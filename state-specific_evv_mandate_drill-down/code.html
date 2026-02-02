@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>State EVV Mandate Drill-Down | RCM AI-Native</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ecec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102222",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .status-pass { color: #0bda50; }
+        .status-fail { color: #fa5c38; }
+        .status-pending { color: #facc15; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-white selection:bg-primary/30">
+<div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#283939] px-6 lg:px-10 py-3 bg-background-dark/80 backdrop-blur-md sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4 text-white">
+<div class="size-6 text-primary">
+<span class="material-symbols-outlined text-3xl">deployed_code</span>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">RCM AI-Native</h2>
+</div>
+<nav class="hidden md:flex items-center gap-9">
+<a class="text-[#9db9b9] hover:text-primary text-sm font-medium leading-normal transition-colors" href="#">Dashboard</a>
+<a class="text-white text-sm font-medium leading-normal" href="#">States</a>
+<a class="text-[#9db9b9] hover:text-primary text-sm font-medium leading-normal transition-colors" href="#">Payers</a>
+<a class="text-[#9db9b9] hover:text-primary text-sm font-medium leading-normal transition-colors" href="#">Reports</a>
+</nav>
+</div>
+<div class="flex flex-1 justify-end gap-4 lg:gap-8">
+<label class="hidden sm:flex flex-col min-w-40 !h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-[#9db9b9] flex border-none bg-[#283939] items-center justify-center pl-4 rounded-l-lg" data-icon="MagnifyingGlass">
+<span class="material-symbols-outlined text-xl">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 border-none bg-[#283939] text-white focus:ring-0 h-full placeholder:text-[#9db9b9] px-4 rounded-r-lg pl-2 text-sm font-normal" placeholder="Search Mandates..." value=""/>
+</div>
+</label>
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center rounded-lg h-10 px-4 bg-primary text-[#111818] text-sm font-bold transition-transform hover:scale-105 active:scale-95">
+<span class="truncate">Export Audit</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary/20" data-alt="User profile avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDCA1HwsjI_WTTmsYO8Acr2t_4IuTVFovpQYH1bGXIufDWALRdWrF8j56Kg7agLXNt9rNBmjPSCGz9ny-KOW0apWQcpSNQkFd382yyLvoylBnIhOT0xKTvLVLH8WM3bsNl98o0VCq5X2goxBkxjKlkAdA41kq3kqt4ejmsB4oNX8eUgl9xaDeosW7ksgj1T_xZg6YF_61Q9ErIxq6H2zgBalIjQCNEBGxiNGgj7FXuqLGYnMZS9HKn0eKQcQR-DQr7swWrqL-wNbNu5");'></div>
+</div>
+</header>
+<main class="flex-1 px-4 lg:px-10 py-8 max-w-[1600px] mx-auto w-full">
+<!-- Profile/State Header -->
+<div class="flex flex-col @container mb-8">
+<div class="flex w-full flex-col gap-6 @[520px]:flex-row @[520px]:justify-between items-start">
+<div class="flex gap-6">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-xl min-h-32 w-32 shadow-xl shadow-primary/10 border border-[#3b5454]" data-alt="Texas State Flag with HUD elements" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD8CDEr1TRBqDVCjOwloExIRArmrQshqIFc2rR-Gbb9tznCznfLxu84kRDdL8WNJeZwjA517Sxndq168CjSNAR4HKk1Oqd9Bs_KJdvKq5JcEL6hIWy2TkpDNC2lFl2zHgpmh9tCKvAhwLrCaWLlRo-jfwxTEwFE_41FLD6v2ThmXr5UDydVyieoi9n8Nt3bAPZk0Eb_rk5edQZ8gK1Ebf77kgv7AlyUpADFqvSuNEyomKamTXlBcrCenU-ag_6CqSBo2B91UU13F2Pq");'></div>
+<div class="flex flex-col justify-center">
+<div class="flex items-center gap-2">
+<h1 class="text-white text-3xl font-bold leading-tight tracking-[-0.015em]">Texas EVV Mandate Drill-Down</h1>
+<span class="bg-primary/20 text-primary px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">Active Mandate</span>
+</div>
+<p class="text-[#9db9b9] text-base font-normal mt-1 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">sync</span> Last Sync: Oct 24, 2023 - 08:42 AM
+                                </p>
+<p class="text-[#9db9b9] text-base font-normal">State Medicaid Code: <span class="text-white font-mono">TX-EVV-2024</span></p>
+</div>
+</div>
+<div class="flex flex-wrap w-full max-w-[480px] gap-3 @[480px]:w-auto self-end">
+<button class="flex min-w-[120px] cursor-pointer items-center justify-center rounded-lg h-10 px-4 bg-[#283939] text-white text-sm font-bold transition-colors hover:bg-[#3b5454]">
+<span class="truncate">State Ombudsman</span>
+</button>
+<button class="flex min-w-[120px] cursor-pointer items-center justify-center rounded-lg h-10 px-4 bg-primary text-[#111818] text-sm font-bold shadow-lg shadow-primary/20">
+<span class="truncate">Update Credentials</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Stats Overview -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-[#3b5454] bg-[#1a2e2e]/40">
+<p class="text-[#9db9b9] text-sm font-medium uppercase tracking-wider">Overall Readiness</p>
+<div class="flex items-end justify-between">
+<p class="text-primary tracking-tight text-3xl font-bold leading-tight">87.4%</p>
+<p class="text-[#0bda50] text-sm font-medium flex items-center"><span class="material-symbols-outlined text-sm">trending_up</span>+2.4%</p>
+</div>
+<div class="mt-2 h-1.5 w-full bg-[#3b5454] rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 87.4%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-[#3b5454] bg-[#1a2e2e]/40">
+<p class="text-[#9db9b9] text-sm font-medium uppercase tracking-wider">Regional Risk</p>
+<div class="flex items-end justify-between">
+<p class="text-white tracking-tight text-3xl font-bold leading-tight">Elevated</p>
+<span class="material-symbols-outlined text-status-fail">warning</span>
+</div>
+<p class="text-[#9db9b9] text-xs mt-2">14 Counties below 70% threshold</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-[#3b5454] bg-[#1a2e2e]/40">
+<p class="text-[#9db9b9] text-sm font-medium uppercase tracking-wider">Active MCOs</p>
+<div class="flex items-end justify-between">
+<p class="text-white tracking-tight text-3xl font-bold leading-tight">12</p>
+<span class="material-symbols-outlined text-primary">account_balance</span>
+</div>
+<p class="text-[#9db9b9] text-xs mt-2">All proprietary API connections live</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 border border-[#3b5454] bg-[#1a2e2e]/40">
+<p class="text-[#9db9b9] text-sm font-medium uppercase tracking-wider">Daily Submission</p>
+<div class="flex items-end justify-between">
+<p class="text-white tracking-tight text-3xl font-bold leading-tight">42.1k</p>
+<p class="text-status-fail text-sm font-medium flex items-center"><span class="material-symbols-outlined text-sm">trending_down</span>-1.2%</p>
+</div>
+<p class="text-[#9db9b9] text-xs mt-2">Avg. Visits per 24h Window</p>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Main Content Area: Left 8 Columns -->
+<div class="lg:col-span-8 flex flex-col gap-8">
+<!-- Regulatory Checklist Section -->
+<div class="bg-[#1a2e2e]/20 border border-[#3b5454] rounded-xl overflow-hidden">
+<div class="p-6 border-b border-[#3b5454] flex justify-between items-center bg-[#1a2e2e]/40">
+<h3 class="text-xl font-bold">Regulatory Compliance Grid</h3>
+<span class="text-xs text-[#9db9b9] font-mono">Phase 3 Revision v2.4</span>
+</div>
+<div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Aggregator Card -->
+<div class="p-4 bg-[#283939]/30 border border-[#3b5454] rounded-lg">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">hub</span>
+<span class="font-bold">Aggregator Integration</span>
+</div>
+<span class="material-symbols-outlined status-pass">check_circle</span>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs text-[#9db9b9]">
+<span>HHAeXchange API</span>
+<span class="text-white">Connected</span>
+</div>
+<div class="flex justify-between text-xs text-[#9db9b9]">
+<span>Sandata Bridge</span>
+<span class="text-white">Active</span>
+</div>
+</div>
+</div>
+<!-- Data Elements Card -->
+<div class="p-4 bg-[#283939]/30 border border-[#3b5454] rounded-lg">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">fingerprint</span>
+<span class="font-bold">Required Data Elements</span>
+</div>
+<span class="material-symbols-outlined status-pending">error</span>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs text-[#9db9b9]">
+<span>GPS Coordinates</span>
+<span class="text-white">99.2% Accuracy</span>
+</div>
+<div class="flex justify-between text-xs text-[#9db9b9]">
+<span>Member Signature</span>
+<span class="text-status-fail">Missing 2.4%</span>
+</div>
+</div>
+</div>
+<!-- Frequency Card -->
+<div class="p-4 bg-[#283939]/30 border border-[#3b5454] rounded-lg">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">schedule</span>
+<span class="font-bold">Transmission Frequency</span>
+</div>
+<span class="material-symbols-outlined status-pass">check_circle</span>
+</div>
+<div class="text-xs text-[#9db9b9]">Real-time batching verified for all EVV vendors. Last batch 08:42 AM.</div>
+</div>
+<!-- Service Codes Card -->
+<div class="p-4 bg-[#283939]/30 border border-[#3b5454] rounded-lg">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">list_alt</span>
+<span class="font-bold">Service Code Mapping</span>
+</div>
+<span class="material-symbols-outlined status-pass">check_circle</span>
+</div>
+<div class="text-xs text-[#9db9b9]">T1019 &amp; S5125 codes mapped to state-specific modifiers for 2024.</div>
+</div>
+</div>
+</div>
+<!-- Compliance Heatmap -->
+<div class="bg-[#1a2e2e]/20 border border-[#3b5454] rounded-xl p-6">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h3 class="text-xl font-bold">Regional Risk Heatmap</h3>
+<p class="text-sm text-[#9db9b9]">County-level drill-down for non-compliance risk</p>
+</div>
+<div class="flex gap-2">
+<button class="bg-[#283939] px-3 py-1 rounded text-xs hover:bg-[#3b5454]">County View</button>
+<button class="bg-[#283939] px-3 py-1 rounded text-xs hover:bg-[#3b5454]">MCO View</button>
+</div>
+</div>
+<div class="h-96 w-full rounded-lg bg-[#283939]/20 flex items-center justify-center relative border border-[#3b5454] overflow-hidden">
+<!-- Placeholder for State Map Visualization -->
+<div class="absolute inset-0 opacity-40 bg-gradient-to-br from-primary/10 via-transparent to-primary/5"></div>
+<div class="z-10 text-center flex flex-col items-center">
+<div class="size-64 mb-4 relative" data-location="Texas" style="">
+<!-- SVG Map Mockup -->
+<svg class="w-full h-full text-primary/40" viewbox="0 0 200 200">
+<path d="M40 20 L160 20 L180 80 L140 180 L40 160 L20 80 Z" fill="currentColor" stroke="currentColor" stroke-width="2"></path>
+<circle class="text-status-fail fill-current opacity-80" cx="80" cy="70" r="10"></circle>
+<circle class="text-status-fail fill-current opacity-80" cx="120" cy="110" r="15"></circle>
+<circle class="text-status-pending fill-current opacity-80" cx="60" cy="130" r="8"></circle>
+</svg>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+<div class="bg-background-dark/90 border border-primary p-2 rounded shadow-2xl text-[10px] w-32">
+<p class="font-bold border-b border-[#3b5454] mb-1">Harris County</p>
+<div class="flex justify-between"><span>Risk:</span><span class="text-status-fail">High</span></div>
+<div class="flex justify-between"><span>Readiness:</span><span>62%</span></div>
+</div>
+</div>
+</div>
+<div class="flex gap-4 text-xs">
+<div class="flex items-center gap-1"><div class="size-2 rounded-full bg-status-fail"></div> High Risk</div>
+<div class="flex items-center gap-1"><div class="size-2 rounded-full bg-status-pending"></div> Moderate</div>
+<div class="flex items-center gap-1"><div class="size-2 rounded-full bg-primary"></div> Compliant</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Sidebar: Right 4 Columns -->
+<div class="lg:col-span-4 flex flex-col gap-8">
+<!-- Payer Specific Rules -->
+<div class="bg-[#1a2e2e]/20 border border-[#3b5454] rounded-xl flex flex-col h-fit">
+<div class="p-6 border-b border-[#3b5454]">
+<h3 class="text-lg font-bold">Payer Specific Rules</h3>
+<p class="text-xs text-[#9db9b9]">Medicaid MCO Requirements</p>
+</div>
+<div class="divide-y divide-[#3b5454]">
+<!-- Payer 1 -->
+<div class="p-4 hover:bg-[#283939]/30 transition-colors">
+<div class="flex justify-between items-start mb-2">
+<span class="text-sm font-bold">Superior HealthPlan</span>
+<span class="text-[10px] bg-[#3b5454] px-1.5 py-0.5 rounded text-[#9db9b9]">VENDOR: HHAe</span>
+</div>
+<p class="text-xs text-[#9db9b9] leading-relaxed">Required 24h batching for LTSS services. Modifier 'U7' mandatory for home health.</p>
+</div>
+<!-- Payer 2 -->
+<div class="p-4 hover:bg-[#283939]/30 transition-colors">
+<div class="flex justify-between items-start mb-2">
+<span class="text-sm font-bold">Amerigroup Texas</span>
+<span class="text-[10px] bg-[#3b5454] px-1.5 py-0.5 rounded text-[#9db9b9]">VENDOR: Sandata</span>
+</div>
+<p class="text-xs text-[#9db9b9] leading-relaxed">Unique Portal credentials required for claim reconciliation. Weekly API sync.</p>
+</div>
+<!-- Payer 3 -->
+<div class="p-4 hover:bg-[#283939]/30 transition-colors">
+<div class="flex justify-between items-start mb-2">
+<span class="text-sm font-bold">UnitedHealthcare Community</span>
+<span class="text-[10px] bg-[#3b5454] px-1.5 py-0.5 rounded text-[#9db9b9]">VENDOR: Proprietary</span>
+</div>
+<p class="text-xs text-[#status-fail] leading-relaxed font-medium">Alert: Recent schema update for GPS precision (Dec 1st).</p>
+</div>
+</div>
+<button class="p-3 text-primary text-xs font-bold hover:underline border-t border-[#3b5454]">View All 12 Payers</button>
+</div>
+<!-- State News & Policy Alerts -->
+<div class="bg-[#1a2e2e]/20 border border-[#3b5454] rounded-xl flex flex-col h-fit">
+<div class="p-6 border-b border-[#3b5454] flex justify-between items-center">
+<h3 class="text-lg font-bold">News &amp; Policy</h3>
+<span class="material-symbols-outlined text-[#9db9b9] text-lg">rss_feed</span>
+</div>
+<div class="p-4 space-y-4">
+<div class="border-l-2 border-primary pl-4 py-1">
+<p class="text-xs font-bold text-white mb-1">HHSC Phase 3 Extension</p>
+<p class="text-[11px] text-[#9db9b9]">The Texas HHSC has extended the pilot phase for individual providers until Jan 2024.</p>
+<span class="text-[10px] text-primary/60 font-mono mt-1 block">2 hours ago</span>
+</div>
+<div class="border-l-2 border-status-fail pl-4 py-1">
+<p class="text-xs font-bold text-white mb-1">Sandata Aggregator Outage</p>
+<p class="text-[11px] text-[#9db9b9]">Temporary latency reported in Region 4 transaction transmissions. Resolution in progress.</p>
+<span class="text-[10px] text-primary/60 font-mono mt-1 block">6 hours ago</span>
+</div>
+<div class="border-l-2 border-status-pending pl-4 py-1">
+<p class="text-xs font-bold text-white mb-1">Modifier Revision Alert</p>
+<p class="text-[11px] text-[#9db9b9]">Updated guidance for modifier 'U1' in specialized nursing claims published today.</p>
+<span class="text-[10px] text-primary/60 font-mono mt-1 block">Yesterday</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Status Bar (Command Center Style) -->
+<footer class="bg-background-dark border-t border-[#283939] px-6 py-3 flex flex-wrap gap-6 items-center justify-between text-[10px] text-[#9db9b9] uppercase tracking-widest font-bold">
+<div class="flex gap-6">
+<div class="flex items-center gap-2"><span class="size-2 rounded-full bg-status-pass animate-pulse"></span> System Operational</div>
+<div class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">database</span> Node: TX-WEST-04</div>
+<div class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">bolt</span> API Latency: 42ms</div>
+</div>
+<div class="flex gap-4">
+<span>© 2023 RCM AI-Native</span>
+<a class="hover:text-primary" href="#">Support</a>
+<a class="hover:text-primary" href="#">Documentation</a>
+</div>
+</footer>
+</div>
+</div>
+</body></html>

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Payer Coding Rulebook Explorer</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#0f172a",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body { font-family: 'Manrope', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
+        .rule-card { transition: all 0.2s ease; }
+        .rule-card:hover { border-color: #135bec; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col overflow-hidden">
+<header class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-3 shrink-0">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-primary">
+<div class="size-8">
+<svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M36.7273 44C33.9891 44 31.6043 39.8386 30.3636 33.69C29.123 39.8386 26.7382 44 24 44C21.2618 44 18.877 39.8386 17.6364 33.69C16.3957 39.8386 14.0109 44 11.2727 44C7.25611 44 4 35.0457 4 24C4 12.9543 7.25611 4 11.2727 4C14.0109 4 16.3957 8.16144 17.6364 14.31C18.877 8.16144 21.2618 4 24 4C26.7382 4 29.123 8.16144 30.3636 14.31C31.6043 8.16144 33.9891 4 36.7273 4C40.7439 4 44 12.9543 44 24C44 35.0457 40.7439 44 36.7273 44Z" fill="currentColor"></path>
+</svg>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold">RevenueCycle AI</h2>
+</div>
+<nav class="flex items-center gap-6">
+<a class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Optimizer</a>
+<a class="text-primary text-sm font-bold border-b-2 border-primary pb-1" href="#">Rulebook Explorer</a>
+<a class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Claims History</a>
+<a class="text-slate-500 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Regulatory AI</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full text-[10px] font-bold uppercase border border-emerald-100 dark:border-emerald-800">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+</span>
+            Real-time Monitoring
+        </div>
+<div class="size-9 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden ring-2 ring-slate-100 dark:ring-slate-800">
+<img alt="User profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAz7xWuiMCFWh5vdP3bP21xUZXRs78Ppkzb5fk47Y6y1-gKlWPS9ojG8ue7kbeUpnpWx-qdqN1BlTks8PDnbOTv3bqinC20GUn2ElzICik-RizqFOLb7U4b87cr408CbwEf3DPCSyC6KCBDfiwtC3BDQGp3zce_MCroDW4zGemS4-jQVM8jYmbR9ox4_4tXibuVqJKVHscaKzViPeOjjhfv1UV3FDXSnchgLoHroCPv8x3Dwd7TiNpTMZOyghkwLgmPxVH4C_9P2M2s"/>
+</div>
+</div>
+</header>
+<main class="flex flex-1 overflow-hidden">
+<aside class="w-80 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
+<div class="p-4 border-b border-slate-200 dark:border-slate-800">
+<h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Payer Directory (5,241)</h3>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-primary focus:border-primary" placeholder="Search payers, IDs, or states..." type="text"/>
+</div>
+<div class="flex gap-2 mt-3">
+<button class="flex-1 text-[10px] font-bold py-1 px-2 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">Medicare</button>
+<button class="flex-1 text-[10px] font-bold py-1 px-2 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">Medicaid</button>
+<button class="flex-1 text-[10px] font-bold py-1 px-2 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">Commercial</button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar">
+<div class="divide-y divide-slate-100 dark:divide-slate-800">
+<div class="p-4 bg-primary/5 border-l-4 border-primary">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-bold text-primary">ID: CMS-001</span>
+<span class="text-[10px] bg-primary/10 text-primary px-1.5 rounded uppercase font-bold tracking-tighter">Federal</span>
+</div>
+<h4 class="font-bold text-sm text-slate-900 dark:text-white">Medicare - Part B National</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Multi-state Jurisdictions</p>
+</div>
+<div class="p-4 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-bold text-slate-500">ID: UHC-NY-01</span>
+<span class="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 rounded uppercase font-bold tracking-tighter">Commercial</span>
+</div>
+<h4 class="font-bold text-sm text-slate-700 dark:text-slate-300">UnitedHealthcare - New York</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Northeast Commercial Group</p>
+</div>
+<div class="p-4 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-bold text-slate-500">ID: BCBS-IL-04</span>
+<span class="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 rounded uppercase font-bold tracking-tighter">PPO</span>
+</div>
+<h4 class="font-bold text-sm text-slate-700 dark:text-slate-300">Blue Cross Blue Shield - Illinois</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Preferred Provider Organization</p>
+</div>
+<div class="p-4 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-bold text-slate-500">ID: CIG-MA-12</span>
+<span class="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 rounded uppercase font-bold tracking-tighter">Commercial</span>
+</div>
+<h4 class="font-bold text-sm text-slate-700 dark:text-slate-300">Cigna HealthCare - Massachusetts</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Open Access Plus</p>
+</div>
+<div class="p-4 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+<div class="flex justify-between items-start mb-1">
+<span class="text-xs font-bold text-slate-500">ID: HUM-TX-02</span>
+<span class="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 rounded uppercase font-bold tracking-tighter">Advantage</span>
+</div>
+<h4 class="font-bold text-sm text-slate-700 dark:text-slate-300">Humana - Texas</h4>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Medicare Advantage Plan</p>
+</div>
+<div class="p-8 text-center">
+<p class="text-xs text-slate-400 italic">5,236 more payers available</p>
+</div>
+</div>
+</div>
+</aside>
+<section class="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-slate-950">
+<div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-6">
+<div class="flex justify-between items-end mb-6">
+<div>
+<nav class="flex text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 gap-2">
+<span>Payer Explorer</span>
+<span>/</span>
+<span>Medicare Part B</span>
+<span>/</span>
+<span class="text-primary">Current Rule Set</span>
+</nav>
+<div class="flex items-center gap-3">
+<h1 class="text-2xl font-extrabold text-slate-900 dark:text-white">Medicare National Policy Rulebook</h1>
+<span class="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">v2024.Q4.2</span>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-lg">download</span> Export JSON
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:bg-blue-700 transition-colors">
+<span class="material-symbols-outlined text-lg">edit</span> Request Exception
+                    </button>
+</div>
+</div>
+<div class="grid grid-cols-4 gap-4">
+<div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+<p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Last AI Synced</p>
+<p class="text-sm font-bold text-slate-900 dark:text-white">2 hours ago</p>
+</div>
+<div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+<p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Active LCD/NCDs</p>
+<p class="text-sm font-bold text-slate-900 dark:text-white">1,482 Active Rules</p>
+</div>
+<div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+<p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Compliance Score</p>
+<p class="text-sm font-bold text-emerald-600 dark:text-emerald-400">99.8% Optimized</p>
+</div>
+<div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+<p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Region Compatibility</p>
+<p class="text-sm font-bold text-slate-900 dark:text-white">National Coverage</p>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+<div class="grid grid-cols-3 gap-6">
+<div class="col-span-2 space-y-6">
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+<div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center">
+<h3 class="font-bold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">conversion_path</span>
+                                High-Volume Crosswalks &amp; LCD References
+                            </h3>
+<button class="text-primary text-xs font-bold hover:underline">View All</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm">
+<thead>
+<tr class="text-[10px] uppercase text-slate-400 font-bold border-b border-slate-100 dark:border-slate-800">
+<th class="px-5 py-3">CPT Code</th>
+<th class="px-5 py-3">Allowed ICD-10s</th>
+<th class="px-5 py-3">Reference (LCD)</th>
+<th class="px-5 py-3">Coverage Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-5 py-4 font-mono font-bold text-primary">99214</td>
+<td class="px-5 py-4">I10, E11.9, Z00.00... (+142)</td>
+<td class="px-5 py-4"><span class="underline text-slate-500 cursor-pointer">L33631</span></td>
+<td class="px-5 py-4"><span class="text-emerald-500 font-bold">Comprehensive</span></td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-5 py-4 font-mono font-bold text-primary">93000</td>
+<td class="px-5 py-4">R07.9, I20.9, I25.10... (+54)</td>
+<td class="px-5 py-4"><span class="underline text-slate-500 cursor-pointer">L34636</span></td>
+<td class="px-5 py-4"><span class="text-emerald-500 font-bold">Restricted</span></td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-5 py-4 font-mono font-bold text-primary">80053</td>
+<td class="px-5 py-4">E11.9, N18.3, K76.0... (+88)</td>
+<td class="px-5 py-4"><span class="underline text-slate-500 cursor-pointer">NCD 190.15</span></td>
+<td class="px-5 py-4"><span class="text-emerald-500 font-bold">Comprehensive</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-6">
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+<h3 class="font-bold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-amber-500 text-xl">label</span>
+                                    Modifier Requirements
+                                </h3>
+</div>
+<div class="p-4 space-y-3">
+<div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold text-slate-900 dark:text-white">Modifier -25</span>
+<span class="text-[9px] bg-amber-100 text-amber-700 px-1.5 rounded font-bold uppercase">Critical</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400">Required when an E/M service and a procedure (e.g., EKG) are performed on the same day.</p>
+</div>
+<div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold text-slate-900 dark:text-white">Modifier -59</span>
+<span class="text-[9px] bg-blue-100 text-blue-700 px-1.5 rounded font-bold uppercase">NCCI Edit</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400">Used for distinct procedural services that are normally bundled into a single claim.</p>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+<h3 class="font-bold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-emerald-500 text-xl">fact_check</span>
+                                    Evidence Prerequisites
+                                </h3>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-emerald-500 text-lg">check_circle</span>
+<div>
+<p class="text-xs font-bold">Medical Necessity Memo</p>
+<p class="text-[11px] text-slate-500 dark:text-slate-400">Required for all high-tier Cardiac imaging (93306).</p>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-emerald-500 text-lg">check_circle</span>
+<div>
+<p class="text-xs font-bold">Prior Auth Token (eReferral)</p>
+<p class="text-[11px] text-slate-500 dark:text-slate-400">Verify via CMS-PART-B portal for elective surgeries.</p>
+</div>
+</div>
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-amber-500 text-lg">priority_high</span>
+<div>
+<p class="text-xs font-bold">Sign-off Requirement</p>
+<p class="text-[11px] text-slate-500 dark:text-slate-400">Attending signature must be visible on physical exam notes.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="space-y-6">
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col h-[400px]">
+<div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+<h3 class="font-bold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl">auto_awesome</span>
+                                AI Rule Updates
+                            </h3>
+<span class="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded-full font-bold">Live Feed</span>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+<div class="relative pl-6 border-l-2 border-primary/20">
+<div class="absolute -left-[5px] top-0 size-2 rounded-full bg-primary"></div>
+<div class="flex justify-between items-start mb-1">
+<p class="text-xs font-bold text-slate-900 dark:text-white">CMS Transmittal 12104</p>
+<span class="text-[9px] text-slate-400">8m ago</span>
+</div>
+<p class="text-[11px] text-slate-600 dark:text-slate-400">Automated update to Telehealth POS rules for 2024. Added 14 new G-codes to allowed list.</p>
+<div class="mt-2 flex gap-2">
+<span class="text-[9px] bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-100 dark:border-emerald-800">Auto-Applied</span>
+</div>
+</div>
+<div class="relative pl-6 border-l-2 border-slate-200 dark:border-slate-800">
+<div class="absolute -left-[5px] top-0 size-2 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+<div class="flex justify-between items-start mb-1">
+<p class="text-xs font-bold text-slate-900 dark:text-white">LCD L33631 Revision</p>
+<span class="text-[9px] text-slate-400">2h ago</span>
+</div>
+<p class="text-[11px] text-slate-600 dark:text-slate-400">Manual review suggested: Medicare increased specificity requirements for Diabetic Foot Care ICD-10 links.</p>
+<button class="mt-2 text-[10px] font-bold text-primary hover:underline">Review Changes</button>
+</div>
+<div class="relative pl-6 border-l-2 border-slate-200 dark:border-slate-800 opacity-60">
+<div class="absolute -left-[5px] top-0 size-2 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+<div class="flex justify-between items-start mb-1">
+<p class="text-xs font-bold text-slate-900 dark:text-white">National Correct Coding Initiative (NCCI)</p>
+<span class="text-[9px] text-slate-400">Yesterday</span>
+</div>
+<p class="text-[11px] text-slate-600 dark:text-slate-400">Quarterly edit update for Column 1/Column 2 bundling pairs. 430 edits affected.</p>
+</div>
+</div>
+</div>
+<div class="bg-slate-900 text-white rounded-xl shadow-xl overflow-hidden">
+<div class="p-5 border-b border-slate-800 flex justify-between items-center">
+<h3 class="font-bold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">terminal</span>
+                                AI Rule Tester
+                            </h3>
+<span class="text-[9px] text-slate-400 font-mono">SANDBOX MODE</span>
+</div>
+<div class="p-5 space-y-4">
+<div>
+<label class="text-[10px] text-slate-400 uppercase font-bold mb-1 block">Test Claim Payload (CPT/ICD/Mod)</label>
+<input class="w-full bg-slate-800 border-slate-700 rounded-lg text-xs font-mono py-2 px-3 focus:ring-primary focus:border-primary text-emerald-400" type="text" value="99214, 93000-25 | I10, R07.9"/>
+</div>
+<button class="w-full py-2 bg-primary hover:bg-blue-600 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-sm">play_arrow</span> Run Policy Validation
+                            </button>
+<div class="p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-emerald-400 text-sm">check_circle</span>
+<span class="text-xs font-bold text-emerald-400">Pass: Clinical Validation</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-amber-400 text-sm">warning</span>
+<span class="text-xs font-bold text-amber-400">Warning: Modifier -25 required</span>
+</div>
+<p class="text-[10px] text-slate-500 mt-2 italic font-mono">Total Estimated Reimbursement: $172.40</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<footer class="h-10 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-emerald-500"></div>
+<span class="text-[11px] font-medium text-slate-500 dark:text-slate-400">Payer Gateway Connected</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400 text-sm">history</span>
+<span class="text-[11px] font-medium text-slate-500 dark:text-slate-400">Session Uptime: 4h 12m</span>
+</div>
+</div>
+<div class="flex items-center gap-4 text-[11px] font-bold text-slate-400">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-sm">security</span> FIPS 140-2 Compliant</span>
+<span class="text-slate-300 dark:text-slate-700">|</span>
+<span class="text-slate-600 dark:text-slate-400">Rulebook Engine v4.21.0</span>
+</div>
+</footer>
+
+</body></html>

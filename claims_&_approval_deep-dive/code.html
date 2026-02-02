@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Claims &amp; Approval Deep-Dive | RCM AI-Native</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#137fec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="flex flex-col min-h-screen">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111418] px-10 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4 text-primary">
+<div class="size-6">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462C2.19985 28.361 1.76794 23.9758 2.60947 19.7452C3.451 15.5145 5.52816 11.6284 8.57829 8.5783C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948C23.9758 1.76795 28.361 2.19986 32.3462 3.85057C36.3314 5.50129 39.7376 8.29668 42.134 11.8833C44.5305 15.4698 45.8096 19.6865 45.8096 24L24 24L24 45.8096Z" fill="currentColor"></path>
+</svg>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight">RCM AI-Native</h2>
+</div>
+<label class="flex flex-col min-w-40 h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full overflow-hidden">
+<div class="text-slate-400 flex bg-slate-100 dark:bg-slate-800 items-center justify-center pl-4">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="w-full border-none bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-0 placeholder:text-slate-400 px-4 pl-2 text-sm font-normal" placeholder="Search claims, NPI..."/>
+</div>
+</label>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<nav class="flex items-center gap-6">
+<a class="text-slate-600 dark:text-slate-300 text-sm font-medium hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-primary text-sm font-semibold border-b-2 border-primary py-4" href="#">Claims</a>
+<a class="text-slate-600 dark:text-slate-300 text-sm font-medium hover:text-primary transition-colors" href="#">Reconciliation</a>
+<a class="text-slate-600 dark:text-slate-300 text-sm font-medium hover:text-primary transition-colors" href="#">Analytics</a>
+</nav>
+<div class="flex gap-2 items-center">
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+</button>
+<div class="ml-2 bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border border-slate-200 dark:border-slate-700" data-alt="User profile avatar portrait" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAidyXu5XeljjTqc2dWVrNHVLU8eijoRkDt9cxxwQEqOgOkPRlZ3jLC7nwzeNC9jGHzJ-X-vz1y-ofK0IwPARETa9Zd_XSdN1Px6ppaXT0cLwP1MCkEqdx5hIF10k_VnTkNPAnaQH5Tqp_iGLtTmTKPRXKsnKBRUxYj8ys-Qp_c130qyJ4WGajidqSYCxgztHhozWAmn8bMHaJXDBftFfrbaJXAIvbdEo90_-9QHeRIORpgrtjFxA6RIm3dbnWxvxtmRLpUlg2sTDrJ");'></div>
+</div>
+</div>
+</header>
+<main class="flex-1 max-w-[1600px] mx-auto w-full px-4 md:px-10 py-8">
+<!-- Page Heading -->
+<div class="flex flex-wrap justify-between items-end gap-4 mb-8">
+<div class="flex flex-col gap-1">
+<h1 class="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight">Total Claims &amp; Approval Analysis</h1>
+<p class="text-slate-500 dark:text-slate-400 text-base font-normal">Real-time financial reconciliation and deep-dive lifecycle tracking powered by AI.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+<span>Last 30 Days</span>
+</button>
+<button class="flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold hover:bg-primary/90">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span>Export Report</span>
+</button>
+</div>
+</div>
+<!-- Stats Overview -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Total Claim Volume</p>
+<div class="flex items-baseline gap-2">
+<p class="text-slate-900 dark:text-white text-2xl font-bold">$4,281,450</p>
+<span class="text-emerald-500 text-sm font-bold flex items-center"><span class="material-symbols-outlined text-[14px]">arrow_upward</span>12%</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Avg. Days to Pay</p>
+<div class="flex items-baseline gap-2">
+<p class="text-slate-900 dark:text-white text-2xl font-bold">14.2 Days</p>
+<span class="text-orange-500 text-sm font-bold flex items-center"><span class="material-symbols-outlined text-[14px]">arrow_downward</span>2%</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Current Denial Rate</p>
+<div class="flex items-baseline gap-2">
+<p class="text-slate-900 dark:text-white text-2xl font-bold">3.1%</p>
+<span class="text-orange-500 text-sm font-bold flex items-center"><span class="material-symbols-outlined text-[14px]">arrow_downward</span>0.5%</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Clean Claim Rate (CCR)</p>
+<div class="flex items-baseline gap-2">
+<p class="text-slate-900 dark:text-white text-2xl font-bold">89.4%</p>
+<span class="text-emerald-500 text-sm font-bold flex items-center"><span class="material-symbols-outlined text-[14px]">arrow_upward</span>3.1%</span>
+</div>
+</div>
+</div>
+<!-- Claims Lifecycle Waterfall -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 mb-8">
+<div class="flex items-center justify-between mb-8">
+<h2 class="text-slate-900 dark:text-white text-xl font-bold">Claims Lifecycle Waterfall</h2>
+<div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+<span class="flex items-center gap-1"><span class="w-3 h-3 bg-primary rounded-sm"></span> Volume</span>
+<span class="flex items-center gap-1"><span class="w-3 h-3 bg-slate-300 dark:bg-slate-700 rounded-sm"></span> Drop-off</span>
+</div>
+</div>
+<div class="grid grid-cols-5 gap-4 items-end min-h-[220px]">
+<div class="flex flex-col items-center gap-4 group">
+<div class="w-full bg-primary/20 dark:bg-primary/10 rounded-t-lg relative flex flex-col justify-end overflow-hidden" style="height: 100%;">
+<div class="bg-primary w-full" style="height: 100%;"></div>
+<div class="absolute inset-0 flex items-center justify-center text-white font-bold text-sm">12,450</div>
+</div>
+<div class="text-center">
+<p class="text-slate-900 dark:text-white text-sm font-bold">Initial</p>
+<p class="text-slate-500 text-xs italic">100%</p>
+</div>
+</div>
+<div class="flex flex-col items-center gap-4">
+<div class="w-full bg-primary/20 dark:bg-primary/10 rounded-t-lg relative flex flex-col justify-end overflow-hidden" style="height: 92%;">
+<div class="bg-primary w-full" style="height: 100%;"></div>
+<div class="absolute inset-0 flex items-center justify-center text-white font-bold text-sm">11,454</div>
+</div>
+<div class="text-center">
+<p class="text-slate-900 dark:text-white text-sm font-bold">Scrubbed</p>
+<p class="text-slate-500 text-xs italic">92%</p>
+</div>
+</div>
+<div class="flex flex-col items-center gap-4">
+<div class="w-full bg-primary/20 dark:bg-primary/10 rounded-t-lg relative flex flex-col justify-end overflow-hidden" style="height: 85%;">
+<div class="bg-primary w-full" style="height: 100%;"></div>
+<div class="absolute inset-0 flex items-center justify-center text-white font-bold text-sm">10,582</div>
+</div>
+<div class="text-center">
+<p class="text-slate-900 dark:text-white text-sm font-bold">Payer Rec.</p>
+<p class="text-slate-500 text-xs italic">85%</p>
+</div>
+</div>
+<div class="flex flex-col items-center gap-4">
+<div class="w-full bg-primary/20 dark:bg-primary/10 rounded-t-lg relative flex flex-col justify-end overflow-hidden" style="height: 78%;">
+<div class="bg-primary w-full" style="height: 100%;"></div>
+<div class="absolute inset-0 flex items-center justify-center text-white font-bold text-sm">9,711</div>
+</div>
+<div class="text-center">
+<p class="text-slate-900 dark:text-white text-sm font-bold">Adjudicated</p>
+<p class="text-slate-500 text-xs italic">78%</p>
+</div>
+</div>
+<div class="flex flex-col items-center gap-4">
+<div class="w-full bg-emerald-500/20 rounded-t-lg relative flex flex-col justify-end overflow-hidden" style="height: 72%;">
+<div class="bg-emerald-500 w-full" style="height: 100%;"></div>
+<div class="absolute inset-0 flex items-center justify-center text-white font-bold text-sm">8,964</div>
+</div>
+<div class="text-center">
+<p class="text-slate-900 dark:text-white text-sm font-bold text-emerald-500">Approved</p>
+<p class="text-slate-500 text-xs italic">72%</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Content Area: Split View -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left Column: Claim Status Grid (8/12) -->
+<div class="lg:col-span-8 flex flex-col gap-4">
+<div class="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex gap-2">
+<select class="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium focus:ring-primary py-1.5 pl-3 pr-8">
+<option>Filter by Payer</option>
+<option>Aetna</option>
+<option>UnitedHealth</option>
+<option>BlueCross</option>
+</select>
+<select class="bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium focus:ring-primary py-1.5 pl-3 pr-8">
+<option>Tax ID / NPI</option>
+</select>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-slate-500 font-medium">Displaying 1-10 of 1,240</span>
+<div class="flex">
+<button class="p-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</button>
+<button class="p-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-primary transition-colors ml-1">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+<th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Claim ID</th>
+<th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Payer</th>
+<th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase">NPI</th>
+<th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase text-right">Amount</th>
+<th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase">Status</th>
+<th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase">AI Prob.</th>
+<th class="px-4 py-3"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-4 py-4 font-mono text-sm text-primary">#CLM-4921-X</td>
+<td class="px-4 py-4 text-sm font-medium">UnitedHealthcare</td>
+<td class="px-4 py-4 text-sm text-slate-500">1295810244</td>
+<td class="px-4 py-4 text-sm text-right font-bold">$12,400.00</td>
+<td class="px-4 py-4">
+<span class="px-2 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-500 uppercase">Scrubbed</span>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 82%;"></div>
+</div>
+<span class="text-xs font-bold">82%</span>
+</div>
+</td>
+<td class="px-4 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined">expand_more</span></button>
+</td>
+</tr>
+<!-- Expanded Details (Mock) -->
+<tr class="bg-slate-50 dark:bg-slate-800/20">
+<td class="px-4 py-4" colspan="7">
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<p class="text-xs font-bold uppercase text-slate-400">AI Approval Probability History</p>
+<div class="flex gap-4">
+<div class="flex flex-col items-end">
+<span class="text-[10px] text-slate-500 uppercase">Current Variance</span>
+<span class="text-xs font-bold text-emerald-500">+4.2% since submission</span>
+</div>
+</div>
+</div>
+<div class="h-16 flex items-end gap-1.5 px-2">
+<!-- Mock Sparkline -->
+<div class="flex-1 bg-primary/30 rounded-t h-[40%]" title="Day 1: 45%"></div>
+<div class="flex-1 bg-primary/30 rounded-t h-[45%]" title="Day 2: 48%"></div>
+<div class="flex-1 bg-primary/40 rounded-t h-[52%]" title="Day 3: 52%"></div>
+<div class="flex-1 bg-primary/50 rounded-t h-[65%]" title="Day 4: 65%"></div>
+<div class="flex-1 bg-primary/60 rounded-t h-[72%]" title="Day 5: 72%"></div>
+<div class="flex-1 bg-primary/80 rounded-t h-[78%]" title="Day 6: 78%"></div>
+<div class="flex-1 bg-primary h-[82%]" title="Current: 82%"></div>
+</div>
+<div class="flex gap-6 mt-2 border-t border-slate-200 dark:border-slate-800 pt-4">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-emerald-500 text-[18px]">verified</span>
+<div>
+<p class="text-xs font-bold">Patient Eligibility</p>
+<p class="text-[11px] text-slate-500">Confirmed &amp; Verified</p>
+</div>
+</div>
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-orange-400 text-[18px]">warning</span>
+<div>
+<p class="text-xs font-bold">Coding Accuracy</p>
+<p class="text-[11px] text-slate-500">Modifier 25 Flagged</p>
+</div>
+</div>
+</div>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-4 py-4 font-mono text-sm text-primary">#CLM-1205-A</td>
+<td class="px-4 py-4 text-sm font-medium">Aetna Medicare</td>
+<td class="px-4 py-4 text-sm text-slate-500">1023948571</td>
+<td class="px-4 py-4 text-sm text-right font-bold">$3,150.25</td>
+<td class="px-4 py-4">
+<span class="px-2 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-500 uppercase">Approved</span>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="bg-emerald-500 h-full" style="width: 98%;"></div>
+</div>
+<span class="text-xs font-bold">98%</span>
+</div>
+</td>
+<td class="px-4 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined">expand_more</span></button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-4 py-4 font-mono text-sm text-primary">#CLM-8831-Z</td>
+<td class="px-4 py-4 text-sm font-medium">BlueCross BlueShield</td>
+<td class="px-4 py-4 text-sm text-slate-500">1948203394</td>
+<td class="px-4 py-4 text-sm text-right font-bold">$42,910.00</td>
+<td class="px-4 py-4">
+<span class="px-2 py-1 rounded-full text-[11px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-500 uppercase">Adjudicated</span>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 61%;"></div>
+</div>
+<span class="text-xs font-bold">61%</span>
+</div>
+</td>
+<td class="px-4 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined">expand_more</span></button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors border-b-0">
+<td class="px-4 py-4 font-mono text-sm text-primary">#CLM-2033-Q</td>
+<td class="px-4 py-4 text-sm font-medium">Humana Inc.</td>
+<td class="px-4 py-4 text-sm text-slate-500">1442938477</td>
+<td class="px-4 py-4 text-sm text-right font-bold">$912.50</td>
+<td class="px-4 py-4">
+<span class="px-2 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-500 uppercase">Denied</span>
+</td>
+<td class="px-4 py-4">
+<div class="flex items-center gap-2">
+<div class="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="bg-red-500 h-full" style="width: 14%;"></div>
+</div>
+<span class="text-xs font-bold">14%</span>
+</div>
+</td>
+<td class="px-4 py-4 text-right">
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined">expand_more</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Right Column: Dual Axis Chart & Insights (4/12) -->
+<div class="lg:col-span-4 flex flex-col gap-6">
+<!-- CCR vs Approval Rate Chart -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-slate-900 dark:text-white text-base font-bold">CCR vs. Approval Rate</h3>
+<button class="text-slate-400 hover:text-primary"><span class="material-symbols-outlined text-[18px]">info</span></button>
+</div>
+<div class="relative h-48 w-full flex items-end gap-3 px-2">
+<!-- Chart Background Lines -->
+<div class="absolute inset-0 flex flex-col justify-between py-2 pointer-events-none">
+<div class="border-t border-slate-100 dark:border-slate-800 w-full"></div>
+<div class="border-t border-slate-100 dark:border-slate-800 w-full"></div>
+<div class="border-t border-slate-100 dark:border-slate-800 w-full"></div>
+</div>
+<!-- Dual Axis Data Bars/Points (Mockup) -->
+<div class="flex-1 flex flex-col justify-end gap-1 relative group">
+<div class="w-full bg-slate-200 dark:bg-slate-800 rounded-t h-[90%]" title="CCR: 89%"></div>
+<div class="absolute top-[15%] left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-primary border border-white dark:border-slate-900 z-10" title="Approval: 85%"></div>
+<span class="text-[9px] text-slate-500 text-center mt-1">W1</span>
+</div>
+<div class="flex-1 flex flex-col justify-end gap-1 relative group">
+<div class="w-full bg-slate-200 dark:bg-slate-800 rounded-t h-[75%]" title="CCR: 75%"></div>
+<div class="absolute top-[35%] left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-primary border border-white dark:border-slate-900 z-10" title="Approval: 68%"></div>
+<span class="text-[9px] text-slate-500 text-center mt-1">W2</span>
+</div>
+<div class="flex-1 flex flex-col justify-end gap-1 relative group">
+<div class="w-full bg-slate-200 dark:bg-slate-800 rounded-t h-[82%]" title="CCR: 82%"></div>
+<div class="absolute top-[25%] left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-primary border border-white dark:border-slate-900 z-10" title="Approval: 79%"></div>
+<span class="text-[9px] text-slate-500 text-center mt-1">W3</span>
+</div>
+<div class="flex-1 flex flex-col justify-end gap-1 relative group">
+<div class="w-full bg-slate-200 dark:bg-slate-800 rounded-t h-[95%]" title="CCR: 95%"></div>
+<div class="absolute top-[10%] left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-primary border border-white dark:border-slate-900 z-10" title="Approval: 91%"></div>
+<span class="text-[9px] text-slate-500 text-center mt-1">W4</span>
+</div>
+</div>
+<div class="mt-6 flex justify-center gap-6">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 bg-slate-200 dark:bg-slate-800 rounded-sm"></span>
+<span class="text-[11px] font-medium text-slate-500">Clean Claim Rate</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 bg-primary rounded-sm"></span>
+<span class="text-[11px] font-medium text-slate-500">Approval Rate</span>
+</div>
+</div>
+</div>
+<!-- AI Smart Insights -->
+<div class="bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/20 p-6">
+<div class="flex items-center gap-2 mb-4 text-primary">
+<span class="material-symbols-outlined text-[20px]">psychology</span>
+<h3 class="text-base font-bold">AI Insights</h3>
+</div>
+<ul class="space-y-4">
+<li class="flex gap-3">
+<span class="material-symbols-outlined text-emerald-500 text-[18px]">trending_up</span>
+<p class="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+<strong class="text-slate-900 dark:text-white">High Correlation:</strong> Clean Claim Rate (CCR) is driving a 4.5% uptick in approval speed for Aetna claims.
+                                </p>
+</li>
+<li class="flex gap-3">
+<span class="material-symbols-outlined text-orange-400 text-[18px]">error</span>
+<p class="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+<strong class="text-slate-900 dark:text-white">Alert:</strong> NPI #1023948571 has a 12% higher denial rate due to missing documentation on 'Modifier 59' codes.
+                                </p>
+</li>
+<li class="flex gap-3">
+<span class="material-symbols-outlined text-primary text-[18px]">lightbulb</span>
+<p class="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+<strong class="text-slate-900 dark:text-white">Opportunity:</strong> Auto-scrubbing for UnitedHealth could improve net revenue by 2.1% if applied pre-submission.
+                                </p>
+</li>
+</ul>
+<button class="w-full mt-6 py-2 rounded-lg bg-primary/10 text-primary text-xs font-bold border border-primary/20 hover:bg-primary/20 transition-colors">
+                            Run Automated Reconciliation
+                        </button>
+</div>
+<!-- Payer Efficiency List -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+<h3 class="text-slate-900 dark:text-white text-base font-bold mb-4">Payer Efficiency Score</h3>
+<div class="space-y-4">
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between text-[11px] font-bold">
+<span>BlueCross</span>
+<span>92.4%</span>
+</div>
+<div class="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="bg-emerald-500 h-full" style="width: 92.4%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between text-[11px] font-bold">
+<span>Medicare</span>
+<span>88.1%</span>
+</div>
+<div class="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="bg-emerald-500 h-full" style="width: 88.1%;"></div>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between text-[11px] font-bold">
+<span>UnitedHealth</span>
+<span>76.5%</span>
+</div>
+<div class="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="bg-orange-500 h-full" style="width: 76.5%;"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer / Feedback -->
+<footer class="mt-10 py-6 border-t border-slate-200 dark:border-slate-800 px-10 flex flex-wrap justify-between items-center gap-4">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-medium">© 2023 RCM AI-Native Platform. All financial data encrypted.</p>
+<div class="flex gap-6">
+<a class="text-slate-400 hover:text-primary text-xs font-medium" href="#">System Status</a>
+<a class="text-slate-400 hover:text-primary text-xs font-medium" href="#">Privacy Policy</a>
+<a class="text-slate-400 hover:text-primary text-xs font-medium" href="#">Compliance (HIPAA)</a>
+</div>
+</footer>
+</div>
+</body></html>

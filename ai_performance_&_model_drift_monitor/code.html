@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AI Performance &amp; Model Drift Monitor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ecec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#0a1111",
+                        "card-dark": "#112020",
+                        "alert-red": "#ff4d4d",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Space Grotesk', sans-serif; }
+        .mono-text { font-family: 'JetBrains Mono', monospace; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1a2e2e; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #13ecec; border-radius: 10px; }
+        .neon-glow { box-shadow: 0 0 15px rgba(19, 236, 236, 0.2); }
+        .alert-glow { box-shadow: 0 0 15px rgba(255, 77, 77, 0.3); }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Top Navigation -->
+<header class="border-b border-[#283939] bg-background-light dark:bg-background-dark px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3">
+<div class="size-8 bg-primary rounded flex items-center justify-center text-background-dark">
+<span class="material-symbols-outlined font-bold">query_stats</span>
+</div>
+<h1 class="text-xl font-bold tracking-tight uppercase">RCM <span class="text-primary">AI Monitor</span></h1>
+</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-primary text-sm font-semibold border-b-2 border-primary pb-1" href="#">Dashboard</a>
+<a class="text-slate-500 dark:text-[#9db9b9] text-sm font-medium hover:text-white transition-colors" href="#">Model Registry</a>
+<a class="text-slate-500 dark:text-[#9db9b9] text-sm font-medium hover:text-white transition-colors" href="#">Drift Logs</a>
+<a class="text-slate-500 dark:text-[#9db9b9] text-sm font-medium hover:text-white transition-colors" href="#">Deployments</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden lg:flex flex-col items-end mr-4">
+<span class="text-[10px] text-[#9db9b9] uppercase tracking-widest">System Status</span>
+<span class="text-xs font-bold text-primary flex items-center gap-1">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+                    OPERATIONAL (v2.4.0)
+                </span>
+</div>
+<button class="p-2 hover:bg-white/5 rounded-full transition-colors relative">
+<span class="material-symbols-outlined text-[#9db9b9]">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-alert-red rounded-full"></span>
+</button>
+<div class="h-8 w-[1px] bg-[#283939] mx-2"></div>
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border border-primary/50" data-alt="User profile avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBy6-Xd4bKYuePwQVMwJDMVZTi6jCwpEM6zzjDgIarp0TE4Hi6RSWixdL7e0vStbpENpeAbCN1yfdFeYfbKj5TS-idtFuZyKtHXpisxBDyFHcCNdpNtqrql-PE_xvgE_LnykZvle_Kfw5CpiEeVI8AydUyngPdr3ZID5rLGBHiBFmTbzTniBgKxFss6Rxm0MyTXHYImgx8FdT9ucmoscWzkyotMZrZz0bp4B91f1_675gPWLgtt-9ZD7UDC0BNgNXCBoBhiLZj0Ed9_");'></div>
+<span class="text-sm font-medium hidden sm:inline">Admin_DS_01</span>
+</div>
+</div>
+</header>
+<main class="flex-1 flex overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-16 lg:w-64 border-r border-[#283939] flex flex-col bg-background-light dark:bg-background-dark shrink-0">
+<div class="p-4 space-y-2 flex-1">
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary border border-primary/20">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-semibold hidden lg:block">System Overview</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-500 dark:text-[#9db9b9] hover:bg-white/5 transition-colors cursor-pointer">
+<span class="material-symbols-outlined">analytics</span>
+<span class="text-sm font-medium hidden lg:block">PSI Distribution</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-500 dark:text-[#9db9b9] hover:bg-white/5 transition-colors cursor-pointer">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="text-sm font-medium hidden lg:block">Feature Importance</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-500 dark:text-[#9db9b9] hover:bg-white/5 transition-colors cursor-pointer">
+<span class="material-symbols-outlined">history</span>
+<span class="text-sm font-medium hidden lg:block">Retraining History</span>
+</div>
+<div class="pt-4 mt-4 border-t border-[#283939]">
+<p class="px-3 mb-2 text-[10px] uppercase tracking-widest text-[#9db9b9] hidden lg:block">Environments</p>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-500 dark:text-[#9db9b9] hover:bg-white/5 cursor-pointer">
+<span class="material-symbols-outlined text-xs">fiber_manual_record</span>
+<span class="text-sm font-medium hidden lg:block">Production</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-500 dark:text-[#9db9b9] hover:bg-white/5 cursor-pointer">
+<span class="material-symbols-outlined text-xs text-primary">radio_button_checked</span>
+<span class="text-sm font-medium text-white hidden lg:block">Staging-Canary</span>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-[#283939]">
+<button class="w-full flex items-center justify-center gap-2 bg-[#283939] text-white py-2 rounded-lg text-sm font-bold hover:bg-[#344a4a] transition-all">
+<span class="material-symbols-outlined text-sm">download</span>
+<span class="hidden lg:block">Export Telemetry</span>
+</button>
+</div>
+</aside>
+<!-- Dashboard Content -->
+<section class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+<!-- Page Heading -->
+<div class="flex flex-wrap items-end justify-between gap-4">
+<div>
+<h2 class="text-3xl font-black text-white tracking-tight">AI Performance &amp; Model Drift</h2>
+<p class="text-[#9db9b9] font-mono text-sm mt-1">Telemetry Live: 2023-10-27T14:42:01Z // Cluster: us-east-1-rcm-04</p>
+</div>
+<div class="flex gap-2">
+<div class="bg-card-dark border border-[#283939] rounded px-3 py-1 flex items-center gap-2">
+<span class="text-[10px] text-[#9db9b9] uppercase font-bold">Refresh Rate:</span>
+<span class="text-xs font-mono text-primary">5s</span>
+</div>
+<button class="bg-primary text-background-dark font-bold text-sm px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">autorenew</span> Retrain All
+                    </button>
+</div>
+</div>
+<!-- Model Health Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<!-- Card 1 -->
+<div class="bg-card-dark border border-[#283939] p-5 rounded-xl neon-glow">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[11px] text-[#9db9b9] font-bold uppercase tracking-widest">Model Alpha</p>
+<h3 class="text-lg font-bold text-white">Denial Predictor</h3>
+</div>
+<span class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded">HEALTHY</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] text-[#9db9b9] uppercase">Drift Score</p>
+<p class="text-3xl font-mono font-bold text-primary">0.12</p>
+</div>
+<div>
+<p class="text-[10px] text-[#9db9b9] uppercase">Latency</p>
+<p class="text-3xl font-mono font-bold text-white">45<span class="text-sm font-normal text-[#9db9b9]">ms</span></p>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-white/5 flex items-center gap-3">
+<div class="flex-1 h-8 bg-[#1a2e2e] rounded relative overflow-hidden">
+<svg class="absolute inset-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 100 30">
+<path d="M0 20 L10 18 L20 22 L30 15 L40 18 L50 12 L60 20 L70 15 L80 18 L90 10 L100 15" fill="none" stroke="#13ecec" stroke-width="1.5"></path>
+</svg>
+</div>
+<span class="text-[10px] font-mono text-primary">+0.02%</span>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-card-dark border border-[#283939] p-5 rounded-xl">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[11px] text-[#9db9b9] font-bold uppercase tracking-widest">Model Beta</p>
+<h3 class="text-lg font-bold text-white">Coding Agent</h3>
+</div>
+<span class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded">STABLE</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] text-[#9db9b9] uppercase">Drift Score</p>
+<p class="text-3xl font-mono font-bold text-primary">0.05</p>
+</div>
+<div>
+<p class="text-[10px] text-[#9db9b9] uppercase">Latency</p>
+<p class="text-3xl font-mono font-bold text-white">120<span class="text-sm font-normal text-[#9db9b9]">ms</span></p>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-white/5 flex items-center gap-3">
+<div class="flex-1 h-8 bg-[#1a2e2e] rounded relative overflow-hidden">
+<svg class="absolute inset-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 100 30">
+<path d="M0 15 L20 16 L40 14 L60 15 L80 14 L100 15" fill="none" stroke="#13ecec" stroke-width="1.5"></path>
+</svg>
+</div>
+<span class="text-[10px] font-mono text-primary">-0.01%</span>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-card-dark border border-alert-red/50 p-5 rounded-xl alert-glow">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-[11px] text-[#9db9b9] font-bold uppercase tracking-widest">Model Gamma</p>
+<h3 class="text-lg font-bold text-white">Revenue Forecaster</h3>
+</div>
+<span class="bg-alert-red/20 text-alert-red text-[10px] font-bold px-2 py-1 rounded">CRITICAL DRIFT</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div>
+<p class="text-[10px] text-[#9db9b9] uppercase">Drift Score</p>
+<p class="text-3xl font-mono font-bold text-alert-red">0.28</p>
+</div>
+<div>
+<p class="text-[10px] text-[#9db9b9] uppercase">Latency</p>
+<p class="text-3xl font-mono font-bold text-white">80<span class="text-sm font-normal text-[#9db9b9]">ms</span></p>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-white/5 flex items-center gap-3">
+<div class="flex-1 h-8 bg-alert-red/5 rounded relative overflow-hidden">
+<svg class="absolute inset-0 w-full h-full" preserveaspectratio="none" viewbox="0 0 100 30">
+<path d="M0 25 L20 20 L40 28 L60 15 L80 5 L100 2" fill="none" stroke="#ff4d4d" stroke-width="1.5"></path>
+</svg>
+</div>
+<span class="text-[10px] font-mono text-alert-red">+12.4%</span>
+</div>
+</div>
+</div>
+<!-- Main Visualizations Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- PSI Chart Section -->
+<div class="lg:col-span-2 space-y-6">
+<div class="bg-card-dark border border-[#283939] rounded-xl p-6">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h3 class="text-lg font-bold text-white">Population Stability Index (PSI)</h3>
+<p class="text-sm text-[#9db9b9]">Aggregated feature drift across all production cohorts</p>
+</div>
+<div class="flex items-center gap-4 text-[11px] font-mono">
+<div class="flex items-center gap-1.5"><span class="w-3 h-3 bg-primary rounded-full"></span> PSI Value</div>
+<div class="flex items-center gap-1.5"><span class="w-3 h-3 border-t-2 border-dashed border-alert-red"></span> Alert Threshold (0.2)</div>
+</div>
+</div>
+<div class="relative h-64 w-full">
+<!-- SVG Chart Component -->
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 800 200">
+<defs>
+<lineargradient id="psiGradient" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#13ecec" stop-opacity="0.2"></stop>
+<stop offset="100%" stop-color="#13ecec" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<!-- Threshold Line -->
+<line stroke="#ff4d4d" stroke-dasharray="4" stroke-width="1" x1="0" x2="800" y1="60" y2="60"></line>
+<!-- Chart Path -->
+<path d="M0 160 Q 50 150, 100 170 T 200 140 T 300 165 T 400 130 T 500 145 T 600 70 T 700 50 T 800 45" fill="none" stroke="#13ecec" stroke-width="2.5"></path>
+<path d="M0 160 Q 50 150, 100 170 T 200 140 T 300 165 T 400 130 T 500 145 T 600 70 T 700 50 T 800 45 L 800 200 L 0 200 Z" fill="url(#psiGradient)"></path>
+<!-- Pulse markers for breach -->
+<circle class="animate-ping" cx="700" cy="50" fill="#ff4d4d" r="4"></circle>
+<circle cx="700" cy="50" fill="#ff4d4d" r="3"></circle>
+</svg>
+<!-- Y Axis -->
+<div class="absolute left-0 top-0 bottom-0 flex flex-col justify-between text-[10px] text-[#9db9b9] font-mono py-1">
+<span>0.40</span><span>0.30</span><span class="text-alert-red font-bold">0.20</span><span>0.10</span><span>0.00</span>
+</div>
+</div>
+<div class="flex justify-between mt-4 text-[10px] text-[#9db9b9] font-mono px-6">
+<span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>NOW</span>
+</div>
+</div>
+<!-- Prediction Accuracy vs Ground Truth -->
+<div class="bg-card-dark border border-[#283939] rounded-xl p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-lg font-bold text-white">Accuracy vs. Ground Truth</h3>
+<div class="flex gap-4 text-[11px] font-mono">
+<div class="flex items-center gap-1.5"><span class="w-3 h-1 bg-primary"></span> Predicted Score</div>
+<div class="flex items-center gap-1.5"><span class="w-3 h-1 bg-white"></span> Actual Outcome</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="md:col-span-3 h-48 relative">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 600 150">
+<path d="M0 30 L50 35 L100 25 L150 40 L200 38 L250 45 L300 55 L350 70 L400 75 L450 80 L500 85 L600 90" fill="none" stroke="#13ecec" stroke-width="2"></path>
+<path d="M0 35 L50 32 L100 28 L150 38 L200 42 L250 50 L300 65 L350 85 L400 95 L450 110 L500 120 L600 135" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="2"></path>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+<div class="w-[1px] h-full bg-alert-red/20 ml-[30%] relative">
+<div class="absolute top-0 left-1/2 -translate-x-1/2 bg-alert-red text-white text-[9px] px-1 py-0.5 rounded uppercase">Divergence Detected</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col justify-center border-l border-[#283939] pl-6 space-y-4">
+<div>
+<p class="text-[10px] text-[#9db9b9] uppercase">RMSE Delta</p>
+<p class="text-xl font-mono font-bold text-alert-red">+0.142</p>
+</div>
+<div>
+<p class="text-[10px] text-[#9db9b9] uppercase">Confidence</p>
+<p class="text-xl font-mono font-bold text-white">82.4%</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Sidebar: Retraining Queue -->
+<div class="space-y-6">
+<div class="bg-card-dark border border-[#283939] rounded-xl flex flex-col h-full min-h-[500px]">
+<div class="p-6 border-b border-[#283939]">
+<h3 class="text-lg font-bold text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">dynamic_feed</span>
+                                Retraining Queue
+                            </h3>
+</div>
+<div class="flex-1 p-4 space-y-4 overflow-y-auto custom-scrollbar">
+<!-- Job 1 -->
+<div class="bg-white/5 border border-white/10 rounded-lg p-4">
+<div class="flex justify-between mb-2">
+<span class="text-xs font-bold text-primary">MODEL ALPHA V2.4</span>
+<span class="text-[10px] font-mono text-[#9db9b9]">88%</span>
+</div>
+<div class="w-full h-1.5 bg-[#1a2e2e] rounded-full overflow-hidden mb-3">
+<div class="h-full bg-primary" style="width: 88%"></div>
+</div>
+<div class="flex items-center gap-2 text-[10px] text-[#9db9b9]">
+<span class="material-symbols-outlined text-sm text-primary">sync</span>
+                                    Validating Feature Weights...
+                                </div>
+</div>
+<!-- Job 2 -->
+<div class="bg-white/5 border border-white/10 rounded-lg p-4 opacity-70">
+<div class="flex justify-between mb-2">
+<span class="text-xs font-bold text-white uppercase">Denial Predictor v1.9</span>
+<span class="text-[10px] font-mono text-[#9db9b9]">WAITING</span>
+</div>
+<div class="w-full h-1.5 bg-[#1a2e2e] rounded-full overflow-hidden mb-3">
+<div class="h-full bg-slate-700" style="width: 0%"></div>
+</div>
+<div class="flex items-center gap-2 text-[10px] text-[#9db9b9]">
+<span class="material-symbols-outlined text-sm">schedule</span>
+                                    Scheduled for 02:00 UTC
+                                </div>
+</div>
+<!-- Job 3 -->
+<div class="bg-white/5 border border-white/10 rounded-lg p-4 opacity-70">
+<div class="flex justify-between mb-2">
+<span class="text-xs font-bold text-white uppercase">Revenue Forecaster Patch</span>
+<span class="text-[10px] font-mono text-[#9db9b9]">QUEUED</span>
+</div>
+<div class="flex items-center gap-2 text-[10px] text-[#9db9b9] mt-4">
+<span class="material-symbols-outlined text-sm">priority_high</span>
+                                    Manual review required
+                                </div>
+<button class="mt-3 w-full py-1.5 bg-white/10 rounded text-[10px] font-bold hover:bg-white/20 transition-colors">REVIEW DATASET</button>
+</div>
+</div>
+<div class="p-4 bg-primary/5 border-t border-[#283939]">
+<p class="text-[10px] text-[#9db9b9] text-center mb-3">Worker Nodes Active: 14/16</p>
+<button class="w-full py-2 bg-[#283939] text-white rounded font-bold text-sm border border-white/5 hover:border-primary/50 transition-all">MANAGE PIPELINES</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Feature Importance Bar Chart -->
+<div class="bg-card-dark border border-[#283939] rounded-xl p-6">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h3 class="text-lg font-bold text-white">Current Feature Importance</h3>
+<p class="text-sm text-[#9db9b9]">Top drivers influencing model decisions in last 24h</p>
+</div>
+<select class="bg-[#1a2e2e] border-none text-[11px] font-bold text-white rounded cursor-pointer ring-1 ring-white/10 focus:ring-primary">
+<option>All Models</option>
+<option>Denial Predictor</option>
+<option>Coding Agent</option>
+</select>
+</div>
+<div class="space-y-4">
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-mono">
+<span class="text-white">Payer ID (Eligibility)</span>
+<span class="text-primary">0.342</span>
+</div>
+<div class="w-full h-3 bg-[#1a2e2e] rounded-sm overflow-hidden">
+<div class="h-full bg-primary neon-glow" style="width: 82%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-mono">
+<span class="text-white">Total Claim Amount</span>
+<span class="text-primary">0.211</span>
+</div>
+<div class="w-full h-3 bg-[#1a2e2e] rounded-sm overflow-hidden">
+<div class="h-full bg-primary/80" style="width: 64%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-mono">
+<span class="text-white">ICD-10 Code Complexity</span>
+<span class="text-primary">0.188</span>
+</div>
+<div class="w-full h-3 bg-[#1a2e2e] rounded-sm overflow-hidden">
+<div class="h-full bg-primary/60" style="width: 52%"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-[11px] font-mono">
+<span class="text-white">Facility Provider Rating</span>
+<span class="text-primary">0.094</span>
+</div>
+<div class="w-full h-3 bg-[#1a2e2e] rounded-sm overflow-hidden">
+<div class="h-full bg-primary/40" style="width: 28%"></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer Stats Bar -->
+<footer class="bg-card-dark border-t border-[#283939] px-6 py-2 flex items-center justify-between">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-[10px] text-[#9db9b9] font-mono">NODE_HEALTH: 100%</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-[10px] text-[#9db9b9] font-mono">ETL_PIPELINE: ACTIVE</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-alert-red"></span>
+<span class="text-[10px] text-alert-red font-mono font-bold">ALERTS: 2 UNRESOLVED</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-[10px] text-[#9db9b9] font-mono tracking-tighter">GPU_UTIL: 42% // RAM: 64.2GB / 128GB</span>
+<div class="h-4 w-[1px] bg-[#283939]"></div>
+<span class="text-[10px] text-[#9db9b9] font-mono">v2.4.0-Alpha.12</span>
+</div>
+</footer>
+</body></html>

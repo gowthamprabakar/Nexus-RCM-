@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Feature Importance Explorer - RCM AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ecec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#0a1111",
+                        "card-dark": "#112020",
+                        "alert-red": "#ff4d4d",
+                        "shap-pos": "#ff0051",
+                        "shap-neg": "#008bfb",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body { font-family: 'Space Grotesk', sans-serif; }
+        .mono-text { font-family: 'JetBrains Mono', monospace; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1a2e2e; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #13ecec; border-radius: 10px; }
+        .neon-glow { box-shadow: 0 0 15px rgba(19, 236, 236, 0.15); }
+        .matrix-cell { transition: all 0.2s; }
+        .matrix-cell:hover { filter: brightness(1.5); outline: 1px solid #13ecec; z-index: 10; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col overflow-hidden">
+<header class="border-b border-[#283939] bg-background-light dark:bg-background-dark px-6 py-3 flex items-center justify-between sticky top-0 z-50 shrink-0">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3">
+<div class="size-8 bg-primary rounded flex items-center justify-center text-background-dark">
+<span class="material-symbols-outlined font-bold">query_stats</span>
+</div>
+<h1 class="text-xl font-bold tracking-tight uppercase">RCM <span class="text-primary">Explain</span></h1>
+</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-slate-500 dark:text-[#9db9b9] text-sm font-medium hover:text-white transition-colors" href="#">Dashboard</a>
+<a class="text-primary text-sm font-semibold border-b-2 border-primary pb-1" href="#">Explainability</a>
+<a class="text-slate-500 dark:text-[#9db9b9] text-sm font-medium hover:text-white transition-colors" href="#">Drift Logs</a>
+<a class="text-slate-500 dark:text-[#9db9b9] text-sm font-medium hover:text-white transition-colors" href="#">Registry</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-card-dark border border-[#283939] rounded px-3 py-1.5">
+<span class="text-[10px] text-[#9db9b9] uppercase font-bold">Active Model:</span>
+<select class="bg-transparent border-none text-xs font-mono text-primary p-0 focus:ring-0 cursor-pointer">
+<option>Denial Predictor v2.4</option>
+<option>Coding Agent v1.9</option>
+<option>Revenue Forecaster</option>
+</select>
+</div>
+<div class="h-8 w-[1px] bg-[#283939] mx-2"></div>
+<div class="flex items-center gap-3">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border border-primary/50" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBy6-Xd4bKYuePwQVMwJDMVZTi6jCwpEM6zzjDgIarp0TE4Hi6RSWixdL7e0vStbpENpeAbCN1yfdFeYfbKj5TS-idtFuZyKtHXpisxBDyFHcCNdpNtqrql-PE_xvgE_LnykZvle_Kfw5CpiEeVI8AydUyngPdr3ZID5rLGBHiBFmTbzTniBgKxFss6Rxm0MyTXHYImgx8FdT9ucmoscWzkyotMZrZz0bp4B91f1_675gPWLgtt-9ZD7UDC0BNgNXCBoBhiLZj0Ed9_");'></div>
+<span class="text-sm font-medium hidden sm:inline">Admin_DS_01</span>
+</div>
+</div>
+</header>
+<main class="flex-1 flex overflow-hidden">
+<aside class="w-80 border-r border-[#283939] flex flex-col bg-background-light dark:bg-background-dark shrink-0 overflow-hidden">
+<div class="p-4 border-b border-[#283939]">
+<h2 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wider">
+<span class="material-symbols-outlined text-primary text-lg">grid_view</span>
+                Feature Interaction
+            </h2>
+<p class="text-[10px] text-[#9db9b9] mt-1 uppercase font-mono">Correlation Matrix (Pearson)</p>
+</div>
+<div class="flex-1 overflow-auto custom-scrollbar p-4">
+<div class="relative">
+<div class="grid grid-cols-6 gap-1 mb-1 ml-12">
+<span class="text-[8px] text-[#9db9b9] rotate-45 origin-bottom-left whitespace-nowrap">Payer ID</span>
+<span class="text-[8px] text-[#9db9b9] rotate-45 origin-bottom-left whitespace-nowrap">ICD-10</span>
+<span class="text-[8px] text-[#9db9b9] rotate-45 origin-bottom-left whitespace-nowrap">Amount</span>
+<span class="text-[8px] text-[#9db9b9] rotate-45 origin-bottom-left whitespace-nowrap">Age</span>
+<span class="text-[8px] text-[#9db9b9] rotate-45 origin-bottom-left whitespace-nowrap">Prov ID</span>
+<span class="text-[8px] text-[#9db9b9] rotate-45 origin-bottom-left whitespace-nowrap">Zip</span>
+</div>
+<div class="space-y-1">
+<div class="flex gap-1 items-center">
+<span class="w-12 text-[8px] text-[#9db9b9] text-right truncate">Payer ID</span>
+<div class="flex-1 grid grid-cols-6 gap-1">
+<div class="aspect-square bg-primary/100 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/40 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/10 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/20 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/5 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/10 rounded-sm matrix-cell"></div>
+</div>
+</div>
+<div class="flex gap-1 items-center">
+<span class="w-12 text-[8px] text-[#9db9b9] text-right truncate">ICD-10</span>
+<div class="flex-1 grid grid-cols-6 gap-1">
+<div class="aspect-square bg-primary/40 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/100 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/60 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/10 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/40 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/20 rounded-sm matrix-cell"></div>
+</div>
+</div>
+<div class="flex gap-1 items-center">
+<span class="w-12 text-[8px] text-[#9db9b9] text-right truncate">Amount</span>
+<div class="flex-1 grid grid-cols-6 gap-1">
+<div class="aspect-square bg-primary/10 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/60 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/100 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/30 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/10 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/5 rounded-sm matrix-cell"></div>
+</div>
+</div>
+<div class="flex gap-1 items-center">
+<span class="w-12 text-[8px] text-[#9db9b9] text-right truncate">Age</span>
+<div class="flex-1 grid grid-cols-6 gap-1">
+<div class="aspect-square bg-primary/20 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/10 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/30 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/100 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/10 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/40 rounded-sm matrix-cell"></div>
+</div>
+</div>
+<div class="flex gap-1 items-center">
+<span class="w-12 text-[8px] text-[#9db9b9] text-right truncate">Prov ID</span>
+<div class="flex-1 grid grid-cols-6 gap-1">
+<div class="aspect-square bg-primary/5 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/40 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/10 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/10 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/100 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/30 rounded-sm matrix-cell"></div>
+</div>
+</div>
+<div class="flex gap-1 items-center">
+<span class="w-12 text-[8px] text-[#9db9b9] text-right truncate">Zip</span>
+<div class="flex-1 grid grid-cols-6 gap-1">
+<div class="aspect-square bg-primary/10 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/20 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/5 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/40 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/30 rounded-sm matrix-cell"></div>
+<div class="aspect-square bg-primary/100 rounded-sm matrix-cell"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-8 space-y-4">
+<h3 class="text-[10px] font-bold text-white uppercase tracking-widest border-b border-[#283939] pb-2">Cluster Insights</h3>
+<div class="bg-[#112020] rounded p-3 border border-[#283939]">
+<p class="text-[11px] text-slate-300 leading-relaxed italic">"Payer ID and ICD-10 Complexity show high non-linear interaction in denial clusters for region NE-04."</p>
+</div>
+</div>
+</div>
+</aside>
+<section class="flex-1 flex flex-col overflow-hidden bg-background-dark/50">
+<div class="p-6 border-b border-[#283939] flex justify-between items-center">
+<div>
+<h2 class="text-2xl font-black text-white tracking-tight uppercase">Advanced Feature Importance</h2>
+<p class="text-[#9db9b9] font-mono text-sm mt-1">SHAP Kernel Explainer // Cohort: All Claims (Q4-2023)</p>
+</div>
+<div class="flex gap-3">
+<button class="bg-[#283939] text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-white/10 transition-all border border-white/5 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">filter_alt</span> Refine Cohort
+                </button>
+<button class="bg-primary text-background-dark font-bold text-xs px-4 py-1.5 rounded-lg flex items-center gap-2 shadow-lg shadow-primary/10">
+<span class="material-symbols-outlined text-sm">download</span> Export SHAP Data
+                </button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-6">
+<div class="bg-card-dark border border-[#283939] rounded-xl p-8 relative min-h-[500px]">
+<div class="flex justify-between items-center mb-10">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-shap-neg"></span>
+<span class="text-[10px] font-mono text-[#9db9b9]">Decreases Probability</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-3 h-3 rounded-full bg-shap-pos"></span>
+<span class="text-[10px] font-mono text-[#9db9b9]">Increases Probability</span>
+</div>
+</div>
+<div class="text-[10px] font-mono text-[#9db9b9] uppercase">Feature Value: <span class="text-blue-400">Low</span> <span class="inline-block w-20 h-1.5 bg-gradient-to-r from-blue-400 to-pink-500 rounded-full mx-2"></span> <span class="text-pink-500">High</span></div>
+</div>
+<div class="space-y-8 relative">
+<div class="relative group">
+<div class="flex items-center gap-4 mb-2">
+<span class="w-32 text-xs font-mono text-white text-right truncate">Payer ID</span>
+<div class="flex-1 relative h-6">
+<div class="absolute top-1/2 w-full h-[1px] bg-[#283939]"></div>
+<div class="absolute left-1/2 top-0 h-full flex items-center gap-0.5">
+<div class="size-2 rounded-full bg-shap-pos/60 -ml-1"></div>
+<div class="size-2 rounded-full bg-shap-pos/80 -ml-2"></div>
+<div class="size-2 rounded-full bg-shap-pos -ml-1"></div>
+<div class="size-2 rounded-full bg-shap-pos/70 ml-2"></div>
+<div class="size-2 rounded-full bg-shap-pos/90 ml-4"></div>
+<div class="size-2 rounded-full bg-shap-pos ml-6"></div>
+<div class="size-2 rounded-full bg-shap-pos/40 ml-10"></div>
+</div>
+<div class="absolute right-1/2 top-0 h-full flex items-center">
+<div class="size-2 rounded-full bg-shap-neg/40 mr-4"></div>
+<div class="size-2 rounded-full bg-shap-neg/80 mr-2"></div>
+<div class="size-2 rounded-full bg-shap-neg"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="relative group">
+<div class="flex items-center gap-4 mb-2">
+<span class="w-32 text-xs font-mono text-white text-right truncate">ICD-10 Complexity</span>
+<div class="flex-1 relative h-6">
+<div class="absolute top-1/2 w-full h-[1px] bg-[#283939]"></div>
+<div class="absolute left-1/2 top-0 h-full flex items-center">
+<div class="size-2 rounded-full bg-shap-pos/90 ml-2"></div>
+<div class="size-2 rounded-full bg-shap-pos ml-4"></div>
+<div class="size-2 rounded-full bg-shap-pos/60 ml-12"></div>
+<div class="size-2 rounded-full bg-shap-pos ml-14"></div>
+<div class="size-2 rounded-full bg-shap-pos ml-20"></div>
+</div>
+<div class="absolute right-1/2 top-0 h-full flex items-center">
+<div class="size-2 rounded-full bg-shap-neg/60 mr-2"></div>
+<div class="size-2 rounded-full bg-shap-neg mr-3"></div>
+<div class="size-2 rounded-full bg-shap-neg/80 mr-12"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="relative group">
+<div class="flex items-center gap-4 mb-2">
+<span class="w-32 text-xs font-mono text-white text-right truncate">Total Claim Amount</span>
+<div class="flex-1 relative h-6">
+<div class="absolute top-1/2 w-full h-[1px] bg-[#283939]"></div>
+<div class="absolute left-1/2 top-0 h-full flex items-center">
+<div class="size-2 rounded-full bg-shap-pos/40 ml-2"></div>
+<div class="size-2 rounded-full bg-shap-pos/60 ml-3"></div>
+</div>
+<div class="absolute right-1/2 top-0 h-full flex items-center">
+<div class="size-2 rounded-full bg-shap-neg ml-4"></div>
+<div class="size-2 rounded-full bg-shap-neg ml-6"></div>
+<div class="size-2 rounded-full bg-shap-neg/80 ml-8"></div>
+<div class="size-2 rounded-full bg-shap-neg/40 ml-10"></div>
+<div class="size-2 rounded-full bg-shap-neg ml-16"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="relative group">
+<div class="flex items-center gap-4 mb-2">
+<span class="w-32 text-xs font-mono text-white text-right truncate">Patient Age</span>
+<div class="flex-1 relative h-6">
+<div class="absolute top-1/2 w-full h-[1px] bg-[#283939]"></div>
+<div class="absolute left-1/2 top-0 h-full flex items-center">
+<div class="size-2 rounded-full bg-shap-pos/30 ml-4"></div>
+<div class="size-2 rounded-full bg-shap-pos/80 ml-10"></div>
+</div>
+<div class="absolute right-1/2 top-0 h-full flex items-center">
+<div class="size-2 rounded-full bg-shap-neg ml-2"></div>
+<div class="size-2 rounded-full bg-shap-neg/60 ml-5"></div>
+<div class="size-2 rounded-full bg-shap-neg ml-12"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="relative group">
+<div class="flex items-center gap-4 mb-2">
+<span class="w-32 text-xs font-mono text-white text-right truncate">Service Line</span>
+<div class="flex-1 relative h-6">
+<div class="absolute top-1/2 w-full h-[1px] bg-[#283939]"></div>
+<div class="absolute left-1/2 top-0 h-full flex items-center">
+<div class="size-2 rounded-full bg-shap-pos/80 ml-4"></div>
+<div class="size-2 rounded-full bg-shap-pos ml-6"></div>
+</div>
+<div class="absolute right-1/2 top-0 h-full flex items-center">
+<div class="size-2 rounded-full bg-shap-neg ml-2"></div>
+<div class="size-2 rounded-full bg-shap-neg/40 ml-8"></div>
+<div class="size-2 rounded-full bg-shap-neg ml-14"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="absolute top-0 bottom-0 left-[calc(8rem+1rem+50%)] w-[1px] bg-primary/20 pointer-events-none">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-mono text-primary bg-background-dark px-1">BASE_VALUE</div>
+</div>
+</div>
+<div class="mt-12 flex items-center justify-between pt-6 border-t border-[#283939]">
+<div class="text-[10px] text-[#9db9b9] max-w-md">
+                        The SHAP value summary shows how each feature contributes to the model's prediction. Each dot represents a claim from the dataset.
+                    </div>
+<div class="flex items-center gap-4 text-[11px] font-mono">
+<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-xs">info</span> Convergence: 0.998</div>
+<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-xs">check_circle</span> Validated</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<aside class="w-80 border-l border-[#283939] flex flex-col bg-background-light dark:bg-background-dark shrink-0 overflow-hidden">
+<div class="p-6 border-b border-[#283939]">
+<h3 class="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-wider">
+<span class="material-symbols-outlined text-primary text-lg">auto_awesome</span>
+                Top Influencers
+            </h3>
+<p class="text-[10px] text-[#9db9b9] mt-1 font-mono uppercase">AI-Generated Explanations</p>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+<div class="bg-white/5 border border-white/10 rounded-lg p-4 neon-glow">
+<div class="flex items-center justify-between mb-3">
+<span class="text-[10px] font-bold text-primary uppercase bg-primary/10 px-2 py-0.5 rounded">Rising Dominance</span>
+<span class="text-[10px] font-mono text-[#9db9b9]">+12.4%</span>
+</div>
+<h4 class="text-xs font-bold text-white mb-2">ICD-10 Complexity</h4>
+<p class="text-[11px] text-slate-400 leading-relaxed">
+                    Higher weight detected in recent denials. The model is increasingly sensitive to secondary diagnostic codes in neurosurgery claims, likely due to updated payer adjudication logic in Q3.
+                </p>
+</div>
+<div class="bg-white/5 border border-white/10 rounded-lg p-4">
+<div class="flex items-center justify-between mb-3">
+<span class="text-[10px] font-bold text-slate-400 uppercase bg-white/5 px-2 py-0.5 rounded">Steady Bias</span>
+<span class="text-[10px] font-mono text-[#9db9b9]">Stable</span>
+</div>
+<h4 class="text-xs font-bold text-white mb-2">Payer ID (BlueShield)</h4>
+<p class="text-[11px] text-slate-400 leading-relaxed">
+                    Remains the strongest predictor for eligibility-based denials. Feature importance is consistently linked to Payer-specific policy revisions.
+                </p>
+</div>
+<div class="bg-white/5 border border-white/10 rounded-lg p-4 opacity-70">
+<div class="flex items-center justify-between mb-3">
+<span class="text-[10px] font-bold text-alert-red uppercase bg-alert-red/10 px-2 py-0.5 rounded">Fading Weight</span>
+<span class="text-[10px] font-mono text-alert-red">-5.2%</span>
+</div>
+<h4 class="text-xs font-bold text-white mb-2">Facility Provider Rating</h4>
+<p class="text-[11px] text-slate-400 leading-relaxed">
+                    Provider reputation is losing predictive power as the model shifts toward clinical documentation integrity (CDI) features for denial probability.
+                </p>
+</div>
+<div class="pt-4 mt-4 border-t border-[#283939]">
+<button class="w-full py-2 bg-[#283939] text-white rounded font-bold text-[10px] uppercase border border-white/5 hover:bg-primary hover:text-background-dark transition-all">
+                    Request Deep Analysis
+                </button>
+</div>
+</div>
+</aside>
+</main>
+<footer class="bg-card-dark border-t border-[#283939] px-6 py-2 flex items-center justify-between shrink-0">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-[10px] text-[#9db9b9] font-mono">EXPLAINER_SERVICE: ACTIVE</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="text-[10px] text-[#9db9b9] font-mono">COHORT_SAMPLING: 10,000 OBS</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-[10px] text-[#9db9b9] font-mono tracking-tighter">ENGINE: XGBOOST v1.7.1 + SHAP 0.42.1</span>
+<div class="h-4 w-[1px] bg-[#283939]"></div>
+<span class="text-[10px] text-[#9db9b9] font-mono">v2.4.0-Exp.5</span>
+</div>
+</footer>
+
+</body></html>

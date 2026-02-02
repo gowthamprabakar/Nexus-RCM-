@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin &amp; Role-Based Access Control | RCM Platform</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Manrope', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-[#111318] dark:text-white transition-colors duration-200">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-64 border-r border-solid border-[#f0f2f4] dark:border-slate-800 bg-white dark:bg-background-dark flex flex-col h-full">
+<div class="p-6 flex flex-col gap-8 h-full">
+<div class="flex gap-3 items-center">
+<div class="bg-primary rounded-lg p-1.5 text-white">
+<span class="material-symbols-outlined text-2xl">shield_person</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-[#111318] dark:text-white text-sm font-bold leading-tight">RCM Admin</h1>
+<p class="text-[#616f89] text-xs font-normal">Enterprise Control</p>
+</div>
+</div>
+<nav class="flex flex-col gap-1 flex-1">
+<div class="flex items-center gap-3 px-3 py-2 text-[#616f89] dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<p class="text-sm font-medium">Dashboard</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-[#616f89] dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer">
+<span class="material-symbols-outlined text-[20px]">analytics</span>
+<p class="text-sm font-medium">Analytics</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-[#616f89] dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer">
+<span class="material-symbols-outlined text-[20px]">description</span>
+<p class="text-sm font-medium">Claims</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1">admin_panel_settings</span>
+<p class="text-sm font-bold">Access Control</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-[#616f89] dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer">
+<span class="material-symbols-outlined text-[20px]">group</span>
+<p class="text-sm font-medium">User Directory</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-[#616f89] dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer">
+<span class="material-symbols-outlined text-[20px]">lock</span>
+<p class="text-sm font-medium">Security Policies</p>
+</div>
+</nav>
+<div class="mt-auto pt-4 border-t border-gray-100 dark:border-slate-800 flex flex-col gap-4">
+<div class="flex items-center gap-3 px-3">
+<div class="size-8 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover" data-alt="User avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDbSUG9LlhYQ-DtZvAWkCH46O9s68DwPJQ5r5b3n7EwhsV5S1POI7uzF9Im5XNR-wxHFpwy1XOmanVzfPVdfGHsOFeAgY7ZOe5UgKp2BH1dWW33bKgoq7_1P3RPEqejtNqo-TVvDULi9nyccrPxxWrurc7EzQwVG4JcfU7s0nQXyyTEtbjfSb7Wz7aFVIe0D35a6wIS6D_wwm-RyMdrTyVb66EqJ0iF-R0Bv1Yy2oI1aHXzRS2F2YrT5NyWC5Zcthk30GU8_inoLvXb')"></div>
+<div class="overflow-hidden">
+<p class="text-xs font-bold truncate">Alex Morgan</p>
+<p class="text-[10px] text-[#616f89]">System Administrator</p>
+</div>
+</div>
+<button class="w-full bg-primary text-white py-2.5 rounded-lg text-xs font-bold tracking-wide">
+                        Add New Role
+                    </button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col overflow-hidden">
+<!-- Top Navbar -->
+<header class="flex items-center justify-between border-b border-solid border-[#f0f2f4] dark:border-slate-800 bg-white dark:bg-background-dark px-8 py-3 shrink-0">
+<div class="flex items-center gap-6">
+<h2 class="text-[#111318] dark:text-white text-base font-bold">Revenue Cycle Management</h2>
+<div class="h-4 w-px bg-[#f0f2f4] dark:bg-slate-800"></div>
+<div class="flex items-center gap-6">
+<a class="text-[#616f89] text-xs font-medium hover:text-primary transition-colors" href="#">Global Settings</a>
+<a class="text-[#616f89] text-xs font-medium hover:text-primary transition-colors" href="#">Audit Logs</a>
+<a class="text-[#111318] dark:text-white text-xs font-bold border-b-2 border-primary pb-1" href="#">Access Management</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="w-full pl-10 pr-4 py-1.5 bg-[#f0f2f4] dark:bg-slate-800 border-none rounded-lg text-sm placeholder:text-[#616f89] focus:ring-1 focus:ring-primary" placeholder="Search resources..." type="text"/>
+</div>
+<button class="bg-[#f0f2f4] dark:bg-slate-800 text-[#111318] dark:text-white px-4 py-1.5 rounded-lg text-xs font-bold">
+                        Export CSV
+                    </button>
+<button class="bg-primary text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-lg shadow-primary/20">
+                        Save Changes
+                    </button>
+</div>
+</header>
+<!-- Dashboard Content Scrollable Area -->
+<div class="flex-1 overflow-y-auto p-6 bg-background-light dark:bg-slate-900 custom-scrollbar">
+<!-- Page Heading -->
+<div class="mb-6">
+<div class="flex flex-wrap gap-1 text-[10px] font-bold text-primary uppercase tracking-widest mb-1">
+<span>System Admin</span>
+<span>/</span>
+<span class="text-slate-400">Access Control</span>
+</div>
+<div class="flex justify-between items-end">
+<div>
+<h1 class="text-2xl font-extrabold text-[#111318] dark:text-white leading-tight">System Admin &amp; Access Control</h1>
+<p class="text-[#616f89] text-sm mt-1">Manage role hierarchies, granular permissions, and real-time security status.</p>
+</div>
+<div class="flex gap-2">
+<span class="flex items-center gap-1.5 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-[11px] font-bold">
+<span class="size-1.5 bg-green-500 rounded-full"></span>
+                                System Operational
+                            </span>
+</div>
+</div>
+</div>
+<!-- Dashboard Grid -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Left: Role Hierarchy (3 cols) -->
+<div class="col-span-3 flex flex-col gap-6">
+<div class="bg-white dark:bg-background-dark rounded-xl border border-[#f0f2f4] dark:border-slate-800 shadow-sm overflow-hidden">
+<div class="p-4 border-b border-[#f0f2f4] dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
+<h3 class="text-sm font-bold">Role Hierarchy</h3>
+<span class="material-symbols-outlined text-slate-400 text-lg cursor-pointer">add_circle</span>
+</div>
+<div class="p-3">
+<ul class="flex flex-col gap-1 text-sm">
+<li class="p-2 flex items-center gap-2 text-primary font-bold bg-primary/5 rounded-lg border-l-2 border-primary">
+<span class="material-symbols-outlined text-lg">expand_more</span>
+<span class="material-symbols-outlined text-lg">account_balance</span>
+                                        CFO / Executive
+                                    </li>
+<li class="p-2 ml-4 flex items-center gap-2 text-[#616f89] dark:text-slate-400 hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+<span class="material-symbols-outlined text-lg">payments</span>
+                                        Billing Manager
+                                    </li>
+<li class="p-2 ml-8 flex items-center gap-2 text-[#616f89] dark:text-slate-400 hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-lg">person</span>
+                                        Billing Specialist
+                                    </li>
+<li class="p-2 ml-4 flex items-center gap-2 text-[#616f89] dark:text-slate-400 hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-lg">expand_more</span>
+<span class="material-symbols-outlined text-lg">smart_toy</span>
+                                        AI Supervisor
+                                    </li>
+<li class="p-2 ml-12 flex items-center gap-2 text-primary bg-primary/5 rounded-lg">
+<span class="material-symbols-outlined text-lg">robot_2</span>
+                                        AI Agent L1
+                                    </li>
+<li class="p-2 ml-4 flex items-center gap-2 text-[#616f89] dark:text-slate-400 hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+<span class="material-symbols-outlined text-lg">gavel</span>
+                                        Claims Auditor
+                                    </li>
+</ul>
+</div>
+</div>
+<!-- User Management Preview -->
+<div class="bg-white dark:bg-background-dark rounded-xl border border-[#f0f2f4] dark:border-slate-800 shadow-sm overflow-hidden flex-1">
+<div class="p-4 border-b border-[#f0f2f4] dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50">
+<h3 class="text-sm font-bold">Quick Search Users</h3>
+</div>
+<div class="p-4 space-y-4">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-xs text-primary">JD</div>
+<div>
+<p class="text-xs font-bold">Jane Doe</p>
+<p class="text-[10px] text-green-600 font-bold uppercase tracking-tighter">MFA Enabled</p>
+</div>
+</div>
+<div class="flex items-center gap-3 opacity-60">
+<div class="size-8 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-xs">RK</div>
+<div>
+<p class="text-xs font-bold">Robert King</p>
+<p class="text-[10px] text-amber-500 font-bold uppercase tracking-tighter">MFA Disabled</p>
+</div>
+</div>
+<button class="w-full border border-[#f0f2f4] dark:border-slate-700 py-2 rounded-lg text-xs font-bold text-[#616f89]">View All 42 Users</button>
+</div>
+</div>
+</div>
+<!-- Center: Permissions Matrix (6 cols) -->
+<div class="col-span-6">
+<div class="bg-white dark:bg-background-dark rounded-xl border border-[#f0f2f4] dark:border-slate-800 shadow-sm h-full overflow-hidden flex flex-col">
+<div class="p-4 border-b border-[#f0f2f4] dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 flex justify-between items-center">
+<div>
+<h3 class="text-sm font-bold uppercase tracking-wider text-primary">Granular Permissions Matrix</h3>
+<p class="text-[10px] text-[#616f89] font-medium">Configuring: CFO / Executive Role</p>
+</div>
+<div class="flex gap-2">
+<div class="flex items-center gap-1.5 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 px-2 py-1 rounded">
+<span class="material-symbols-outlined text-sm">filter_alt</span>
+<span class="text-[10px] font-bold">Filter Categories</span>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 bg-white dark:bg-background-dark z-10 border-b border-gray-100 dark:border-slate-800">
+<tr class="text-[10px] font-bold text-[#616f89] uppercase">
+<th class="px-6 py-3">Permission Node</th>
+<th class="px-4 py-3">View</th>
+<th class="px-4 py-3">Edit</th>
+<th class="px-4 py-3">Admin</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<!-- PHI Section -->
+<tr class="bg-gray-50/30 dark:bg-slate-800/20">
+<td class="px-6 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest" colspan="4">Data Privacy (PHI)</td>
+</tr>
+<tr class="border-b border-gray-50 dark:border-slate-800/50">
+<td class="px-6 py-3 font-medium text-xs">Patient Identifiable Info</td>
+<td class="px-4 py-3"><input checked="" class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+<td class="px-4 py-3"><input class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+<td class="px-4 py-3"><input class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+</tr>
+<tr class="border-b border-gray-50 dark:border-slate-800/50">
+<td class="px-6 py-3 font-medium text-xs">SSN / Insurance Details</td>
+<td class="px-4 py-3"><input checked="" class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+<td class="px-4 py-3"><input checked="" class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+<td class="px-4 py-3"><input class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+</tr>
+<!-- Revenue Section -->
+<tr class="bg-gray-50/30 dark:bg-slate-800/20">
+<td class="px-6 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest" colspan="4">Financial Operations</td>
+</tr>
+<tr class="border-b border-gray-50 dark:border-slate-800/50">
+<td class="px-6 py-3 font-medium text-xs">Edit Claims Records</td>
+<td class="px-4 py-3"><input checked="" class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+<td class="px-4 py-3"><input checked="" class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+<td class="px-4 py-3"><input class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+</tr>
+<tr class="border-b border-gray-50 dark:border-slate-800/50">
+<td class="px-6 py-3 font-medium text-xs">Revenue Forecasting</td>
+<td class="px-4 py-3"><input checked="" class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+<td class="px-4 py-3"><input checked="" class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+<td class="px-4 py-3"><input checked="" class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+</tr>
+<!-- AI Section -->
+<tr class="bg-gray-50/30 dark:bg-slate-800/20">
+<td class="px-6 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest" colspan="4">AI Engine Control</td>
+</tr>
+<tr class="border-b border-gray-50 dark:border-slate-800/50">
+<td class="px-6 py-3 font-medium text-xs">Override AI Suggestions</td>
+<td class="px-4 py-3"><input class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+<td class="px-4 py-3"><input class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+<td class="px-4 py-3"><input checked="" class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+</tr>
+<tr class="border-b border-gray-50 dark:border-slate-800/50">
+<td class="px-6 py-3 font-medium text-xs">Train Model with Data</td>
+<td class="px-4 py-3"><input class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+<td class="px-4 py-3"><input class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+<td class="px-4 py-3"><input class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+</tr>
+<!-- System Section -->
+<tr class="bg-gray-50/30 dark:bg-slate-800/20">
+<td class="px-6 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest" colspan="4">System Administration</td>
+</tr>
+<tr class="border-b border-gray-50 dark:border-slate-800/50">
+<td class="px-6 py-3 font-medium text-xs">Manage API Keys</td>
+<td class="px-4 py-3"><input class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+<td class="px-4 py-3"><input class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+<td class="px-4 py-3"><input checked="" class="rounded border-gray-300 text-primary focus:ring-primary h-4 w-4" type="checkbox"/></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right: Security Health (3 cols) -->
+<div class="col-span-3 flex flex-col gap-6">
+<div class="bg-white dark:bg-background-dark rounded-xl border border-[#f0f2f4] dark:border-slate-800 shadow-sm p-5">
+<h3 class="text-sm font-bold mb-4">Security Health</h3>
+<div class="flex flex-col items-center mb-6">
+<div class="relative flex items-center justify-center">
+<svg class="w-24 h-24 transform -rotate-90">
+<circle class="text-slate-100 dark:text-slate-800" cx="48" cy="48" fill="transparent" r="40" stroke="currentColor" stroke-width="8"></circle>
+<circle class="text-primary" cx="48" cy="48" fill="transparent" r="40" stroke="currentColor" stroke-dasharray="251.2" stroke-dashoffset="10" stroke-width="8"></circle>
+</svg>
+<div class="absolute flex flex-col items-center">
+<span class="text-xl font-black">98%</span>
+<span class="text-[8px] font-bold text-[#616f89] uppercase tracking-tighter">Compliant</span>
+</div>
+</div>
+<p class="text-xs font-bold mt-4 text-center">HIPAA &amp; SOC-2 Status</p>
+<p class="text-[10px] text-green-600 font-bold mt-1">✓ Full Compliance Verified</p>
+</div>
+<div class="space-y-4">
+<div class="p-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg">
+<div class="flex justify-between items-center mb-1">
+<p class="text-[10px] font-bold text-[#616f89] uppercase tracking-wider">Active Sessions</p>
+<span class="text-[10px] font-black text-primary">12 Active</span>
+</div>
+<div class="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[70%]"></div>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Real-time Alerts</h4>
+<div class="flex gap-3 p-2 border-l-2 border-amber-500 bg-amber-50 dark:bg-amber-900/10 rounded-r">
+<span class="material-symbols-outlined text-amber-500 text-lg">warning</span>
+<div class="flex-1">
+<p class="text-[10px] font-bold">New IP Login Detected</p>
+<p class="text-[9px] text-slate-500">User: RM-104 | 192.168.1.12</p>
+</div>
+</div>
+<div class="flex gap-3 p-2 border-l-2 border-green-500 bg-green-50 dark:bg-green-900/10 rounded-r">
+<span class="material-symbols-outlined text-green-500 text-lg">check_circle</span>
+<div class="flex-1">
+<p class="text-[10px] font-bold">MFA Policy Update</p>
+<p class="text-[9px] text-slate-500">Applied to 42 users successfully</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-background-dark rounded-xl border border-[#f0f2f4] dark:border-slate-800 shadow-sm p-5 flex flex-col gap-4">
+<h3 class="text-sm font-bold">Quick Actions</h3>
+<button class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors w-full text-left">
+<div class="size-8 rounded bg-primary/10 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-lg">key</span>
+</div>
+<div>
+<p class="text-xs font-bold">Reset API Keys</p>
+<p class="text-[9px] text-slate-500">Rotate all system keys</p>
+</div>
+</button>
+<button class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors w-full text-left">
+<div class="size-8 rounded bg-primary/10 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-lg">history</span>
+</div>
+<div>
+<p class="text-xs font-bold">View System Logs</p>
+<p class="text-[9px] text-slate-500">Access full audit trail</p>
+</div>
+</button>
+</div>
+</div>
+</div>
+<!-- Footer / Status Bar -->
+<div class="mt-8 flex justify-between items-center px-4 py-3 bg-white dark:bg-background-dark border border-gray-100 dark:border-slate-800 rounded-xl shadow-sm">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2">
+<span class="size-2 bg-green-500 rounded-full animate-pulse"></span>
+<span class="text-[10px] font-bold text-slate-500">SOC-2 TYPE II: ACTIVE</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="size-2 bg-primary rounded-full"></span>
+<span class="text-[10px] font-bold text-slate-500">PHI ENCRYPTION: AES-256</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<p class="text-[10px] font-medium text-slate-400">Last security sync: 2 minutes ago</p>
+<button class="text-[10px] font-bold text-primary underline">Run Manual Scan</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

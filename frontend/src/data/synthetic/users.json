@@ -1,0 +1,47 @@
+[
+    {
+        "id": "USR-101",
+        "name": "Alex Sterling",
+        "role": "CFO",
+        "email": "asterling@nexusrcm.com",
+        "department": "Executive",
+        "status": "Active",
+        "last_login": "2023-10-26T08:00:00Z"
+    },
+    {
+        "id": "USR-104",
+        "name": "David Miller",
+        "role": "Claims Manager",
+        "email": "dmiller@nexusrcm.com",
+        "department": "Revenue Cycle",
+        "status": "Active",
+        "last_login": "2023-10-26T08:15:00Z"
+    },
+    {
+        "id": "USR-105",
+        "name": "Elena Rodriguez",
+        "role": "Denial Specialist",
+        "email": "erodriguez@nexusrcm.com",
+        "department": "Denials",
+        "status": "Active",
+        "last_login": "2023-10-26T09:30:00Z"
+    },
+    {
+        "id": "USR-106",
+        "name": "Marcus Chen",
+        "role": "Coding Lead",
+        "email": "mchen@nexusrcm.com",
+        "department": "Coding",
+        "status": "Away",
+        "last_login": "2023-10-25T17:45:00Z"
+    },
+    {
+        "id": "USR-107",
+        "name": "Sarah Connor",
+        "role": "Patient Access",
+        "email": "sconnor@nexusrcm.com",
+        "department": "Front Office",
+        "status": "Active",
+        "last_login": "2023-10-26T07:50:00Z"
+    }
+]

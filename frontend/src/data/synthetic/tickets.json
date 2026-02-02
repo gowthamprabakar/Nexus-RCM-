@@ -1,0 +1,131 @@
+[
+    {
+        "id": "TKT-8842",
+        "title": "Aetna Denial Spike in New York Region",
+        "description": "Investigate sudden 15% increase in 'Duplicate Claim' denials for NY outpatient services.",
+        "priority": "Critical",
+        "status": "Open",
+        "assignee": {
+            "name": "David Miller",
+            "id": "USR-104",
+            "avatar": "https://ui-avatars.com/api/?name=David+Miller&background=0D8ABC&color=fff"
+        },
+        "source": "Payer Variance",
+        "recovery_potential": 142500,
+        "created_at": "2023-10-24T09:12:00Z",
+        "due_date": "2023-10-26T17:00:00Z",
+        "tags": [
+            "Denial",
+            "Aetna",
+            "NY-Region"
+        ],
+        "timeline": [
+            {
+                "id": 1,
+                "type": "system",
+                "author": "LIDA Intelligence",
+                "content": "Ticket automatically generated from NY Payer Variance alert. Priority set to Critical due to $142.5k revenue exposure.",
+                "time": "2023-10-24T09:12:00Z"
+            },
+            {
+                "id": 2,
+                "type": "user",
+                "author": "David Miller",
+                "content": "I've initiated the audit of the NY clearinghouse logs. @Marcus Chen, can you verify if the CO-18 codes are hitting the middleware correctly?",
+                "time": "2023-10-24T11:30:00Z"
+            },
+            {
+                "id": 3,
+                "type": "system",
+                "author": "Progress Verified",
+                "content": "Configuration error in Node-NY4 identified. Routing issue corrected for Aetna 835 response files.",
+                "time": "2023-10-25T14:45:00Z"
+            }
+        ]
+    },
+    {
+        "id": "TKT-8845",
+        "title": "Medicare Part B AR Aging Over 90 Days",
+        "description": "LIDA AI identified $420k in aging accounts that meet auto-appeal criteria.",
+        "priority": "High",
+        "status": "In Progress",
+        "assignee": {
+            "name": "Elena Rodriguez",
+            "id": "USR-105",
+            "avatar": "https://ui-avatars.com/api/?name=Elena+Rodriguez&background=6366f1&color=fff"
+        },
+        "source": "Predictive AR",
+        "recovery_potential": 420000,
+        "created_at": "2023-10-22T14:30:00Z",
+        "due_date": "2023-10-30T17:00:00Z",
+        "tags": [
+            "AR",
+            "Medicare",
+            "Auto-Appeal"
+        ],
+        "timeline": []
+    },
+    {
+        "id": "TKT-8850",
+        "title": "Update Charge Master for 2024 CPT Changes",
+        "description": "Review and implement new pricing for 12 cardiology codes effective Jan 1.",
+        "priority": "Medium",
+        "status": "Open",
+        "assignee": {
+            "name": "Marcus Chen",
+            "id": "USR-106",
+            "avatar": "https://ui-avatars.com/api/?name=Marcus+Chen&background=10b981&color=fff"
+        },
+        "source": "Compliance Update",
+        "recovery_potential": 0,
+        "created_at": "2023-10-20T10:00:00Z",
+        "due_date": "2023-11-15T17:00:00Z",
+        "tags": [
+            "Compliance",
+            "Coding"
+        ],
+        "timeline": []
+    },
+    {
+        "id": "TKT-8812",
+        "title": "Resolve Unposted Payments from UHC",
+        "description": "Batch #9921 downloaded but requires manual reconciliation due to formatting error.",
+        "priority": "High",
+        "status": "Resolved",
+        "assignee": {
+            "name": "David Miller",
+            "id": "USR-104",
+            "avatar": "https://ui-avatars.com/api/?name=David+Miller&background=0D8ABC&color=fff"
+        },
+        "source": "Integration Error",
+        "recovery_potential": 55000,
+        "created_at": "2023-10-18T08:45:00Z",
+        "due_date": "2023-10-19T17:00:00Z",
+        "tags": [
+            "Reconciliation",
+            "UHC"
+        ],
+        "timeline": []
+    },
+    {
+        "id": "TKT-8805",
+        "title": "Audit High-Cost Pharmacy Claims",
+        "description": "Outlier detection flagged 5 oncology claims exceeding $50k threshold.",
+        "priority": "Low",
+        "status": "Open",
+        "assignee": {
+            "name": "Elena Rodriguez",
+            "id": "USR-105",
+            "avatar": "https://ui-avatars.com/api/?name=Elena+Rodriguez&background=6366f1&color=fff"
+        },
+        "source": "Fraud Detection",
+        "recovery_potential": 250000,
+        "created_at": "2023-10-25T11:20:00Z",
+        "due_date": "2023-11-01T17:00:00Z",
+        "tags": [
+            "Audit",
+            "Pharmacy"
+        ],
+        "timeline": []
+    }
+]

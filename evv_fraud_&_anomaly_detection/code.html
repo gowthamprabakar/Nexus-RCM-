@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EVV Fraud &amp; Anomaly Detection | AI-Native RCM</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f20d0d",
+                        "background-light": "#f8f5f5",
+                        "background-dark": "#221010",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .heatmap-gradient {
+            background: radial-gradient(circle at 30% 50%, rgba(242, 13, 13, 0.4) 0%, transparent 60%),
+                        radial-gradient(circle at 70% 20%, rgba(242, 13, 13, 0.2) 0%, transparent 40%);
+        }
+        .node-link-bg {
+            background-image: radial-gradient(#333 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-slate-200 font-display min-h-screen flex flex-col">
+<!-- Header / Navigation -->
+<header class="border-b border-slate-200 dark:border-white/10 bg-white/50 dark:bg-black/20 backdrop-blur-md sticky top-0 z-50">
+<div class="px-6 py-4 flex items-center justify-between">
+<div class="flex items-center space-x-4">
+<div class="bg-primary p-1.5 rounded-lg">
+<span class="material-icons text-white text-2xl">security</span>
+</div>
+<div>
+<h1 class="text-xl font-bold tracking-tight text-slate-900 dark:text-white uppercase">EVV Fraud &amp; Anomaly Detection</h1>
+<div class="flex items-center text-xs text-slate-500 dark:text-slate-400">
+<span class="flex h-2 w-2 rounded-full bg-green-500 mr-2 animate-pulse"></span>
+                        AI Engine: Active • Live Surveillance 
+                    </div>
+</div>
+</div>
+<div class="flex items-center space-x-6">
+<div class="hidden md:flex items-center space-x-4 border-r border-white/10 pr-6 mr-6">
+<div class="text-right">
+<p class="text-[10px] uppercase text-slate-500 font-bold">Scanning Threshold</p>
+<p class="text-sm font-semibold text-primary">High Sensitivity (85%+)</p>
+</div>
+<div class="text-right border-l border-white/10 pl-4">
+<p class="text-[10px] uppercase text-slate-500 font-bold">Flagged Volume</p>
+<p class="text-sm font-semibold">1,248 Records</p>
+</div>
+</div>
+<div class="flex space-x-2">
+<button class="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 transition-colors">
+<span class="material-icons text-slate-500">settings</span>
+</button>
+<button class="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 transition-colors relative">
+<span class="material-icons text-slate-500">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 flex overflow-hidden">
+<!-- Left Sidebar (Navigation Icons) -->
+<nav class="w-16 flex flex-col items-center py-6 border-r border-slate-200 dark:border-white/10 bg-white/30 dark:bg-black/10">
+<div class="space-y-8 flex flex-col">
+<button class="p-2 text-primary rounded-xl bg-primary/10 border border-primary/20">
+<span class="material-icons">grid_view</span>
+</button>
+<button class="p-2 text-slate-400 hover:text-white transition-colors">
+<span class="material-icons">map</span>
+</button>
+<button class="p-2 text-slate-400 hover:text-white transition-colors">
+<span class="material-icons">group</span>
+</button>
+<button class="p-2 text-slate-400 hover:text-white transition-colors">
+<span class="material-icons">history</span>
+</button>
+<button class="p-2 text-slate-400 hover:text-white transition-colors mt-auto">
+<span class="material-icons">help_outline</span>
+</button>
+</div>
+</nav>
+<!-- Dashboard Content -->
+<div class="flex-1 overflow-y-auto p-6 space-y-6">
+<!-- Risk Heatmap (Top Section) -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 relative bg-white dark:bg-black/40 rounded-xl border border-slate-200 dark:border-white/10 overflow-hidden min-h-[300px]">
+<div class="absolute inset-0 heatmap-gradient opacity-60"></div>
+<div class="relative p-5">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-sm font-bold uppercase tracking-widest text-slate-500">National Risk Heatmap</h3>
+<div class="flex space-x-2 text-[10px] items-center">
+<span class="bg-primary/20 text-primary px-2 py-0.5 rounded border border-primary/30">CRITICAL HOTSPOTS</span>
+<span class="bg-slate-100 dark:bg-white/5 text-slate-400 px-2 py-0.5 rounded border border-white/10 uppercase">Regional Clusters</span>
+</div>
+</div>
+<div class="h-56 w-full flex items-center justify-center">
+<img class="w-full h-full object-cover opacity-40 mix-blend-overlay rounded-lg" data-alt="Abstract data heatmap showing clusters of activity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBiEYCQ8K7FJsDOywEfUnSK0b6hJnUc_4yW-GZltAQwC4ZHkW882H1tyKO1mf_Q-1OEH8SX-CZ8DzHY3yzyauXQ3rnz6ikZQckGzw9QglzZ9gOMnEEkGpoSNkHg6e2r_-4zV7X1FzjA09WU0h3f1X41m9DhNASJ1z9kIxIGAsmh-2LMXmHQpplxhwJ-YB6j5mROsHnPoDYhQnxv0M9UV0d5OA7uneZUcADXFmt1YnI5f5v7Qar5Gn01oJpj8QDVx-rKjBl-qqz7IBAL"/>
+<!-- Mock Data Points -->
+<div class="absolute top-1/2 left-1/3 w-8 h-8 bg-primary rounded-full blur-xl animate-pulse"></div>
+<div class="absolute top-1/4 right-1/4 w-12 h-12 bg-primary rounded-full blur-2xl opacity-50"></div>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-black/40 rounded-xl border border-slate-200 dark:border-white/10 p-5 flex flex-col">
+<h3 class="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4">Risk Distribution</h3>
+<div class="flex-1 flex flex-col justify-center space-y-4">
+<div class="space-y-1">
+<div class="flex justify-between text-xs mb-1">
+<span class="font-medium text-primary">CRITICAL FRAUD</span>
+<span class="text-slate-400">18%</span>
+</div>
+<div class="w-full h-2 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[18%]"></div>
+</div>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-xs mb-1">
+<span class="font-medium text-yellow-500">ANOMALOUS ACTIVITY</span>
+<span class="text-slate-400">42%</span>
+</div>
+<div class="w-full h-2 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-yellow-500 w-[42%]"></div>
+</div>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between text-xs mb-1">
+<span class="font-medium text-blue-500">VERIFIED CLEAN</span>
+<span class="text-slate-400">40%</span>
+</div>
+<div class="w-full h-2 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-blue-500 w-[40%]"></div>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-4 border-t border-white/10 text-center">
+<span class="text-2xl font-black text-white italic">0.92</span>
+<p class="text-[10px] text-slate-500 uppercase tracking-tighter">System Reliability Score</p>
+</div>
+</div>
+</section>
+<!-- Bottom Section: Table & Patterns -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Anomaly Detection Table -->
+<div class="lg:col-span-2 bg-white dark:bg-black/40 rounded-xl border border-slate-200 dark:border-white/10 flex flex-col">
+<div class="p-5 border-b border-slate-200 dark:border-white/10 flex justify-between items-center">
+<div class="flex items-center space-x-3">
+<span class="material-icons text-primary">warning</span>
+<h3 class="font-bold text-slate-900 dark:text-white">Active Anomalies Detected</h3>
+</div>
+<div class="flex space-x-2">
+<button class="text-xs px-3 py-1 bg-slate-100 dark:bg-white/5 rounded hover:bg-white/10 transition-colors">EXPORT CSV</button>
+<button class="text-xs px-3 py-1 bg-slate-100 dark:bg-white/5 rounded hover:bg-white/10 transition-colors">BULK ACTION</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left text-sm border-separate border-spacing-0">
+<thead>
+<tr class="text-[10px] uppercase text-slate-500 tracking-wider">
+<th class="px-5 py-3 border-b border-white/5 font-bold">Risk Score</th>
+<th class="px-5 py-3 border-b border-white/5 font-bold">Provider / Client</th>
+<th class="px-5 py-3 border-b border-white/5 font-bold">Detection Tag</th>
+<th class="px-5 py-3 border-b border-white/5 font-bold">Timestamp</th>
+<th class="px-5 py-3 border-b border-white/5 font-bold">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-white/5">
+<tr class="hover:bg-primary/5 cursor-pointer transition-colors group">
+<td class="px-5 py-4">
+<div class="flex items-center space-x-2">
+<div class="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center text-xs font-bold text-primary">98</div>
+</div>
+</td>
+<td class="px-5 py-4">
+<div class="font-semibold text-slate-900 dark:text-white">Marcus Sterling</div>
+<div class="text-xs text-slate-500 italic">to Martha W.</div>
+</td>
+<td class="px-5 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-500/20 text-primary border border-primary/20">
+<span class="material-icons text-xs mr-1">flight_takeoff</span> Impossible Travel
+                                        </span>
+</td>
+<td class="px-5 py-4 text-xs text-slate-500">2023-11-24 <br/> 14:22:01</td>
+<td class="px-5 py-4">
+<span class="text-[10px] font-bold text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded">PENDING AUDIT</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 cursor-pointer transition-colors border-l-4 border-primary bg-primary/5">
+<td class="px-5 py-4">
+<div class="flex items-center space-x-2">
+<div class="w-10 h-10 rounded-full border-2 border-primary flex items-center justify-center text-xs font-bold text-primary">94</div>
+</div>
+</td>
+<td class="px-5 py-4">
+<div class="font-semibold text-slate-900 dark:text-white">Elena Rodriguez</div>
+<div class="text-xs text-slate-500 italic">to Multiple Clients</div>
+</td>
+<td class="px-5 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 dark:bg-orange-500/20 text-orange-500 border border-orange-500/20">
+<span class="material-icons text-xs mr-1">visibility_off</span> Ghost Billing
+                                        </span>
+</td>
+<td class="px-5 py-4 text-xs text-slate-500">2023-11-24 <br/> 12:45:55</td>
+<td class="px-5 py-4">
+<span class="text-[10px] font-bold text-red-500 bg-red-500/10 px-2 py-1 rounded">UNDER INVESTIGATION</span>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 cursor-pointer transition-colors">
+<td class="px-5 py-4">
+<div class="flex items-center space-x-2">
+<div class="w-10 h-10 rounded-full border-2 border-yellow-500 flex items-center justify-center text-xs font-bold text-yellow-500">72</div>
+</div>
+</td>
+<td class="px-5 py-4">
+<div class="font-semibold text-slate-900 dark:text-white">James K. Hall</div>
+<div class="text-xs text-slate-500 italic">to Frank Miller</div>
+</td>
+<td class="px-5 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-white/10 text-slate-400 border border-white/5">
+<span class="material-icons text-xs mr-1">draw</span> Signature Forgery
+                                        </span>
+</td>
+<td class="px-5 py-4 text-xs text-slate-500">2023-11-24 <br/> 09:10:33</td>
+<td class="px-5 py-4">
+<span class="text-[10px] font-bold text-slate-400 bg-white/5 px-2 py-1 rounded">FLAGGED</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Pattern Analysis Node Chart -->
+<div class="bg-white dark:bg-black/40 rounded-xl border border-slate-200 dark:border-white/10 flex flex-col">
+<div class="p-5 border-b border-slate-200 dark:border-white/10">
+<h3 class="font-bold text-slate-900 dark:text-white">Provider-Client Collusion</h3>
+<p class="text-[10px] text-slate-500 uppercase font-bold mt-1">Network Interaction Diagram</p>
+</div>
+<div class="flex-1 node-link-bg relative flex items-center justify-center p-4">
+<!-- SVG Placeholder for Node-Link Diagram -->
+<svg class="w-full h-full" viewbox="0 0 300 300">
+<!-- Connections -->
+<line opacity="0.6" stroke="#f20d0d" stroke-width="2" x1="150" x2="80" y1="150" y2="80"></line>
+<line opacity="0.4" stroke="#f20d0d" stroke-width="2" x1="150" x2="220" y1="150" y2="80"></line>
+<line stroke="#333" stroke-width="1" x1="150" x2="150" y1="150" y2="230"></line>
+<line stroke="#f20d0d" stroke-dasharray="4" stroke-width="1" x1="80" x2="40" y1="80" y2="100"></line>
+<!-- Nodes -->
+<circle cx="150" cy="150" fill="#f20d0d" r="14"></circle>
+<circle cx="80" cy="80" fill="#444" r="10"></circle>
+<circle cx="220" cy="80" fill="#444" r="10"></circle>
+<circle cx="150" cy="230" fill="#444" r="10"></circle>
+<text fill="white" font-size="8" text-anchor="middle" x="150" y="175">SUSPECT PROVIDER</text>
+<text fill="#666" font-size="8" text-anchor="middle" x="80" y="65">CLIENT A</text>
+<text fill="#666" font-size="8" text-anchor="middle" x="220" y="65">CLIENT B</text>
+</svg>
+<div class="absolute bottom-4 right-4 flex flex-col space-y-1">
+<button class="w-8 h-8 bg-black/50 border border-white/10 rounded flex items-center justify-center">
+<span class="material-icons text-xs">add</span>
+</button>
+<button class="w-8 h-8 bg-black/50 border border-white/10 rounded flex items-center justify-center">
+<span class="material-icons text-xs">remove</span>
+</button>
+</div>
+</div>
+<div class="p-4 bg-primary/10 border-t border-primary/20">
+<div class="flex items-center text-xs text-primary font-bold">
+<span class="material-icons text-sm mr-2">hub</span>
+                            COLLUSION DETECTED: 4 NODES LINKED
+                        </div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Panel: AI Investigator Lab -->
+<aside class="w-96 border-l border-slate-200 dark:border-white/10 bg-white/40 dark:bg-black/40 backdrop-blur-md overflow-y-auto">
+<div class="p-6">
+<div class="flex items-center justify-between mb-8">
+<h2 class="text-lg font-bold text-slate-900 dark:text-white">Investigator Lab</h2>
+<span class="px-2 py-1 bg-primary text-[10px] text-white font-black rounded uppercase">Live Case</span>
+</div>
+<!-- Case Header -->
+<div class="mb-8">
+<div class="flex items-center space-x-3 mb-4">
+<div class="w-12 h-12 bg-slate-200 dark:bg-white/10 rounded-lg flex items-center justify-center">
+<span class="material-icons text-slate-500">fingerprint</span>
+</div>
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">Elena Rodriguez</h4>
+<p class="text-xs text-slate-500 tracking-wider font-medium">PROVIDER ID: 884-29-X</p>
+</div>
+</div>
+<div class="bg-red-500/10 border border-primary/20 p-4 rounded-xl">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[10px] font-bold text-primary uppercase">Fraud Confidence</span>
+<span class="text-lg font-black text-primary">94.2%</span>
+</div>
+<div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[94.2%]"></div>
+</div>
+<p class="text-[10px] text-slate-400 mt-2 leading-relaxed">
+                            AI detected overlapping GPS pings for Client 449 and Client 112 simultaneously at 14:02 EST. Physical distance between sites is 18 miles.
+                        </p>
+</div>
+</div>
+<!-- GPS Evidence -->
+<div class="space-y-4 mb-8">
+<h5 class="text-[10px] font-black uppercase text-slate-500 tracking-widest">GPS Evidence Log</h5>
+<div class="h-40 bg-slate-200 dark:bg-black rounded-lg border border-white/10 relative overflow-hidden">
+<img class="w-full h-full object-cover opacity-60" data-alt="Map view showing overlapping GPS coordinates" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCz9mIjSztXQRA-Q-h2f9JX80DEqWLTjv0MPwkmW8rPUXDU_jtS2_fUljHttDl4tNzH8jQgfFY1EpKaxbfAhyD6QNivch8F9wx3n-2PlInRPMpSga3ZXSP2RYQYDoLqntdBDd-TEVqO8mggYzqkCKyL39BUORJ0Hmz01oXB8568wIKz4zwrqUofXyeGEfg3cVtE5jM1F1P0_zQcIxOCiiQPjIpAOF0y8SWy5j6KAEIHoZW6fjsTU2X2PbY-UTsM5-_2t8iA6IzwzcrC"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+<div class="absolute bottom-2 left-2 right-2 flex justify-between">
+<span class="text-[10px] text-white font-mono bg-black/50 px-1">LAT: 40.7128</span>
+<span class="text-[10px] text-white font-mono bg-black/50 px-1">LNG: -74.0060</span>
+</div>
+<!-- Ping Markers -->
+<div class="absolute top-1/2 left-1/3 w-3 h-3 bg-primary rounded-full ring-4 ring-primary/30"></div>
+<div class="absolute top-1/4 right-1/2 w-3 h-3 bg-yellow-500 rounded-full ring-4 ring-yellow-500/30"></div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center p-2 rounded bg-white/5 border border-white/5">
+<span class="text-xs text-slate-400">Ping 01 (Reported)</span>
+<span class="text-xs font-mono text-white">14:02:11</span>
+</div>
+<div class="flex justify-between items-center p-2 rounded bg-white/5 border border-white/5">
+<span class="text-xs text-slate-400">Ping 02 (Concurrent)</span>
+<span class="text-xs font-mono text-primary font-bold">14:02:14</span>
+</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="space-y-3 pt-6 border-t border-slate-200 dark:border-white/10">
+<button class="w-full py-3 bg-primary hover:bg-red-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center space-x-2">
+<span class="material-icons text-sm">block</span>
+<span>SUSPEND BILLING</span>
+</button>
+<button class="w-full py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-lg border border-white/10 transition-colors flex items-center justify-center space-x-2">
+<span class="material-icons text-sm">assignment_turned_in</span>
+<span>FLAG FOR AUDIT</span>
+</button>
+<button class="w-full py-3 bg-transparent hover:bg-white/5 text-slate-500 font-bold rounded-lg transition-colors flex items-center justify-center space-x-2">
+<span class="material-icons text-sm">check_circle</span>
+<span>RELEASE CLAIM</span>
+</button>
+</div>
+</div>
+</aside>
+</main>
+<!-- Footer Stats -->
+<footer class="h-10 bg-slate-50 dark:bg-black border-t border-slate-200 dark:border-white/10 px-6 flex items-center justify-between">
+<div class="flex space-x-8">
+<div class="flex items-center space-x-2">
+<span class="text-[10px] text-slate-500 uppercase">System Latency:</span>
+<span class="text-[10px] text-green-500 font-bold">14ms</span>
+</div>
+<div class="flex items-center space-x-2">
+<span class="text-[10px] text-slate-500 uppercase">Models Loaded:</span>
+<span class="text-[10px] text-white font-bold">BERT-4, Custom-GPS v2.1</span>
+</div>
+</div>
+<div class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+            SECURE ACCESS SESSION • 128-BIT ENCRYPTION ACTIVE
+        </div>
+</footer>
+</body></html>

@@ -1,0 +1,356 @@
+[
+    {
+        "id": "CLM-89210",
+        "patient": {
+            "name": "Jameson, Robert",
+            "dob": "1982-12-04",
+            "id": "PT-4921"
+        },
+        "payer": {
+            "name": "UnitedHealth",
+            "id": "PAY-001",
+            "type": "Commercial"
+        },
+        "provider": {
+            "name": "Dr. Sarah Miller",
+            "npi": "1452890123"
+        },
+        "service_date": "2023-10-12",
+        "amount": 2450.00,
+        "status": "Denied",
+        "denial_code": "CO-16",
+        "denial_reason": "Claim/service lacks information or has submission/billing error(s)",
+        "risk_score": 85,
+        "ai_insight": "Mismatched DOB in Eligibility Check vs. Claim Data",
+        "aging_days": 14,
+        "cpt_codes": [
+            "99214",
+            "73030"
+        ],
+        "facility": "Metropolitan General"
+    },
+    {
+        "id": "CLM-89215",
+        "patient": {
+            "name": "Chen, Linda",
+            "dob": "1975-05-22",
+            "id": "PT-3321"
+        },
+        "payer": {
+            "name": "BlueCross BlueShield",
+            "id": "PAY-002",
+            "type": "Commercial"
+        },
+        "provider": {
+            "name": "Dr. Michael Ross",
+            "npi": "1892345678"
+        },
+        "service_date": "2023-10-10",
+        "amount": 840.00,
+        "status": "Denied",
+        "denial_code": "CO-50",
+        "denial_reason": "Medical Necessity",
+        "risk_score": 62,
+        "ai_insight": "Missing diagnosis code linkage for CPT 72148",
+        "aging_days": 16,
+        "cpt_codes": [
+            "72148"
+        ],
+        "facility": "Metropolitan General"
+    },
+    {
+        "id": "CLM-89221",
+        "patient": {
+            "name": "Miller, David",
+            "dob": "1960-09-14",
+            "id": "PT-1102"
+        },
+        "payer": {
+            "name": "Medicare",
+            "id": "PAY-003",
+            "type": "Government"
+        },
+        "provider": {
+            "name": "Dr. Emily Chen",
+            "npi": "1673459821"
+        },
+        "service_date": "2023-09-28",
+        "amount": 12100.50,
+        "status": "Pending",
+        "denial_code": null,
+        "denial_reason": null,
+        "risk_score": 12,
+        "ai_insight": "Duplicate Encounter Flag: Check Claim #CLM-89100",
+        "aging_days": 28,
+        "cpt_codes": [
+            "27447"
+        ],
+        "facility": "Northside Surgical Center"
+    },
+    {
+        "id": "CLM-90284",
+        "patient": {
+            "name": "Harrison, Thomas",
+            "dob": "1955-03-12",
+            "id": "PT-5592"
+        },
+        "payer": {
+            "name": "Medicare",
+            "id": "PAY-003",
+            "type": "Government"
+        },
+        "provider": {
+            "name": "Dr. Alan Grant",
+            "npi": "1332456789"
+        },
+        "service_date": "2023-07-15",
+        "amount": 42350.00,
+        "status": "Denied",
+        "denial_code": "CO-197",
+        "denial_reason": "Precertification/authorization/notification absent",
+        "risk_score": 92,
+        "ai_insight": "Pre-auth #PA-9921 was obtained but not linked in 837 file",
+        "aging_days": 94,
+        "cpt_codes": [
+            "22633",
+            "22840"
+        ],
+        "facility": "Metropolitan General",
+        "priority": "Critical"
+    },
+    {
+        "id": "CLM-88122",
+        "patient": {
+            "name": "Rodriguez, Sofia",
+            "dob": "1990-11-05",
+            "id": "PT-2219"
+        },
+        "payer": {
+            "name": "BlueCross BlueShield",
+            "id": "PAY-002",
+            "type": "Commercial"
+        },
+        "provider": {
+            "name": "Dr. Sarah Miller",
+            "npi": "1452890123"
+        },
+        "service_date": "2023-08-05",
+        "amount": 18120.50,
+        "status": "Denied",
+        "denial_code": "CO-252",
+        "denial_reason": "Documentation requested",
+        "risk_score": 74,
+        "ai_insight": "Operative Report requested attached in EHR but not sent",
+        "aging_days": 72,
+        "cpt_codes": [
+            "29881"
+        ],
+        "facility": "Northside Surgical Center",
+        "priority": "High"
+    },
+    {
+        "id": "CLM-91203",
+        "patient": {
+            "name": "Kowalski, Jan",
+            "dob": "1968-02-19",
+            "id": "PT-8821"
+        },
+        "payer": {
+            "name": "UnitedHealth",
+            "id": "PAY-001",
+            "type": "Commercial"
+        },
+        "provider": {
+            "name": "Dr. Michael Ross",
+            "npi": "1892345678"
+        },
+        "service_date": "2023-09-01",
+        "amount": 12400.00,
+        "status": "Submitted",
+        "denial_code": null,
+        "denial_reason": null,
+        "risk_score": 48,
+        "ai_insight": "Payer processing time exceeded average by 12 days",
+        "aging_days": 45,
+        "cpt_codes": [
+            "27130"
+        ],
+        "facility": "Metropolitan General"
+    },
+    {
+        "id": "CLM-90041",
+        "patient": {
+            "name": "Evans, Patricia",
+            "dob": "1948-07-30",
+            "id": "PT-7721"
+        },
+        "payer": {
+            "name": "Medicare",
+            "id": "PAY-003",
+            "type": "Government"
+        },
+        "provider": {
+            "name": "Dr. Emily Chen",
+            "npi": "1673459821"
+        },
+        "service_date": "2023-06-20",
+        "amount": 8900.00,
+        "status": "Denied",
+        "denial_code": "CO-18",
+        "denial_reason": "Duplicate claim/service",
+        "risk_score": 88,
+        "ai_insight": "Resubmission loop detected. Needs manual override.",
+        "aging_days": 112,
+        "cpt_codes": [
+            "99223",
+            "99291"
+        ],
+        "facility": "Metropolitan General",
+        "priority": "Critical"
+    },
+    {
+        "id": "CLM-85402",
+        "patient": {
+            "name": "Thompson, Gary",
+            "dob": "1985-01-15",
+            "id": "PT-3399"
+        },
+        "payer": {
+            "name": "Aetna",
+            "id": "PAY-004",
+            "type": "Commercial"
+        },
+        "provider": {
+            "name": "Dr. Alan Grant",
+            "npi": "1332456789"
+        },
+        "service_date": "2023-10-18",
+        "amount": 350.00,
+        "status": "Paid",
+        "denial_code": null,
+        "denial_reason": null,
+        "risk_score": 5,
+        "ai_insight": "Clean claim auto-adjudicated",
+        "aging_days": 8,
+        "cpt_codes": [
+            "99213"
+        ],
+        "facility": "Metropolitan General"
+    },
+    {
+        "id": "CLM-85405",
+        "patient": {
+            "name": "Wu, Wei",
+            "dob": "1992-04-10",
+            "id": "PT-4421"
+        },
+        "payer": {
+            "name": "Cigna",
+            "id": "PAY-005",
+            "type": "Commercial"
+        },
+        "provider": {
+            "name": "Dr. Sarah Miller",
+            "npi": "1452890123"
+        },
+        "service_date": "2023-10-15",
+        "amount": 1250.00,
+        "status": "Rejected",
+        "denial_code": "N/A",
+        "denial_reason": "Invalid Subscriber ID",
+        "risk_score": 95,
+        "ai_insight": "Eligibility API shows inactive coverage for DOS",
+        "aging_days": 11,
+        "cpt_codes": [
+            "70450"
+        ],
+        "facility": "Northside Surgical Center"
+    },
+    {
+        "id": "CLM-85500",
+        "patient": {
+            "name": "Davis, Angela",
+            "dob": "1980-08-21",
+            "id": "PT-5511"
+        },
+        "payer": {
+            "name": "Aetna",
+            "id": "PAY-004",
+            "type": "Commercial"
+        },
+        "provider": {
+            "name": "Dr. Michael Ross",
+            "npi": "1892345678"
+        },
+        "service_date": "2023-09-12",
+        "amount": 4500.00,
+        "status": "Denied",
+        "denial_code": "CO-22",
+        "denial_reason": "This care may be covered by another payer per coordination of benefits.",
+        "risk_score": 40,
+        "ai_insight": "Likely secondary payer issue. Check spouse coverage.",
+        "aging_days": 35,
+        "cpt_codes": [
+            "29805"
+        ],
+        "facility": "Metropolitan General"
+    },
+    {
+        "id": "CLM-85512",
+        "patient": {
+            "name": "Johnson, Steve",
+            "dob": "1959-12-01",
+            "id": "PT-6601"
+        },
+        "payer": {
+            "name": "Humana",
+            "id": "PAY-006",
+            "type": "Commercial"
+        },
+        "provider": {
+            "name": "Dr. Emily Chen",
+            "npi": "1673459821"
+        },
+        "service_date": "2023-08-28",
+        "amount": 15000.00,
+        "status": "Submitted",
+        "denial_code": null,
+        "denial_reason": null,
+        "risk_score": 25,
+        "ai_insight": "High dollar claim - monitoring for preemptive denial",
+        "aging_days": 50,
+        "cpt_codes": [
+            "27447"
+        ],
+        "facility": "Northside Surgical Center"
+    },
+    {
+        "id": "CLM-85530",
+        "patient": {
+            "name": "Brown, Lisa",
+            "dob": "1995-06-30",
+            "id": "PT-7788"
+        },
+        "payer": {
+            "name": "UnitedHealth",
+            "id": "PAY-001",
+            "type": "Commercial"
+        },
+        "provider": {
+            "name": "Dr. Alan Grant",
+            "npi": "1332456789"
+        },
+        "service_date": "2023-10-20",
+        "amount": 220.00,
+        "status": "Paid",
+        "denial_code": null,
+        "denial_reason": null,
+        "risk_score": 2,
+        "ai_insight": null,
+        "aging_days": 6,
+        "cpt_codes": [
+            "99213"
+        ],
+        "facility": "Metropolitan General"
+    }
+]

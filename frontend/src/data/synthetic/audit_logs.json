@@ -1,0 +1,43 @@
+[
+    {
+        "id": "AUD-9921",
+        "user": "David Miller",
+        "action": "Updated Claim #88212",
+        "details": "Changed status from 'Denied' to 'Resubmitted' after adding missing attachment.",
+        "ip_address": "192.168.1.42",
+        "timestamp": "2023-10-24T14:32:11Z"
+    },
+    {
+        "id": "AUD-9922",
+        "user": "System (LIDA)",
+        "action": "Auto-Appeal Generated",
+        "details": "Generated appeal draft for Claim #90284 using template 'Medical Necessity - BCBS'.",
+        "ip_address": "INTERNAL",
+        "timestamp": "2023-10-24T14:35:05Z"
+    },
+    {
+        "id": "AUD-9923",
+        "user": "Alex Sterling",
+        "action": "Exported Report",
+        "details": "Downloaded 'Q3 Financial Performance.pdf'",
+        "ip_address": "192.168.1.10",
+        "timestamp": "2023-10-24T15:00:22Z"
+    },
+    {
+        "id": "AUD-9924",
+        "user": "Elena Rodriguez",
+        "action": "Login Failed",
+        "details": "Incorrect password attempt (2nd retry).",
+        "ip_address": "10.0.0.55",
+        "timestamp": "2023-10-25T08:55:00Z",
+        "severity": "Warning"
+    },
+    {
+        "id": "AUD-9925",
+        "user": "Elena Rodriguez",
+        "action": "Login Success",
+        "details": "User authenticated via SSO.",
+        "ip_address": "10.0.0.55",
+        "timestamp": "2023-10-25T08:56:12Z"
+    }
+]

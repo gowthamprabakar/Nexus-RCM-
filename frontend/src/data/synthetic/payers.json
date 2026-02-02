@@ -1,0 +1,62 @@
+[
+    {
+        "id": "PAY-001",
+        "name": "UnitedHealth",
+        "type": "Commercial",
+        "avg_days_to_pay": 54,
+        "denial_rate": 14.2,
+        "contact_phone": "1-877-842-3210",
+        "portal_url": "https://www.uhcprovider.com",
+        "ar_balance": 840000
+    },
+    {
+        "id": "PAY-002",
+        "name": "BlueCross BlueShield",
+        "type": "Commercial",
+        "avg_days_to_pay": 48,
+        "denial_rate": 12.5,
+        "contact_phone": "1-800-258-3278",
+        "portal_url": "https://www.bcbs.com/provider",
+        "ar_balance": 1400000
+    },
+    {
+        "id": "PAY-003",
+        "name": "Medicare",
+        "type": "Government",
+        "avg_days_to_pay": 24,
+        "denial_rate": 8.1,
+        "contact_phone": "1-800-633-4227",
+        "portal_url": "https://www.cms.gov",
+        "ar_balance": 3800000
+    },
+    {
+        "id": "PAY-004",
+        "name": "Aetna",
+        "type": "Commercial",
+        "avg_days_to_pay": 32,
+        "denial_rate": 11.8,
+        "contact_phone": "1-888-632-3862",
+        "portal_url": "https://www.aetna.com/provider",
+        "ar_balance": 1200000
+    },
+    {
+        "id": "PAY-005",
+        "name": "Cigna",
+        "type": "Commercial",
+        "avg_days_to_pay": 61,
+        "denial_rate": 16.5,
+        "contact_phone": "1-800-882-4462",
+        "portal_url": "https://cignaforhcp.cigna.com",
+        "ar_balance": 920000
+    },
+    {
+        "id": "PAY-006",
+        "name": "Humana",
+        "type": "Commercial",
+        "avg_days_to_pay": 38,
+        "denial_rate": 10.9,
+        "contact_phone": "1-800-448-6262",
+        "portal_url": "https://www.humana.com/provider",
+        "ar_balance": 650000
+    }
+]

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>User Access &amp; Role Management | RCM AI Platform</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .slide-out-panel {
+            box-shadow: -10px 0 30px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen text-[#111318] overflow-hidden">
+<div class="flex h-screen overflow-hidden">
+<aside class="w-72 bg-white dark:bg-slate-900 border-r border-[#dbdfe6] flex flex-col justify-between p-4 shrink-0">
+<div class="flex flex-col gap-8">
+<div class="flex items-center gap-3 px-2">
+<div class="bg-primary size-10 rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-2xl">account_balance</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-[#111318] dark:text-white text-base font-bold leading-tight">RCM Global Hub</h1>
+<p class="text-[#616f89] text-xs font-normal">Enterprise AI Platform</p>
+</div>
+</div>
+<nav class="flex flex-col gap-1">
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-[#616f89]">apartment</span>
+<p class="text-[#111318] dark:text-slate-300 text-sm font-medium">Practice Profile</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-[#616f89]">rule</span>
+<p class="text-[#111318] dark:text-slate-300 text-sm font-medium">Billing Rules</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-[#616f89]">psychology</span>
+<p class="text-[#111318] dark:text-slate-300 text-sm font-medium">AI Configurations</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">group</span>
+<p class="text-sm font-semibold">User Management</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-[#616f89]">hub</span>
+<p class="text-[#111318] dark:text-slate-300 text-sm font-medium">Integrations &amp; API</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-[#616f89]">gavel</span>
+<p class="text-[#111318] dark:text-slate-300 text-sm font-medium">Compliance &amp; Audit</p>
+</div>
+</nav>
+</div>
+<div class="flex flex-col gap-1 border-t border-[#dbdfe6] pt-4">
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-[#616f89]">help</span>
+<p class="text-[#111318] dark:text-slate-300 text-sm font-medium">Support</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600">
+<span class="material-symbols-outlined">logout</span>
+<p class="text-sm font-medium">Sign Out</p>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col overflow-hidden relative">
+<header class="flex items-center justify-between sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-[#f0f2f4] px-8 py-3">
+<div class="flex items-center gap-8">
+<h2 class="text-[#111318] dark:text-white text-lg font-bold tracking-tight">System Settings</h2>
+<div class="relative w-72">
+<span class="material-symbols-outlined absolute left-3 top-2 text-[#616f89] text-xl">search</span>
+<input class="w-full h-10 pl-10 pr-4 bg-[#f0f2f4] dark:bg-slate-800 border-none rounded-lg focus:ring-2 focus:ring-primary text-sm" placeholder="Search users or permissions..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-primary text-white h-10 px-6 rounded-lg font-bold text-sm tracking-wide shadow-sm hover:bg-blue-700 transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">person_add</span>
+<span>Add User</span>
+</button>
+<div class="flex items-center gap-2 border-l border-[#f0f2f4] pl-4">
+<button class="size-10 flex items-center justify-center bg-[#f0f2f4] dark:bg-slate-800 rounded-lg text-[#111318] dark:text-slate-300">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 ml-2 border-2 border-primary/20" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB0FwEdWUaE0dZlZ7WckSQZ5bMzRNiCWx9IL2wnl4efSwgP6uR247k795YbiVF2znmNwGwoMkwG3YwMZoRmugEAacCf-Q1pDaVsg3sXq_ollURbpYx7ZPucyUBtYhHafYKNotyRC7ocjCTZ-8ogV7KiY_UKhKI3qktDsGJ4KqEj-rRJVWrt7v9Y4dSqriJsZ-uJR2Ebe3kL7rNpryiCs5SjPrbs2yDaSiCT_De_XHbZaiYqcvxu02ZWmL9BjdvWu-CCoS-xDtj2H8Rd");'></div>
+</div>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto px-8 py-6">
+<div class="flex items-center gap-2 text-sm mb-6">
+<a class="text-[#616f89] hover:text-primary transition-colors font-medium" href="#">Settings</a>
+<span class="material-symbols-outlined text-[#616f89] text-sm">chevron_right</span>
+<span class="text-[#111318] dark:text-slate-400 font-semibold">User Access &amp; Role Management</span>
+</div>
+<div class="max-w-7xl">
+<div class="flex flex-col gap-2 mb-8">
+<h1 class="text-[#111318] dark:text-white text-4xl font-black tracking-tight">User Management</h1>
+<p class="text-[#616f89] text-base max-w-2xl leading-relaxed">
+                        Control organizational access, define granular RBAC policies, and monitor administrative security logs for compliance.
+                    </p>
+</div>
+<div class="flex border-b border-[#dbdfe6] mb-6">
+<button class="px-6 py-3 border-b-2 border-primary text-primary font-bold text-sm">User Directory</button>
+<button class="px-6 py-3 border-b-2 border-transparent text-[#616f89] hover:text-[#111318] font-semibold text-sm">Permissions Matrix</button>
+<button class="px-6 py-3 border-b-2 border-transparent text-[#616f89] hover:text-[#111318] font-semibold text-sm">Custom Roles</button>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-[#dbdfe6] shadow-sm overflow-hidden mb-10">
+<div class="px-6 py-4 border-b border-[#dbdfe6] flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
+<h3 class="font-bold text-sm uppercase tracking-wider text-[#616f89]">Active Personnel</h3>
+<div class="flex gap-2">
+<button class="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold border border-[#dbdfe6] rounded-lg hover:bg-gray-100">
+<span class="material-symbols-outlined text-lg">filter_list</span> Filter
+                            </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-white dark:bg-slate-900 border-b border-[#dbdfe6]">
+<th class="px-6 py-4 text-sm font-semibold text-[#111318] dark:text-slate-300">Name</th>
+<th class="px-6 py-4 text-sm font-semibold text-[#111318] dark:text-slate-300">Role</th>
+<th class="px-6 py-4 text-sm font-semibold text-[#111318] dark:text-slate-300">MFA Status</th>
+<th class="px-6 py-4 text-sm font-semibold text-[#111318] dark:text-slate-300">Last Active</th>
+<th class="px-6 py-4 text-sm font-semibold text-[#111318] dark:text-slate-300"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#dbdfe6] dark:divide-slate-800">
+<tr class="hover:bg-blue-50/30 dark:hover:bg-slate-800/50 transition-colors cursor-pointer bg-blue-50/20">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">JD</div>
+<div class="flex flex-col">
+<span class="font-bold text-[#111318] dark:text-white">Jane Doe</span>
+<span class="text-xs text-[#616f89]">jane.doe@healthsystem.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[#111318] dark:text-slate-300 text-xs font-bold">Billing Admin</span>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+<span class="material-symbols-outlined text-xs mr-1">verified_user</span> Verified
+                                        </span>
+</td>
+<td class="px-6 py-5 text-[#616f89] text-sm">2 mins ago</td>
+<td class="px-6 py-5 text-right">
+<span class="material-symbols-outlined text-[#616f89]">chevron_right</span>
+</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xs">RS</div>
+<div class="flex flex-col">
+<span class="font-bold text-[#111318] dark:text-white">Robert Smith</span>
+<span class="text-xs text-[#616f89]">r.smith@clinics.org</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[#111318] dark:text-slate-300 text-xs font-bold">Claims Adjuster</span>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
+<span class="material-symbols-outlined text-xs mr-1">pending</span> Pending
+                                        </span>
+</td>
+<td class="px-6 py-5 text-[#616f89] text-sm">Oct 24, 2023</td>
+<td class="px-6 py-5 text-right">
+<span class="material-symbols-outlined text-[#616f89]">chevron_right</span>
+</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="size-9 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-xs">AM</div>
+<div class="flex flex-col">
+<span class="font-bold text-[#111318] dark:text-white">Alice Miller</span>
+<span class="text-xs text-[#616f89]">a.miller@partner-rcm.com</span>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[#111318] dark:text-slate-300 text-xs font-bold">Compliance Auditor</span>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+<span class="material-symbols-outlined text-xs mr-1">verified_user</span> Verified
+                                        </span>
+</td>
+<td class="px-6 py-5 text-[#616f89] text-sm">2 hours ago</td>
+<td class="px-6 py-5 text-right">
+<span class="material-symbols-outlined text-[#616f89]">chevron_right</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-[#dbdfe6] p-6 shadow-sm mb-8">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-lg bg-amber-50 dark:bg-slate-800 flex items-center justify-center text-amber-600">
+<span class="material-symbols-outlined">security</span>
+</div>
+<div>
+<h3 class="text-lg font-bold dark:text-white">Security Audit Log</h3>
+<p class="text-xs text-[#616f89]">Real-time tracking of administrative changes</p>
+</div>
+</div>
+<button class="text-xs font-bold text-primary hover:underline">View Full Audit Trail</button>
+</div>
+<div class="space-y-4">
+<div class="flex items-start gap-4 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg text-xs">
+<span class="text-[#616f89] font-mono shrink-0">14:22:10</span>
+<div class="flex-1">
+<span class="font-bold text-[#111318] dark:text-white">Admin (j.smith)</span> changed role for 
+                                <span class="font-bold">Jane Doe</span> from <span class="text-primary italic">Billing Staff</span> to <span class="text-primary italic">Billing Admin</span>.
+                            </div>
+<span class="text-green-600 font-bold uppercase tracking-tighter">Success</span>
+</div>
+<div class="flex items-start gap-4 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg text-xs">
+<span class="text-[#616f89] font-mono shrink-0">12:05:45</span>
+<div class="flex-1">
+<span class="font-bold text-[#111318] dark:text-white">System</span> disabled <span class="font-bold">MFA Requirement</span> for API Integrator account #882.
+                            </div>
+<span class="text-amber-600 font-bold uppercase tracking-tighter">Warning</span>
+</div>
+<div class="flex items-start gap-4 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg text-xs">
+<span class="text-[#616f89] font-mono shrink-0">09:15:33</span>
+<div class="flex-1">
+<span class="font-bold text-[#111318] dark:text-white">Security Polcy</span> updated: De-identification requirement enforced on all Claim Export tasks.
+                            </div>
+<span class="text-green-600 font-bold uppercase tracking-tighter">Success</span>
+</div>
+</div>
+</div>
+<div class="mt-8 pt-8 border-t border-[#dbdfe6] flex justify-between text-xs text-[#616f89] font-medium italic">
+<p>Blockchain Audit Log Hash: 0x8a1...f3e2 | Compliance: HIPAA-RCM-2023</p>
+<p>System v4.2.1-stable | Total Users: 124 / Seats: 150</p>
+</div>
+</div>
+</div>
+<aside class="absolute inset-y-0 right-0 w-[450px] bg-white dark:bg-slate-900 border-l border-[#dbdfe6] z-20 slide-out-panel flex flex-col">
+<div class="p-6 border-b border-[#dbdfe6] flex items-center justify-between bg-gray-50/50 dark:bg-slate-800/50">
+<div class="flex flex-col">
+<h3 class="font-bold text-lg dark:text-white">Edit Access: Jane Doe</h3>
+<p class="text-xs text-[#616f89]">Role-Based Access Control (RBAC)</p>
+</div>
+<button class="size-8 flex items-center justify-center rounded hover:bg-gray-200">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-6 space-y-8">
+<section>
+<label class="block text-sm font-bold mb-3 dark:text-white">Primary Role</label>
+<select class="w-full rounded-lg border-[#dbdfe6] bg-white dark:bg-slate-800 text-sm focus:ring-primary">
+<option>Billing Admin</option>
+<option>Claims Manager</option>
+<option>Compliance Officer</option>
+<option>Financial Analyst</option>
+</select>
+</section>
+<section>
+<div class="flex items-center justify-between mb-4">
+<h4 class="text-sm font-bold dark:text-white">Granular Toggles</h4>
+<span class="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">Overrides Active</span>
+</div>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-sm font-semibold dark:text-white">View Protected Health Info (PHI)</span>
+<span class="text-xs text-[#616f89]">Allow access to patient-level data</span>
+</div>
+<div class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-primary transition-colors">
+<span class="translate-x-5 inline-block h-5 w-5 transform rounded-full bg-white shadow transition"></span>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-sm font-semibold dark:text-white">Edit Claim Attributes</span>
+<span class="text-xs text-[#616f89]">Modify CPT/ICD codes on live claims</span>
+</div>
+<div class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-primary transition-colors">
+<span class="translate-x-5 inline-block h-5 w-5 transform rounded-full bg-white shadow transition"></span>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-sm font-semibold dark:text-white">Manage Integrations</span>
+<span class="text-xs text-[#616f89]">Update EHR/Bank connector settings</span>
+</div>
+<div class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-gray-200 dark:bg-slate-700 transition-colors">
+<span class="translate-x-0 inline-block h-5 w-5 transform rounded-full bg-white shadow transition"></span>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="text-sm font-semibold dark:text-white">Approve Large Adjustments</span>
+<span class="text-xs text-[#616f89]">Write-offs exceeding $5,000.00</span>
+</div>
+<div class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-gray-200 dark:bg-slate-700 transition-colors">
+<span class="translate-x-0 inline-block h-5 w-5 transform rounded-full bg-white shadow transition"></span>
+</div>
+</div>
+</div>
+</section>
+<div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+<div class="flex gap-3">
+<span class="material-symbols-outlined text-blue-600">info</span>
+<div class="text-xs text-blue-800 dark:text-blue-300 leading-normal">
+                            Increasing PHI access privileges will trigger an automatic notification to the Compliance Officer and generate a log entry in the permanent audit trail.
+                        </div>
+</div>
+</div>
+</div>
+<div class="p-6 border-t border-[#dbdfe6] flex gap-3">
+<button class="flex-1 bg-primary text-white py-2.5 rounded-lg font-bold text-sm shadow-sm hover:bg-blue-700 transition-all">
+                    Apply Permissions
+                </button>
+<button class="px-4 py-2.5 border border-[#dbdfe6] rounded-lg font-bold text-sm hover:bg-gray-100 dark:hover:bg-slate-800">
+                    Cancel
+                </button>
+</div>
+</aside>
+</main>
+</div>
+
+</body></html>
