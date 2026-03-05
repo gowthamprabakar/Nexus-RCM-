@@ -136,8 +136,9 @@ export function Sidebar() {
                     statusColor="bg-amber-500"
                 >
                     <SidebarLink to="/claims/work-queue" label="Claims Work Queue" status="amber" />
+                    <SidebarLink to="/claims/pre-batch-scrub" label="Pre-Batch Scrub" />
                     <SidebarLink to="/ai-coding" label="AI Coding Optimizer" />
-                    <SidebarLink to="/finance/reconciliation" label="Revenue Reconciliation" />
+                    <SidebarLink to="/finance/reconciliation" label="Reconciliation Center" />
                     <SidebarLink to="/collections" label="A/R Aging & Collections" status="green" />
                 </SidebarCapsule>
 
@@ -148,9 +149,11 @@ export function Sidebar() {
                     isOpen={openCapsules.denial}
                     onToggle={() => toggleCapsule('denial')}
                 >
-                    <SidebarLink to="/denials/analytics" label="Denial Prevention Map" status="amber" />
+                    <SidebarLink to="/denials/prevention-dashboard" label="Prevention Dashboard" status="green" />
+                    <SidebarLink to="/denials/high-risk" label="High Risk Worklist" status="amber" />
+                    <SidebarLink to="/denials/workspace" label="Prevention Workspace" />
+                    <SidebarLink to="/denials/workflow-log" label="Workflow Audit Log" />
                     <SidebarLink to="/denials" label="Automated Appeals" />
-                    <SidebarLink to="/lida/tickets" label="Analytics Ticketing Hub" />
                     <SidebarLink to="/finance/payer-performance" label="Payer Intelligence" />
                 </SidebarCapsule>
 
