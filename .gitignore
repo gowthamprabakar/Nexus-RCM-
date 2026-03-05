@@ -1,9 +1,55 @@
+# Node / Frontend
 node_modules/
 dist/
 .DS_Store
+
+# Environment files
 .env
+.env.local
+.env.*.local
+
+# IDE / Tools
 .gemini/
 .antigravity/
+
+# Lockfiles
 *-lock.json
 package-lock.json
 yarn.lock
+pnpm-lock.yaml
+
+# Python / Backend
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+*.egg-info/
+dist/
+build/
+*.pyc
+
+# AI / ML artifacts
+*.h5
+*.pkl
+*.onnx
+*.pt
+*.pth
+mlruns/
+.mlflow/
+
+# Database
+*.sqlite
+*.db
+migrations/__pycache__/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
