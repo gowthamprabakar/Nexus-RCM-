@@ -33,38 +33,39 @@ export function CodingOptimizer() {
  const [activeEncounter, setActiveEncounter] = useState({ id: '88291', chief: 'Chest Pain', date: '2023-10-12', provider: 'Dr. Sarah Chen' });
  const [codeFilterTab, setCodeFilterTab] = useState('all');
  const [loading, setLoading] = useState(true);
- const [crsSummary, setCrsSummary] = useState(null);
- const [errorCategories, setErrorCategories] = useState([]);
- const [denialsSummary, setDenialsSummary] = useState(null);
+ const [error, setError] = useState(null);
+ const [auditData, setAuditData] = useState(null);
+ const [suggestionsData, setSuggestionsData] = useState(null);
 
  useEffect(() => {
    async function load() {
      setLoading(true);
-     const [crs, errors, denials] = await Promise.all([
-       api.crs.getSummary(),
-       api.crs.getErrorCategories(),
-       api.denials.getSummary(),
-     ]);
-     setCrsSummary(crs);
-     setErrorCategories(errors || []);
-     setDenialsSummary(denials);
-     setLoading(false);
+     setError(null);
+     try {
+       const [audit, suggestions] = await Promise.all([
+         api.coding.getAudit(),
+         api.coding.getSuggestions(activeEncounter.id),
+       ]);
+       setAuditData(audit);
+       setSuggestionsData(suggestions);
+     } catch (err) {
+       console.error('Failed to load coding optimizer data:', err);
+       setError(err.message || 'Failed to load data');
+     } finally {
+       setLoading(false);
+     }
    }
    load();
- }, []);
+ }, [activeEncounter.id]);
 
- // Derive coding accuracy metrics from real data
- const codingAccuracy = crsSummary?.component_scores?.coding != null
-   ? `${crsSummary.component_scores.coding.toFixed(1)}%` : '--';
- const overallCRS = crsSummary?.overall_score != null
-   ? `${crsSummary.overall_score.toFixed(1)}%` : '--';
- const codingErrors = errorCategories.length > 0
-   ? errorCategories.reduce((sum, c) => sum + (c.count || 0), 0) : '--';
- const codingDenials = denialsSummary?.top_categories?.find(c =>
-   c.category?.toUpperCase().includes('CODING') || c.category?.toUpperCase().includes('CODE')
- );
- const codingDenialImpact = codingDenials?.revenue_at_risk
-   ? `$${(codingDenials.revenue_at_risk / 1000).toFixed(1)}k` : '$0';
+ // Derive coding accuracy metrics from coding API data
+ const codingAccuracy = auditData?.coding_accuracy_pct != null
+   ? `${auditData.coding_accuracy_pct}%` : '--';
+ const codingErrors = auditData?.total_coding_denials ?? '--';
+ const codingDenialImpact = auditData?.denials_by_carc?.length > 0
+   ? `$${(auditData.denials_by_carc.reduce((sum, d) => sum + (d.total_amount || 0), 0) / 1000).toFixed(1)}k`
+   : '$0';
+ const lineSuggestions = suggestionsData?.line_suggestions || [];
 
  const handleEncounterSearch = (e) => {
  if (e.key === 'Enter' && encounterSearch.trim()) {
@@ -119,6 +120,18 @@ export function CodingOptimizer() {
  </div>
  )}
  </div>
+
+ {/* Error State */}
+ {error && (
+ <div className="mx-6 my-2 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3">
+   <span className="material-symbols-outlined text-red-400">error</span>
+   <div>
+     <p className="text-sm font-bold text-red-400">Failed to load coding data</p>
+     <p className="text-xs text-red-400/70 mt-0.5">{error}</p>
+   </div>
+   <button onClick={() => window.location.reload()} className="ml-auto px-3 py-1.5 text-xs font-bold text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">Retry</button>
+ </div>
+ )}
 
  {/* Main Three-Panel Workspace */}
  <div className="flex-1 flex overflow-hidden">

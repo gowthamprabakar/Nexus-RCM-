@@ -3,20 +3,28 @@ import { api } from '../../../services/api';
 
 export function StateMandates() {
  const [loading, setLoading] = useState(true);
+ const [error, setError] = useState(null);
  const [kpis, setKpis] = useState({
   readiness: '87.4%',
   dailySubmission: '42.1k',
   activeMCOs: 12,
  });
+ const [mandateData, setMandateData] = useState(null);
 
  useEffect(() => {
   let cancelled = false;
   async function load() {
    setLoading(true);
+   setError(null);
    try {
-    const summary = await api.crs.getSummary();
+    const [summaryRes, mandatesRes] = await Promise.allSettled([
+     api.crs.getSummary(),
+     api.evv.getStateMandates(),
+    ]);
     if (cancelled) return;
-    if (summary) {
+
+    if (summaryRes.status === 'fulfilled' && summaryRes.value) {
+     const summary = summaryRes.value;
      setKpis(prev => ({
       ...prev,
       readiness: summary.readiness_score ? `${summary.readiness_score.toFixed(1)}%` : prev.readiness,
@@ -28,8 +36,32 @@ export function StateMandates() {
       highRisk: summary.high_risk_count || summary.failed || null,
      }));
     }
+
+    // Wire state mandates from real API
+    if (mandatesRes.status === 'fulfilled' && mandatesRes.value) {
+     const md = mandatesRes.value;
+     setMandateData(md);
+
+     // Override KPIs with mandate-specific data if available
+     if (md.readiness_score != null) {
+      setKpis(prev => ({ ...prev, readiness: `${md.readiness_score.toFixed(1)}%` }));
+     }
+     if (md.daily_submissions != null) {
+      setKpis(prev => ({ ...prev, dailySubmission: md.daily_submissions >= 1000 ? `${(md.daily_submissions / 1000).toFixed(1)}k` : `${md.daily_submissions}` }));
+     }
+     if (md.active_mcos != null) {
+      setKpis(prev => ({ ...prev, activeMCOs: md.active_mcos }));
+     }
+     if (md.total_claims != null) {
+      setKpis(prev => ({ ...prev, totalClaims: md.total_claims }));
+     }
+     if (md.high_risk_count != null) {
+      setKpis(prev => ({ ...prev, highRisk: md.high_risk_count }));
+     }
+    }
    } catch (err) {
     console.error('State mandates load error:', err);
+    setError('Failed to load state mandate data.');
    } finally {
     if (!cancelled) setLoading(false);
    }
@@ -41,6 +73,13 @@ export function StateMandates() {
  return (
   <div className="flex h-full font-sans text-th-heading overflow-auto">
    <main className="flex-1 px-4 lg:px-10 py-8 max-w-[1600px] mx-auto w-full">
+    {/* Error Banner */}
+    {error && (
+     <div className="mb-4 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-400 flex items-center gap-2">
+      <span className="material-symbols-outlined text-sm">warning</span>
+      {error}
+     </div>
+    )}
     {/* Profile/State Header */}
     <div className="flex flex-col mb-8">
      <div className="flex w-full flex-col gap-6 lg:flex-row lg:justify-between items-start">

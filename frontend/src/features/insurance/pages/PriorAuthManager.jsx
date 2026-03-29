@@ -5,31 +5,51 @@ export function PriorAuthManager() {
  const [loading, setLoading] = useState(true);
  const [crsSummary, setCrsSummary] = useState(null);
  const [denialsSummary, setDenialsSummary] = useState(null);
+ const [priorAuthData, setPriorAuthData] = useState(null);
+ const [authRequests, setAuthRequests] = useState(null);
+ const [error, setError] = useState(null);
 
  useEffect(() => {
    async function load() {
      setLoading(true);
-     const [crs, denials] = await Promise.all([
-       api.crs.getSummary(),
-       api.denials.getSummary(),
-     ]);
-     setCrsSummary(crs);
-     setDenialsSummary(denials);
-     setLoading(false);
+     setError(null);
+     try {
+       const [crs, denials, priorAuth] = await Promise.allSettled([
+         api.crs.getSummary(),
+         api.denials.getSummary(),
+         api.patientAccess.getPriorAuth(),
+       ]);
+       if (crs.status === 'fulfilled') setCrsSummary(crs.value);
+       if (denials.status === 'fulfilled') setDenialsSummary(denials.value);
+       if (priorAuth.status === 'fulfilled' && priorAuth.value) {
+         setPriorAuthData(priorAuth.value);
+         // Extract auth requests list if available
+         const requests = Array.isArray(priorAuth.value) ? priorAuth.value
+           : priorAuth.value.requests || priorAuth.value.items || null;
+         if (requests && requests.length > 0) setAuthRequests(requests);
+       }
+     } catch (err) {
+       console.error('PriorAuthManager load error:', err);
+       setError('Failed to load prior authorization data.');
+     } finally {
+       setLoading(false);
+     }
    }
    load();
  }, []);
 
- // Derive auth metrics from real API data
- const authScore = crsSummary?.component_scores?.authorization;
- const authScoreDisplay = authScore != null ? `${authScore.toFixed(1)}%` : '--';
+ // Derive auth metrics (prefer patientAccess API, fallback to CRS/denials)
+ const authScore = priorAuthData?.auth_score ?? priorAuthData?.score ?? crsSummary?.component_scores?.authorization;
+ const authScoreDisplay = authScore != null ? `${Number(authScore).toFixed(1)}%` : '--';
  const authDenialCategory = denialsSummary?.top_categories?.find(c =>
    c.category?.toUpperCase().includes('AUTH')
  );
- const authDenialCount = authDenialCategory?.count ?? 0;
- const authDenialRevenue = authDenialCategory?.revenue_at_risk
-   ? `$${(authDenialCategory.revenue_at_risk / 1000).toFixed(1)}k`
-   : '$0';
+ const authDenialCount = priorAuthData?.denial_count ?? authDenialCategory?.count ?? 0;
+ const authDenialRevenue = priorAuthData?.revenue_at_risk != null
+   ? `$${(priorAuthData.revenue_at_risk / 1000).toFixed(1)}k`
+   : authDenialCategory?.revenue_at_risk
+     ? `$${(authDenialCategory.revenue_at_risk / 1000).toFixed(1)}k`
+     : '$0';
 
  const Skeleton = () => (
    <div className="animate-pulse bg-th-surface-overlay rounded h-6 w-20"></div>
@@ -38,6 +58,14 @@ export function PriorAuthManager() {
  return (
  <div className="flex-1 overflow-y-auto h-full p-6 text-th-heading custom-scrollbar">
  <div className="max-w-[1600px] mx-auto space-y-6">
+
+ {/* Error Banner */}
+ {error && (
+ <div className="px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-400 flex items-center gap-2">
+ <span className="material-symbols-outlined text-sm">warning</span>
+ {error}
+ </div>
+ )}
 
  {/* Auth KPI Strip */}
  {!loading && (
@@ -68,11 +96,20 @@ export function PriorAuthManager() {
  <span className="ai-descriptive">Descriptive AI</span>
  </div>
  <div className="space-y-4">
- {[
+ {(authRequests || [
  { patient: "Jameson, R.", cpt: "MRI Brain (70553)", payer: "UHC", status: "Pending Clinicals", days: 2 },
  { patient: "Miller, D.", cpt: "CT Abdomen (74177)", payer: "Aetna", status: "In Payer Review", days: 5 },
  { patient: "Smith, A.", cpt: "Sleep Study (95810)", payer: "BCBS", status: "Approved", days: 0 },
- ].map((req, i) => (
+ ]).map((raw, i) => {
+  const req = authRequests ? {
+   patient: raw.patient_name || raw.patient || `Patient ${i + 1}`,
+   cpt: raw.cpt_code || raw.procedure || raw.cpt || 'N/A',
+   payer: raw.payer_name || raw.payer || 'Unknown',
+   status: raw.status || 'Pending',
+   days: raw.days_aging || raw.days || 0,
+  } : raw;
+  return req;
+ }).map((req, i) => (
  <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-th-surface-overlay/50 border border-th-border">
  <div>
  <p className="font-bold text-sm text-th-heading">{req.patient}</p>

@@ -30,21 +30,61 @@ export function EVVFraudDetection() {
  const [anomalies, setAnomalies] = useState(FALLBACK_ANOMALIES);
  const [diagnosticsSummary, setDiagnosticsSummary] = useState(null);
  const [crsSummary, setCrsSummary] = useState(null);
+ const [error, setError] = useState(null);
 
  useEffect(() => {
   let cancelled = false;
   async function load() {
    setLoading(true);
+   setError(null);
    try {
-    const [findingsRes, diagSummary, crs] = await Promise.allSettled([
+    const [findingsRes, diagSummary, crs, fraudRes] = await Promise.allSettled([
      api.diagnostics.getFindings({ severity: 'high' }),
      api.diagnostics.getSummary(),
      api.crs.getSummary(),
+     api.evv.getFraudDetection(),
     ]);
     if (cancelled) return;
 
-    // Process findings into anomalies for the table
-    if (findingsRes.status === 'fulfilled' && findingsRes.value?.findings?.length > 0) {
+    // Prefer EVV fraud detection API data if available
+    if (fraudRes.status === 'fulfilled' && fraudRes.value) {
+     const fd = fraudRes.value;
+     const fraudAnomalies = Array.isArray(fd) ? fd : fd.anomalies || fd.items || fd.detections || [];
+     if (fraudAnomalies.length > 0) {
+      const mapped = fraudAnomalies.slice(0, 10).map((f, i) => ({
+       riskScore: f.risk_score || f.severity_score || f.score || (95 - i * 5),
+       provider: f.provider_name || f.provider || f.caregiver_name || `Provider ${i + 1}`,
+       client: f.client_name || f.client || f.patient_name || 'Unknown',
+       tag: f.detection_type || f.tag || f.finding_type || f.category || 'Anomaly',
+       tagIcon: (f.detection_type || f.tag || '').toLowerCase().includes('travel') ? 'flight_takeoff'
+        : (f.detection_type || f.tag || '').toLowerCase().includes('ghost') ? 'visibility_off'
+        : (f.detection_type || f.tag || '').toLowerCase().includes('signature') ? 'draw'
+        : 'warning',
+       tagColor: (f.risk_score || f.severity_score || 0) > 80
+        ? 'bg-red-500/10 text-red-400 border-red-500/20'
+        : 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+       status: (f.status || 'FLAGGED').toUpperCase().replace(/_/g, ' '),
+       statusColor: (f.status || '').toLowerCase().includes('invest')
+        ? 'text-red-400 bg-red-500/10 border-red-500/20'
+        : 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+       description: f.description || f.details || null,
+       highlighted: (f.risk_score || f.severity_score || 0) > 90,
+      }));
+      setAnomalies(mapped);
+     }
+
+     // Extract summary stats from fraud response
+     if (fd.summary || fd.total_findings) {
+      setDiagnosticsSummary(prev => ({
+       ...prev,
+       total_findings: fd.total_findings || fd.summary?.total || prev?.total_findings,
+       anomaly_rate: fd.anomaly_rate || fd.summary?.anomaly_rate || prev?.anomaly_rate,
+       review_rate: fd.review_rate || fd.summary?.review_rate || prev?.review_rate,
+       clean_rate: fd.clean_rate || fd.summary?.clean_rate || prev?.clean_rate,
+      }));
+     }
+    } else if (findingsRes.status === 'fulfilled' && findingsRes.value?.findings?.length > 0) {
+     // Fallback to diagnostics findings
      const mapped = findingsRes.value.findings.slice(0, 10).map((f, i) => ({
       riskScore: f.severity_score || f.risk_score || (90 - i * 5),
       provider: f.provider_name || f.entity || `Provider ${f.claim_id || ''}`,
@@ -61,7 +101,7 @@ export function EVVFraudDetection() {
     }
 
     if (diagSummary.status === 'fulfilled' && diagSummary.value) {
-     setDiagnosticsSummary(diagSummary.value);
+     setDiagnosticsSummary(prev => prev ? { ...diagSummary.value, ...prev } : diagSummary.value);
     }
 
     if (crs.status === 'fulfilled' && crs.value) {
@@ -69,6 +109,7 @@ export function EVVFraudDetection() {
     }
    } catch (err) {
     console.error('Fraud detection load error:', err);
+    setError('Failed to load fraud detection data.');
    } finally {
     if (!cancelled) setLoading(false);
    }
@@ -99,6 +140,13 @@ export function EVVFraudDetection() {
      </div>
     </div>
    </header>
+
+   {error && (
+    <div className="mx-6 mt-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-400 flex items-center gap-2">
+     <span className="material-symbols-outlined text-sm">warning</span>
+     {error}
+    </div>
+   )}
 
    <main className="flex-1 flex overflow-hidden">
     <div className="flex-1 overflow-y-auto p-6 space-y-6">

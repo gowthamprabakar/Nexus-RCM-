@@ -21,6 +21,22 @@ function AIBadge({ level }) {
 // Defaults used when API data is unavailable
 const DEFAULT_STATS = { activeVisits: '1,284', gpsVerified: '1,142', criticalExceptions: 14, compliance: '98.4%' };
 
+const FALLBACK_VISITS = [
+ { id: 1, caregiver: 'Sarah Jenkins', client: 'Robert D.', status: 'verified', time: '08:45 AM', duration: '1h 12m', icons: { gps: true, signal: true, signature: true } },
+ { id: 2, caregiver: 'Marcus Thorne', client: 'Alice W.', status: 'gps_mismatch', time: '09:12 AM', duration: null, delta: '0.18 miles', icons: { gps: false, signal: true, signature: false } },
+ { id: 3, caregiver: 'Elena Rodriguez', client: 'John M.', status: 'short_visit', time: '09:30 AM', duration: '25m (min: 30m)', icons: { gps: true, signal: true, signature: true } },
+ { id: 4, caregiver: 'Tom Harrison', client: 'Linda K.', status: 'no_clock_out', time: 'Yest. 18:00', duration: null, icons: { gps: false, signal: false, signature: false } },
+];
+
+function mapVisitStatus(v) {
+ if (v.status === 'verified' || v.status === 'completed') return { label: 'VERIFIED', color: 'bg-emerald-500/10 text-emerald-500', border: 'border-th-border' };
+ if (v.status === 'gps_mismatch') return { label: 'GPS MISMATCH', color: 'bg-amber-500/20 text-amber-500', border: 'border-amber-500/30 bg-amber-500/5' };
+ if (v.status === 'short_visit') return { label: 'SHORT VISIT', color: 'bg-amber-500/20 text-amber-500', border: 'border-amber-500/30 bg-amber-500/5' };
+ if (v.status === 'no_clock_out' || v.status === 'missing_data') return { label: 'NO CLOCK-OUT', color: 'bg-red-500/20 text-red-500', border: 'border-red-500/30 bg-red-500/5' };
+ if (v.status === 'exception') return { label: 'EXCEPTION', color: 'bg-red-500/20 text-red-500', border: 'border-red-500/30 bg-red-500/5' };
+ return { label: (v.status || 'UNKNOWN').toUpperCase(), color: 'bg-slate-500/20 text-slate-400', border: 'border-th-border' };
+}
+
 export function EVVDashboard() {
  const [filters, setFilters] = useState({
   caregiver: '',
@@ -30,16 +46,20 @@ export function EVVDashboard() {
  });
  const [stats, setStats] = useState(DEFAULT_STATS);
  const [errorCategories, setErrorCategories] = useState([]);
+ const [visits, setVisits] = useState(FALLBACK_VISITS);
  const [loading, setLoading] = useState(true);
+ const [error, setError] = useState(null);
 
  useEffect(() => {
   let cancelled = false;
   async function load() {
    setLoading(true);
+   setError(null);
    try {
-    const [crsSummary, errCats] = await Promise.allSettled([
+    const [crsSummary, errCats, evvVisits] = await Promise.allSettled([
      api.crs.getSummary(),
      api.crs.getErrorCategories(),
+     api.evv.getVisits(),
     ]);
     if (cancelled) return;
 
@@ -66,8 +86,42 @@ export function EVVDashboard() {
      }
      setErrorCategories(errCats.value);
     }
+
+    // Wire EVV visits from real API
+    if (evvVisits.status === 'fulfilled' && evvVisits.value) {
+     const raw = Array.isArray(evvVisits.value) ? evvVisits.value : evvVisits.value.items || evvVisits.value.visits || [];
+     if (raw.length > 0) {
+      const mapped = raw.map((v, i) => ({
+       id: v.id || i,
+       caregiver: v.caregiver_name || v.caregiver || v.provider_name || `Caregiver ${i + 1}`,
+       client: v.client_name || v.client || v.patient_name || `Client ${i + 1}`,
+       status: v.status || v.compliance_status || 'verified',
+       time: v.clock_in_time || v.start_time || v.time || '',
+       duration: v.duration || null,
+       delta: v.gps_delta || v.delta || null,
+       location: v.location || null,
+       icons: {
+        gps: v.gps_verified !== false,
+        signal: v.signal_verified !== false,
+        signature: v.signature_verified !== false,
+       },
+      }));
+      setVisits(mapped);
+
+      // Update stats from visits data
+      const verified = mapped.filter(v => v.status === 'verified' || v.status === 'completed').length;
+      const exceptions = mapped.filter(v => ['exception', 'no_clock_out', 'missing_data'].includes(v.status)).length;
+      setStats(prev => ({
+       ...prev,
+       activeVisits: mapped.length.toLocaleString(),
+       gpsVerified: verified.toLocaleString(),
+       criticalExceptions: exceptions || prev.criticalExceptions,
+      }));
+     }
+    }
    } catch (err) {
     console.error('EVV Dashboard load error:', err);
+    setError('Failed to load dashboard data. Showing cached values.');
    } finally {
     if (!cancelled) setLoading(false);
    }
@@ -126,6 +180,14 @@ export function EVVDashboard() {
     {loading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 ml-2"></div>}
    </div>
 
+   {/* Error Banner */}
+   {error && (
+    <div className="mx-6 mb-2 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-400 flex items-center gap-2">
+     <span className="material-symbols-outlined text-sm">warning</span>
+     {error}
+    </div>
+   )}
+
    {/* Stats Header */}
    <div className="flex flex-wrap gap-4 px-6 pb-5 border-b border-th-border">
     <div className="flex min-w-[180px] flex-1 flex-col gap-1 bg-th-surface-raised border border-th-border border-l-[3px] border-l-blue-500 rounded-xl p-4 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
@@ -176,90 +238,42 @@ export function EVVDashboard() {
       </div>
      </div>
      <div className="flex-1 overflow-y-auto pr-2 flex flex-col gap-3 scrollbar-thin scrollbar-thumb-slate-700">
-      {/* Visit Card 1 (Verified) */}
-      <div className="p-3 rounded-lg bg-th-surface-raised border border-th-border hover:border-primary/50 transition-all cursor-pointer group">
-       <div className="flex justify-between items-start mb-2">
-        <div className="flex flex-col">
-         <span className="text-xs font-bold text-th-heading">Sarah Jenkins</span>
-         <span className="text-[10px] text-th-secondary">Client: Robert D.</span>
+      {visits.map((visit) => {
+       const st = mapVisitStatus(visit);
+       return (
+        <div key={visit.id} className={`p-3 rounded-lg border ${st.border || 'bg-th-surface-raised border-th-border'} hover:border-primary/50 transition-all cursor-pointer group`}>
+         <div className="flex justify-between items-start mb-2">
+          <div className="flex flex-col">
+           <span className="text-xs font-bold text-th-heading">{visit.caregiver}</span>
+           <span className="text-[10px] text-th-secondary">Client: {visit.client}</span>
+          </div>
+          <span className={`${st.color} text-[10px] font-bold px-2 py-0.5 rounded`}>{st.label}</span>
+         </div>
+         <div className="flex items-center gap-3">
+          <div className="flex gap-1">
+           <span className={`material-symbols-outlined text-sm ${visit.icons?.gps ? 'text-primary' : 'text-red-500'}`}>
+            {visit.icons?.gps ? 'location_on' : 'location_off'}
+           </span>
+           <span className={`material-symbols-outlined text-sm ${visit.icons?.signal ? 'text-primary' : 'text-red-500'}`}>
+            {visit.icons?.signal ? 'signal_cellular_alt' : 'signal_disconnected'}
+           </span>
+           <span className={`material-symbols-outlined text-sm ${visit.icons?.signature ? 'text-primary' : 'text-th-muted'}`}>history_edu</span>
+          </div>
+          <div className="ml-auto flex flex-col items-end">
+           {visit.time && <span className="text-[10px] font-bold text-th-heading">{visit.time}</span>}
+           {visit.duration && <span className="text-[10px] text-th-secondary">Duration: {visit.duration}</span>}
+           {visit.delta && <span className="text-[10px] text-th-secondary">Delta: {visit.delta}</span>}
+           {visit.status === 'no_clock_out' && !visit.duration && !visit.delta && (
+            <span className="text-[10px] text-red-500 font-bold">MISSING DATA</span>
+           )}
+          </div>
+         </div>
         </div>
-        <span className="bg-emerald-500/10 text-emerald-500 text-[10px] font-bold px-2 py-0.5 rounded">VERIFIED</span>
-       </div>
-       <div className="flex items-center gap-3">
-        <div className="flex gap-1">
-         <span className="material-symbols-outlined text-primary text-sm">location_on</span>
-         <span className="material-symbols-outlined text-primary text-sm">signal_cellular_alt</span>
-         <span className="material-symbols-outlined text-primary text-sm">history_edu</span>
-        </div>
-        <div className="ml-auto flex flex-col items-end">
-         <span className="text-[10px] font-bold text-th-heading">08:45 AM</span>
-         <span className="text-[10px] text-th-secondary">Duration: 1h 12m</span>
-        </div>
-       </div>
-      </div>
-      {/* Visit Card 2 (GPS Mismatch) */}
-      <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 hover:border-amber-500 transition-all cursor-pointer">
-       <div className="flex justify-between items-start mb-2">
-        <div className="flex flex-col">
-         <span className="text-xs font-bold text-th-heading">Marcus Thorne</span>
-         <span className="text-[10px] text-th-secondary">Client: Alice W.</span>
-        </div>
-        <span className="bg-amber-500/20 text-amber-500 text-[10px] font-bold px-2 py-0.5 rounded">GPS MISMATCH</span>
-       </div>
-       <div className="flex items-center gap-3">
-        <div className="flex gap-1">
-         <span className="material-symbols-outlined text-red-500 text-sm">location_off</span>
-         <span className="material-symbols-outlined text-primary text-sm">signal_cellular_alt</span>
-         <span className="material-symbols-outlined text-th-muted text-sm">history_edu</span>
-        </div>
-        <div className="ml-auto flex flex-col items-end">
-         <span className="text-[10px] font-bold text-th-heading">09:12 AM</span>
-         <span className="text-[10px] text-th-secondary">Delta: 0.18 miles</span>
-        </div>
-       </div>
-      </div>
-      {/* Visit Card 3 (Short Visit Warning) */}
-      <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 hover:border-amber-500 transition-all cursor-pointer">
-       <div className="flex justify-between items-start mb-2">
-        <div className="flex flex-col">
-         <span className="text-xs font-bold text-th-heading">Elena Rodriguez</span>
-         <span className="text-[10px] text-th-secondary">Client: John M.</span>
-        </div>
-        <span className="bg-amber-500/20 text-amber-500 text-[10px] font-bold px-2 py-0.5 rounded">SHORT VISIT</span>
-       </div>
-       <div className="flex items-center gap-3">
-        <div className="flex gap-1">
-         <span className="material-symbols-outlined text-primary text-sm">location_on</span>
-         <span className="material-symbols-outlined text-primary text-sm">signal_cellular_alt</span>
-         <span className="material-symbols-outlined text-primary text-sm">history_edu</span>
-        </div>
-        <div className="ml-auto flex flex-col items-end">
-         <span className="text-[10px] font-bold text-th-heading">09:30 AM</span>
-         <span className="text-[10px] text-amber-400 font-bold">25m (min: 30m)</span>
-        </div>
-       </div>
-      </div>
-      {/* Visit Card 4 (Exception) */}
-      <div className="p-3 rounded-lg border border-red-500/30 bg-red-500/5 hover:border-red-500 transition-all cursor-pointer">
-       <div className="flex justify-between items-start mb-2">
-        <div className="flex flex-col">
-         <span className="text-xs font-bold text-th-heading">Tom Harrison</span>
-         <span className="text-[10px] text-th-secondary">Client: Linda K.</span>
-        </div>
-        <span className="bg-red-500/20 text-red-500 text-[10px] font-bold px-2 py-0.5 rounded">NO CLOCK-OUT</span>
-       </div>
-       <div className="flex items-center gap-3">
-        <div className="flex gap-1">
-         <span className="material-symbols-outlined text-th-muted text-sm">location_off</span>
-         <span className="material-symbols-outlined text-red-500 text-sm">signal_disconnected</span>
-         <span className="material-symbols-outlined text-th-muted text-sm">history_edu</span>
-        </div>
-        <div className="ml-auto flex flex-col items-end">
-         <span className="text-[10px] font-bold text-th-heading">Yest. 18:00</span>
-         <span className="text-[10px] text-red-500 font-bold">MISSING DATA</span>
-        </div>
-       </div>
-      </div>
+       );
+      })}
+      {visits.length === 0 && !loading && (
+       <div className="text-center text-xs text-th-muted py-8">No visit data available</div>
+      )}
      </div>
     </div>
 

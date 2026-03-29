@@ -9,17 +9,28 @@ export function InsuranceVerification() {
  const [loading, setLoading] = useState(true);
  const [crsSummary, setCrsSummary] = useState(null);
  const [denialsSummary, setDenialsSummary] = useState(null);
+ const [eligibilityData, setEligibilityData] = useState(null);
+ const [error, setError] = useState(null);
 
  useEffect(() => {
    async function load() {
      setLoading(true);
-     const [crs, denials] = await Promise.all([
-       api.crs.getSummary(),
-       api.denials.getSummary(),
-     ]);
-     setCrsSummary(crs);
-     setDenialsSummary(denials);
-     setLoading(false);
+     setError(null);
+     try {
+       const [crs, denials, eligibility] = await Promise.allSettled([
+         api.crs.getSummary(),
+         api.denials.getSummary(),
+         api.patientAccess.getEligibility('default'),
+       ]);
+       if (crs.status === 'fulfilled') setCrsSummary(crs.value);
+       if (denials.status === 'fulfilled') setDenialsSummary(denials.value);
+       if (eligibility.status === 'fulfilled' && eligibility.value) setEligibilityData(eligibility.value);
+     } catch (err) {
+       console.error('InsuranceVerification load error:', err);
+       setError('Failed to load verification data.');
+     } finally {
+       setLoading(false);
+     }
    }
    load();
  }, []);
@@ -32,17 +43,21 @@ export function InsuranceVerification() {
  }, 2000);
  };
 
- // Derive verification metrics from real API data
- const eligibilityScore = crsSummary?.component_scores?.eligibility;
- const verificationRate = eligibilityScore != null ? `${eligibilityScore.toFixed(1)}%` : '--';
- const overallCRS = crsSummary?.overall_score != null ? `${crsSummary.overall_score.toFixed(1)}%` : '--';
+ // Derive verification metrics from real API data (prefer patientAccess API, fallback to CRS)
+ const eligibilityScore = eligibilityData?.eligibility_score ?? eligibilityData?.score ?? crsSummary?.component_scores?.eligibility;
+ const verificationRate = eligibilityScore != null ? `${Number(eligibilityScore).toFixed(1)}%` : '--';
+ const overallCRS = eligibilityData?.overall_score != null
+   ? `${eligibilityData.overall_score.toFixed(1)}%`
+   : crsSummary?.overall_score != null ? `${crsSummary.overall_score.toFixed(1)}%` : '--';
  const eligibilityDenialCategory = denialsSummary?.top_categories?.find(c =>
    c.category?.toUpperCase().includes('ELIGIB') || c.category?.toUpperCase().includes('COVERAGE')
  );
- const eligDenialCount = eligibilityDenialCategory?.count ?? 0;
- const eligDenialRevenue = eligibilityDenialCategory?.revenue_at_risk
-   ? `$${(eligibilityDenialCategory.revenue_at_risk / 1000).toFixed(1)}k`
-   : '$0';
+ const eligDenialCount = eligibilityData?.denial_count ?? eligibilityDenialCategory?.count ?? 0;
+ const eligDenialRevenue = eligibilityData?.revenue_at_risk != null
+   ? `$${(eligibilityData.revenue_at_risk / 1000).toFixed(1)}k`
+   : eligibilityDenialCategory?.revenue_at_risk
+     ? `$${(eligibilityDenialCategory.revenue_at_risk / 1000).toFixed(1)}k`
+     : '$0';
 
  const Skeleton = ({ className = "h-8 w-24" }) => (
    <div className={`animate-pulse bg-th-surface-overlay rounded ${className}`}></div>
@@ -51,6 +66,12 @@ export function InsuranceVerification() {
  return (
  <div className="flex-1 flex flex-col overflow-y-auto h-full p-8 custom-scrollbar">
  {/* Header / Search Section */}
+ {error && (
+ <div className="px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-400 flex items-center gap-2 mb-4">
+ <span className="material-symbols-outlined text-sm">warning</span>
+ {error}
+ </div>
+ )}
  <div className="bg-th-surface-raised p-6 rounded-xl border border-th-border mb-6">
  <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">

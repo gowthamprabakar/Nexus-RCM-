@@ -16,15 +16,23 @@ const FALLBACK_VISIT = {
 export function EVVVisitDetails() {
  const [visit, setVisit] = useState(FALLBACK_VISIT);
  const [loading, setLoading] = useState(true);
+ const [error, setError] = useState(null);
 
  useEffect(() => {
   let cancelled = false;
   async function load() {
    setLoading(true);
+   setError(null);
    try {
+    const [summaryRes, visitsRes] = await Promise.allSettled([
+     api.crs.getSummary(),
+     api.evv.getVisits(),
+    ]);
+    if (cancelled) return;
+
     // Load CRS summary to populate KPIs with real system data
-    const summary = await api.crs.getSummary();
-    if (!cancelled && summary) {
+    if (summaryRes.status === 'fulfilled' && summaryRes.value) {
+     const summary = summaryRes.value;
      setVisit(prev => ({
       ...prev,
       complianceScore: summary.readiness_score ? Math.round(summary.readiness_score) : prev.complianceScore,
@@ -32,8 +40,48 @@ export function EVVVisitDetails() {
       totalClaims: summary.total_claims || null,
      }));
     }
+
+    // Wire EVV visit detail from real API
+    if (visitsRes.status === 'fulfilled' && visitsRes.value) {
+     const raw = Array.isArray(visitsRes.value) ? visitsRes.value : visitsRes.value.items || visitsRes.value.visits || [];
+     // Pick the first visit as the detail view (or could be parameterized by route)
+     if (raw.length > 0) {
+      const v = raw[0];
+      setVisit(prev => ({
+       ...prev,
+       serviceCode: v.service_code || v.serviceCode || prev.serviceCode,
+       serviceName: v.service_name || v.serviceName || prev.serviceName,
+       duration: v.duration || v.scheduled_duration || prev.duration,
+       client: {
+        name: v.client_name || v.patient_name || prev.client.name,
+        id: v.client_id || v.patient_id || prev.client.id,
+        initials: (v.client_name || v.patient_name || prev.client.name).split(' ').map(n => n[0]).join(''),
+       },
+       provider: {
+        name: v.caregiver_name || v.provider_name || prev.provider.name,
+        license: v.license || v.provider_license || prev.provider.license,
+        initials: (v.caregiver_name || v.provider_name || prev.provider.name).split(' ').map(n => n[0]).join(''),
+       },
+       scheduled: {
+        start: v.scheduled_start || v.scheduled?.start || prev.scheduled.start,
+        end: v.scheduled_end || v.scheduled?.end || prev.scheduled.end,
+        hours: v.scheduled_hours || v.scheduled?.hours || prev.scheduled.hours,
+       },
+       actual: {
+        start: v.actual_start || v.clock_in_time || v.actual?.start || prev.actual.start,
+        end: v.actual_end || v.clock_out_time || v.actual?.end || prev.actual.end,
+        hours: v.actual_hours || v.actual?.hours || prev.actual.hours,
+        delta: v.time_delta || v.actual?.delta || prev.actual.delta,
+       },
+       complianceScore: v.compliance_score || prev.complianceScore,
+       status: v.status || prev.status,
+       issues: v.issues || v.exceptions || prev.issues,
+      }));
+     }
+    }
    } catch (err) {
     console.error('EVV Visit detail load error:', err);
+    setError('Failed to load visit details.');
    } finally {
     if (!cancelled) setLoading(false);
    }
@@ -47,6 +95,13 @@ export function EVVVisitDetails() {
  return (
   <div className="flex-1 overflow-y-auto font-sans h-full">
    <main className="max-w-[1440px] mx-auto px-6 py-6 font-sans">
+    {/* Error Banner */}
+    {error && (
+     <div className="mb-4 px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-400 flex items-center gap-2">
+      <span className="material-symbols-outlined text-sm">warning</span>
+      {error}
+     </div>
+    )}
     {/* Breadcrumbs */}
     <div className="flex items-center gap-2 mb-4">
      <a className="text-th-secondary text-sm font-medium hover:text-primary transition-colors" href="#">Visits</a>

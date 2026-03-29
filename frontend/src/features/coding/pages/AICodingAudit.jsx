@@ -4,37 +4,39 @@ import { api } from '../../../services/api';
 export function AICodingAudit() {
  const [activeTab, setActiveTab] = useState('audit');
  const [loading, setLoading] = useState(true);
- const [errorCategories, setErrorCategories] = useState([]);
- const [rootCauseSummary, setRootCauseSummary] = useState(null);
+ const [error, setError] = useState(null);
+ const [auditData, setAuditData] = useState(null);
 
  useEffect(() => {
    async function load() {
      setLoading(true);
-     const [errors, rootCause] = await Promise.all([
-       api.crs.getErrorCategories(),
-       api.rootCause.getSummary(),
-     ]);
-     setErrorCategories(errors || []);
-     setRootCauseSummary(rootCause);
-     setLoading(false);
+     setError(null);
+     try {
+       const data = await api.coding.getAudit();
+       if (!data) throw new Error('No audit data returned');
+       setAuditData(data);
+     } catch (err) {
+       console.error('Failed to load coding audit:', err);
+       setError(err.message || 'Failed to load audit data');
+     } finally {
+       setLoading(false);
+     }
    }
    load();
  }, []);
 
- // Derive audit metrics from real data
- const totalErrors = errorCategories.reduce((sum, c) => sum + (c.count || 0), 0);
- const topErrorCategory = errorCategories.length > 0
-   ? errorCategories.sort((a, b) => (b.count || 0) - (a.count || 0))[0] : null;
- const codingMismatch = rootCauseSummary?.root_causes?.find(rc =>
-   rc.root_cause?.toUpperCase().includes('CODING') || rc.root_cause?.toUpperCase().includes('MISMATCH')
- );
- const codingMismatchCount = codingMismatch?.count ?? 0;
- const codingMismatchRevenue = codingMismatch?.revenue_at_risk
-   ? `$${(codingMismatch.revenue_at_risk / 1000).toFixed(1)}k` : '$0';
- const financialImpact = rootCauseSummary?.total_revenue_at_risk
-   ? `+$${(rootCauseSummary.total_revenue_at_risk / 1000).toFixed(1)}k` : '+$158.40';
- const auditScore = totalErrors > 0
-   ? `${Math.max(60, Math.round(100 - (totalErrors / 5))).toFixed(0)}%` : '82%';
+ // Derive audit metrics from coding API data
+ const totalCodingDenials = auditData?.total_coding_denials ?? 0;
+ const denialsByCarc = auditData?.denials_by_carc || [];
+ const topErrorCpts = auditData?.top_error_cpt_codes || [];
+ const totalClaims = auditData?.total_claims ?? 0;
+
+ const financialImpact = denialsByCarc.length > 0
+   ? `$${(denialsByCarc.reduce((sum, d) => sum + (d.total_amount || 0), 0) / 1000).toFixed(1)}k`
+   : '$0';
+ const codingMismatchCount = totalCodingDenials;
+ const auditScore = auditData?.coding_accuracy_pct != null
+   ? `${auditData.coding_accuracy_pct}%` : '--';
 
  const tabs = [
  { id: 'worklist', label: 'Worklist', icon: 'list_alt' },
@@ -68,7 +70,7 @@ export function AICodingAudit() {
  </div>
  <div className="flex items-center gap-1.5 text-red-400 text-xs font-bold uppercase tracking-wide">
  <span className="material-symbols-outlined text-[16px]">priority_high</span>
- {totalErrors > 0 ? `${totalErrors} Errors Found` : 'High Variance'}
+ {totalCodingDenials > 0 ? `${totalCodingDenials} Coding Denials` : 'High Variance'}
  </div>
  </div>
  </div>
@@ -81,6 +83,18 @@ export function AICodingAudit() {
  <span className="ml-2 text-xs font-bold text-th-muted bg-th-surface-overlay px-2 py-0.5 rounded">AUD-99281</span>
  <span className="ml-2 ai-diagnostic">Diagnostic AI</span>
  </div>
+
+ {/* Error State */}
+ {error && (
+ <div className="mx-6 mt-2 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3">
+   <span className="material-symbols-outlined text-red-400">error</span>
+   <div>
+     <p className="text-sm font-bold text-red-400">Failed to load coding audit data</p>
+     <p className="text-xs text-red-400/70 mt-0.5">{error}</p>
+   </div>
+   <button onClick={() => window.location.reload()} className="ml-auto px-3 py-1.5 text-xs font-bold text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">Retry</button>
+ </div>
+ )}
 
  {/* Audit Workspace Content */}
  <div className="flex-1 overflow-hidden flex gap-0">
@@ -150,15 +164,35 @@ export function AICodingAudit() {
  </div>
  </div>
 
- {/* Error categories from API */}
- {!loading && errorCategories.length > 0 && (
+ {/* Coding Denials by CARC from API */}
+ {!loading && denialsByCarc.length > 0 && (
  <div className="mt-6 pt-4 border-t border-th-border">
-   <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-3">Error Categories (from CRS)</h3>
+   <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-3">Denials by CARC Code</h3>
    <div className="space-y-2">
-     {errorCategories.slice(0, 5).map((cat, i) => (
+     {denialsByCarc.slice(0, 5).map((d, i) => (
        <div key={i} className="flex justify-between items-center text-xs p-2 bg-th-surface-overlay/30 rounded">
-         <span className="text-th-heading font-medium">{cat.category || cat.name || `Category ${i+1}`}</span>
-         <span className="font-bold text-amber-400 tabular-nums">{cat.count || 0}</span>
+         <div>
+           <span className="text-th-heading font-medium">{d.carc_code}</span>
+           <span className="text-th-muted ml-1.5">{d.description || ''}</span>
+         </div>
+         <div className="text-right">
+           <span className="font-bold text-amber-400 tabular-nums">{d.denial_count}</span>
+           <span className="text-th-muted ml-1 text-[10px] tabular-nums">(${(d.total_amount / 1000).toFixed(1)}k)</span>
+         </div>
+       </div>
+     ))}
+   </div>
+ </div>
+ )}
+ {/* Top Error CPT Codes */}
+ {!loading && topErrorCpts.length > 0 && (
+ <div className="mt-4 pt-4 border-t border-th-border">
+   <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-3">Top Error CPT Codes</h3>
+   <div className="space-y-2">
+     {topErrorCpts.slice(0, 5).map((cpt, i) => (
+       <div key={i} className="flex justify-between items-center text-xs p-2 bg-th-surface-overlay/30 rounded">
+         <span className="text-th-heading font-medium">{cpt.cpt_code}</span>
+         <span className="font-bold text-red-400 tabular-nums">{cpt.error_count} errors</span>
        </div>
      ))}
    </div>

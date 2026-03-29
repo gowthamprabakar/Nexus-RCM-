@@ -5,38 +5,60 @@ export function PatientAccessHub() {
  const [loading, setLoading] = useState(true);
  const [crsSummary, setCrsSummary] = useState(null);
  const [arSummary, setArSummary] = useState(null);
+ const [eligibilityData, setEligibilityData] = useState(null);
+ const [costEstimate, setCostEstimate] = useState(null);
+ const [error, setError] = useState(null);
 
  useEffect(() => {
    async function load() {
      setLoading(true);
-     const [crs, ar] = await Promise.all([
-       api.crs.getSummary(),
-       api.ar.getSummary(),
-     ]);
-     setCrsSummary(crs);
-     setArSummary(ar);
-     setLoading(false);
+     setError(null);
+     try {
+       const [crs, ar, eligibility, cost] = await Promise.allSettled([
+         api.crs.getSummary(),
+         api.ar.getSummary(),
+         api.patientAccess.getEligibility('default'),
+         api.patientAccess.getCostEstimate('default'),
+       ]);
+       if (crs.status === 'fulfilled') setCrsSummary(crs.value);
+       if (ar.status === 'fulfilled') setArSummary(ar.value);
+       if (eligibility.status === 'fulfilled' && eligibility.value) setEligibilityData(eligibility.value);
+       if (cost.status === 'fulfilled' && cost.value) setCostEstimate(cost.value);
+     } catch (err) {
+       console.error('PatientAccessHub load error:', err);
+       setError('Failed to load patient access data.');
+     } finally {
+       setLoading(false);
+     }
    }
    load();
  }, []);
 
- // Derive KPI values from real data, with safe fallbacks
- const registrationAccuracy = crsSummary?.component_scores?.eligibility != null
-   ? `${crsSummary.component_scores.eligibility.toFixed(1)}%`
-   : '--';
- const registrationTrend = crsSummary?.overall_score != null && crsSummary.overall_score > 90
-   ? '+0.5%' : '--%';
+ // Derive KPI values from real data (prefer patientAccess APIs, fallback to CRS/AR)
+ const registrationAccuracy = eligibilityData?.accuracy != null
+   ? `${eligibilityData.accuracy.toFixed(1)}%`
+   : crsSummary?.component_scores?.eligibility != null
+     ? `${crsSummary.component_scores.eligibility.toFixed(1)}%`
+     : '--';
+ const registrationTrend = eligibilityData?.trend != null
+   ? `${eligibilityData.trend > 0 ? '+' : ''}${eligibilityData.trend}%`
+   : crsSummary?.overall_score != null && crsSummary.overall_score > 90
+     ? '+0.5%' : '--%';
 
- const coverageGapCount = arSummary?.total_claims ?? '--';
- const authAlerts = crsSummary?.component_scores?.authorization != null
+ const coverageGapCount = eligibilityData?.coverage_gaps ?? arSummary?.total_claims ?? '--';
+ const authAlerts = eligibilityData?.auth_alerts ?? (crsSummary?.component_scores?.authorization != null
    ? Math.round((100 - crsSummary.component_scores.authorization) / 10)
-   : '--';
- const estLiability = arSummary?.total_outstanding != null
-   ? `$${(arSummary.total_outstanding / 1000).toFixed(1)}k`
-   : '--';
- const collectedAmt = arSummary?.total_collected != null
-   ? `+$${(arSummary.total_collected / 1000).toFixed(1)}k`
-   : '--';
+   : '--');
+ const estLiability = costEstimate?.estimated_liability != null
+   ? `$${(costEstimate.estimated_liability / 1000).toFixed(1)}k`
+   : arSummary?.total_outstanding != null
+     ? `$${(arSummary.total_outstanding / 1000).toFixed(1)}k`
+     : '--';
+ const collectedAmt = costEstimate?.collected != null
+   ? `+$${(costEstimate.collected / 1000).toFixed(1)}k`
+   : arSummary?.total_collected != null
+     ? `+$${(arSummary.total_collected / 1000).toFixed(1)}k`
+     : '--';
 
  const Skeleton = () => (
    <div className="animate-pulse bg-th-surface-overlay rounded h-8 w-24"></div>
@@ -45,6 +67,12 @@ export function PatientAccessHub() {
  return (
  <div className="flex-1 overflow-y-auto h-full p-6 text-th-heading custom-scrollbar">
  <div className="max-w-[1600px] mx-auto space-y-6">
+ {error && (
+ <div className="px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-400 flex items-center gap-2">
+ <span className="material-symbols-outlined text-sm">warning</span>
+ {error}
+ </div>
+ )}
  <div className="flex justify-between items-end">
  <div>
  <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">

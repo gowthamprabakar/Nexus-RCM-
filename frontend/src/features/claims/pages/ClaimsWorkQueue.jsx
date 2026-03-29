@@ -34,28 +34,6 @@ function AIBadge({ level }) {
   );
 }
 
-const STATIC_FALLBACK_WQ_INSIGHTS = [
-  {
-    title: 'Batch Auto-Fix Available',
-    description: 'AI can auto-correct 312 claims with NPI validation errors and 89 with missing modifier codes. Estimated 4.2 hours manual work saved.',
-    confidence: 96,
-    impact: 'high',
-    category: 'Prescriptive',
-    action: 'Run auto-fix batch',
-    value: '401 claims / 4.2 hrs saved',
-    icon: 'auto_fix_high',
-  },
-  {
-    title: 'Timely Filing Deadline Alert',
-    description: '67 Medicare claims approaching 12-month timely filing deadline within 30 days. $284K at risk of permanent denial.',
-    confidence: 99,
-    impact: 'high',
-    category: 'Predictive',
-    action: 'Prioritize filing queue',
-    value: '$284K deadline risk',
-    icon: 'timer',
-  },
-];
 
 
 export function ClaimsWorkQueue() {
@@ -79,9 +57,10 @@ export function ClaimsWorkQueue() {
   const [amountRange, setAmountRange] = useState('all');
 
   // AI Insights state
-  const [wqAiInsights, setWqAiInsights] = useState(STATIC_FALLBACK_WQ_INSIGHTS);
+  const [wqAiInsights, setWqAiInsights] = useState([]);
   const [wqAiLoading, setWqAiLoading] = useState(false);
   const [crsSummary, setCrsSummary] = useState(null);
+  const [fetchError, setFetchError] = useState(null);
 
   useEffect(() => {
     const fetchClaims = async () => {
@@ -90,6 +69,7 @@ export function ClaimsWorkQueue() {
         setClaims(data);
       } catch (error) {
         console.error("Failed to load claims", error);
+        setFetchError(error?.message || 'Failed to load claims data');
       } finally {
         setLoading(false);
       }
@@ -210,6 +190,27 @@ export function ClaimsWorkQueue() {
     return (
       <div className="flex-1 flex items-center justify-center h-full text-th-muted">
         <span className="material-symbols-outlined text-4xl animate-spin">progress_activity</span>
+      </div>
+    );
+  }
+
+  if (fetchError && claims.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-12">
+        <div className="bg-th-surface-raised border border-th-border rounded-xl p-8 max-w-md w-full text-center">
+          <div className="size-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <span className="material-symbols-outlined text-red-400 text-2xl">error_outline</span>
+          </div>
+          <h3 className="text-th-heading text-lg font-bold mb-2">Failed to Load Claims</h3>
+          <p className="text-th-secondary text-sm mb-6">{fetchError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-th-heading text-sm font-semibold rounded-lg transition-colors inline-flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-lg">refresh</span>
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -518,10 +519,15 @@ export function ClaimsWorkQueue() {
                 <div className="h-3 w-1/2 bg-th-surface-overlay rounded" />
               </div>
             ))
-          ) : (
+          ) : wqAiInsights.length > 0 ? (
             wqAiInsights.map((insight, i) => (
               <AIInsightCard key={i} {...insight} onClick={() => {}} />
             ))
+          ) : (
+            <div className="col-span-full text-center py-8 text-sm text-th-muted">
+              <span className="material-symbols-outlined text-2xl mb-2 block">auto_awesome</span>
+              No AI insights available. Insights will appear when the AI engine processes your claims data.
+            </div>
           )}
         </div>
       </div>

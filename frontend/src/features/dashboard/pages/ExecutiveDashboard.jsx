@@ -155,35 +155,6 @@ function SkeletonDashboard() {
  );
 }
 
-const STATIC_FALLBACK_EXEC_INSIGHTS = [
-  {
-    title: 'Net Collection Rate Below Benchmark',
-    description: '96.3% net collection is 1.2% below MGMA benchmark of 97.5%. Primary driver: Medicaid underpayments averaging $142/claim.',
-    confidence: 93,
-    impact: 'high',
-    category: 'Diagnostic',
-    action: 'Review Medicaid contracts',
-    value: '$210K gap',
-  },
-  {
-    title: 'Q2 Revenue at Risk',
-    description: 'If current denial rate (4.8%) continues through Q2, projected revenue impact is $480K vs budget.',
-    confidence: 88,
-    impact: 'high',
-    category: 'Predictive',
-    action: 'Activate denial prevention protocol',
-    value: '$480K risk',
-  },
-  {
-    title: 'First-Pass Rate Recovery Opportunity',
-    description: 'Implementing pre-scrub AI rules for top 3 error types could improve first-pass rate from 91.2% to 94.8%.',
-    confidence: 82,
-    impact: 'medium',
-    category: 'Prescriptive',
-    action: 'Enable pre-scrub ruleset',
-    value: '+3.6% improvement',
-  },
-];
 
 
 export function ExecutiveDashboard() {
@@ -221,7 +192,7 @@ export function ExecutiveDashboard() {
  const [activeTickets, setActiveTickets] = useState([]);
  const [isLoading, setIsLoading] = useState(true);
  const [error, setError] = useState(null);
- const [execAiInsights, setExecAiInsights] = useState(STATIC_FALLBACK_EXEC_INSIGHTS);
+ const [execAiInsights, setExecAiInsights] = useState([]);
  const [aiInsightsLoading, setAiInsightsLoading] = useState(false);
  const [rootCauseSummary, setRootCauseSummary] = useState(null);
  const [preventionAlerts, setPreventionAlerts] = useState(null);
@@ -598,10 +569,15 @@ export function ExecutiveDashboard() {
            <div className="h-3 w-1/2 bg-th-surface-overlay rounded" />
          </div>
        ))
-     ) : (
+     ) : execAiInsights.length > 0 ? (
        execAiInsights.map((insight) => (
          <AIInsightCard key={insight.title} {...insight} />
        ))
+     ) : (
+       <div className="col-span-full text-center py-8 text-sm text-th-muted">
+         <span className="material-symbols-outlined text-2xl mb-2 block">auto_awesome</span>
+         No AI insights available. Insights will appear when the AI engine processes your data.
+       </div>
      )}
    </div>
  </div>

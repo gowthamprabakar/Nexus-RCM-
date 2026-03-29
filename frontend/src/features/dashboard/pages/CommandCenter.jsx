@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../../services/api';
-import { mockCommandCenterData } from '../../../data/synthetic/mockCommandCenterData';
 import { cn } from '../../../lib/utils';
 
 // --- Compute trend delta from current vs prior-period value ---
@@ -180,78 +179,7 @@ function getCurrentDateRange() {
  return `${monthNames[now.getMonth()]} 1 - ${monthNames[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
 }
 
-const STATIC_FALLBACK_CC_INSIGHTS = [
-  {
-    title: 'Denial Rate Spike Detected',
-    description: 'CO-4 coding errors up 34% this week in Oncology. Pattern matches prior auth requirement change effective Jan 15.',
-    confidence: 91,
-    impact: 'high',
-    category: 'Diagnostic',
-    action: 'Review Oncology coding rules',
-    value: '$128K at risk',
-    icon: 'warning',
-  },
-  {
-    title: 'A/R Velocity Improving',
-    description: 'Days in A/R trending down 2.1 days vs prior month. Medicare processing times normalized post-holiday.',
-    confidence: 87,
-    impact: 'medium',
-    category: 'Predictive',
-    action: 'Accelerate follow-up queue',
-    value: '$340K faster recovery',
-    icon: 'trending_up',
-  },
-  {
-    title: 'Optimize Claim Submission Timing',
-    description: 'Submit Tuesday–Wednesday before 2pm for 12% faster adjudication. Friday submissions average 4.2 days longer.',
-    confidence: 84,
-    impact: 'medium',
-    category: 'Prescriptive',
-    action: 'Update submission schedule',
-    value: '4.2 day reduction',
-    icon: 'schedule',
-  },
-  {
-    title: 'Revenue Leakage: Underbilling',
-    description: 'Cardiology E&M codes show 18% under-complexity billing vs peers. Estimated $58K/month revenue leakage.',
-    confidence: 78,
-    impact: 'high',
-    category: 'Prescriptive',
-    action: 'Audit Cardiology coding',
-    value: '$58K/month',
-    icon: 'attach_money',
-  },
-];
 
-const CC_PRESCRIPTIVE_ACTIONS = [
-  {
-    title: 'Address CO-4 Denial Surge',
-    description: 'Oncology claim edits need rule update. 142 claims pending.',
-    priority: 'critical',
-    effort: 'immediate',
-    impact: '$128K recovery',
-    icon: 'gavel',
-    tag: 'AI Recommended',
-  },
-  {
-    title: 'Accelerate High-Value A/R',
-    description: '47 claims >$5K past 45 days. Assign to senior collectors.',
-    priority: 'high',
-    effort: 'short-term',
-    impact: '$340K',
-    icon: 'payments',
-    tag: 'AI Recommended',
-  },
-  {
-    title: 'Renegotiate Aetna Contract',
-    description: 'Aetna reimbursement 8.2% below market benchmark.',
-    priority: 'medium',
-    effort: 'long-term',
-    impact: '$180K/year',
-    icon: 'handshake',
-    tag: 'Strategic',
-  },
-];
 
 const AgentSwarmWidget = () => {
   const [status, setStatus] = useState(null);
@@ -291,11 +219,12 @@ export function CommandCenter() {
  const navigate = useNavigate();
  const [liveData, setLiveData] = useState(null);
  const [loading, setLoading] = useState(true);
- const data = liveData || mockCommandCenterData;
+ const [error, setError] = useState(null);
+ const data = liveData || { executive: {}, lifecycle: [], bottlenecks: [], tickets: [], performance: { automation: {}, team: [] } };
  const [selectedStage, setSelectedStage] = useState(null);
  const [pipelineData, setPipelineData] = useState(null);
  const [pipelineStats, setPipelineStats] = useState(null);
- const [ccAiInsights, setCcAiInsights] = useState(STATIC_FALLBACK_CC_INSIGHTS);
+ const [ccAiInsights, setCcAiInsights] = useState([]);
  const [aiLoading, setAiLoading] = useState(false);
  const [rootCauseSummary, setRootCauseSummary] = useState(null);
  const [preventionAlerts, setPreventionAlerts] = useState(null);
@@ -336,16 +265,19 @@ export function CommandCenter() {
          if (scanRes) setPreventionAlerts(scanRes);
        }).catch(() => {});
 
-       // Build the full data object matching mock shape
+       // Build the full data object from API responses
        const executive = buildExecutiveData(pipelineRes, denialsRes, crsRes, arRes, paymentsRes, rootCauseRes, diagnosticsRes);
 
        setLiveData({
-         ...mockCommandCenterData,
          executive,
+         lifecycle: pipelineRes?.pipeline || [],
+         bottlenecks: [],
+         tickets: [],
+         performance: { automation: { autoFixRate: '--' }, team: [] },
        });
      } catch (err) {
-       console.error('CommandCenter: failed to load live data, falling back to mock', err);
-       // liveData stays null → fallback kicks in
+       console.error('CommandCenter: failed to load live data', err);
+       setError(err?.message || 'Failed to load Command Center data');
      } finally {
        setLoading(false);
      }
@@ -385,7 +317,39 @@ export function CommandCenter() {
    if (key === 'dept') setFilterDept('All');
  };
 
- const selectedStageData = selectedStage !== null ? data.lifecycle[selectedStage] : null;
+ const selectedStageData = selectedStage !== null ? data.lifecycle?.[selectedStage] : null;
+
+ if (loading) {
+   return (
+     <div className="flex-1 flex items-center justify-center h-full">
+       <div className="flex flex-col items-center gap-3">
+         <span className="material-symbols-outlined text-4xl text-th-muted animate-spin">progress_activity</span>
+         <p className="text-sm text-th-secondary font-medium">Loading Command Center...</p>
+       </div>
+     </div>
+   );
+ }
+
+ if (error && !liveData) {
+   return (
+     <div className="flex-1 flex items-center justify-center p-12">
+       <div className="bg-th-surface-raised border border-th-border rounded-xl p-8 max-w-md w-full text-center shadow-card">
+         <div className="size-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+           <span className="material-symbols-outlined text-red-400 text-2xl">error_outline</span>
+         </div>
+         <h3 className="text-th-heading text-lg font-bold mb-2">Failed to Load Command Center</h3>
+         <p className="text-th-secondary text-sm mb-6">{error}</p>
+         <button
+           onClick={() => window.location.reload()}
+           className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-th-heading text-sm font-semibold rounded-lg transition-colors inline-flex items-center gap-2"
+         >
+           <span className="material-symbols-outlined text-lg">refresh</span>
+           Retry
+         </button>
+       </div>
+     </div>
+   );
+ }
 
  return (
  <div className="flex-1 flex flex-col min-h-0 bg-th-surface-base text-th-primary font-sans overflow-hidden">

@@ -5,31 +5,50 @@ export function BenefitAnalytics() {
  const [loading, setLoading] = useState(true);
  const [arSummary, setArSummary] = useState(null);
  const [paymentsSummary, setPaymentsSummary] = useState(null);
+ const [benefitsData, setBenefitsData] = useState(null);
+ const [error, setError] = useState(null);
 
  useEffect(() => {
    async function load() {
      setLoading(true);
-     const [ar, payments] = await Promise.all([
-       api.ar.getSummary(),
-       api.payments.getSummary(),
-     ]);
-     setArSummary(ar);
-     setPaymentsSummary(payments);
-     setLoading(false);
+     setError(null);
+     try {
+       const [ar, payments, benefits] = await Promise.allSettled([
+         api.ar.getSummary(),
+         api.payments.getSummary(),
+         api.patientAccess.getBenefits('default'),
+       ]);
+       if (ar.status === 'fulfilled') setArSummary(ar.value);
+       if (payments.status === 'fulfilled') setPaymentsSummary(payments.value);
+       if (benefits.status === 'fulfilled' && benefits.value) setBenefitsData(benefits.value);
+     } catch (err) {
+       console.error('BenefitAnalytics load error:', err);
+       setError('Failed to load benefits data.');
+     } finally {
+       setLoading(false);
+     }
    }
    load();
  }, []);
 
- // Derive benefit metrics from real API data
- const totalOutstanding = arSummary?.total_outstanding != null
-   ? `$${(arSummary.total_outstanding / 1000).toFixed(1)}k` : '--';
- const totalClaims = arSummary?.total_claims ?? '--';
- const avgDaysInAR = arSummary?.avg_days_in_ar != null
-   ? `${arSummary.avg_days_in_ar.toFixed(0)} days` : '--';
- const totalPayments = paymentsSummary?.total_payments != null
-   ? `$${(paymentsSummary.total_payments / 1000).toFixed(1)}k` : '--';
- const avgPaymentTime = paymentsSummary?.avg_days_to_payment != null
-   ? `${paymentsSummary.avg_days_to_payment.toFixed(0)} days` : '--';
+ // Derive benefit metrics (prefer patientAccess API, fallback to AR/payments)
+ const totalOutstanding = benefitsData?.total_outstanding != null
+   ? `$${(benefitsData.total_outstanding / 1000).toFixed(1)}k`
+   : arSummary?.total_outstanding != null
+     ? `$${(arSummary.total_outstanding / 1000).toFixed(1)}k` : '--';
+ const totalClaims = benefitsData?.total_claims ?? arSummary?.total_claims ?? '--';
+ const avgDaysInAR = benefitsData?.avg_days_in_ar != null
+   ? `${benefitsData.avg_days_in_ar.toFixed(0)} days`
+   : arSummary?.avg_days_in_ar != null
+     ? `${arSummary.avg_days_in_ar.toFixed(0)} days` : '--';
+ const totalPayments = benefitsData?.total_payments != null
+   ? `$${(benefitsData.total_payments / 1000).toFixed(1)}k`
+   : paymentsSummary?.total_payments != null
+     ? `$${(paymentsSummary.total_payments / 1000).toFixed(1)}k` : '--';
+ const avgPaymentTime = benefitsData?.avg_days_to_payment != null
+   ? `${benefitsData.avg_days_to_payment.toFixed(0)} days`
+   : paymentsSummary?.avg_days_to_payment != null
+     ? `${paymentsSummary.avg_days_to_payment.toFixed(0)} days` : '--';
 
  const Skeleton = () => (
    <div className="animate-pulse bg-th-surface-overlay rounded h-8 w-20"></div>
@@ -38,6 +57,14 @@ export function BenefitAnalytics() {
  return (
  <div className="flex-1 overflow-y-auto h-full p-6 text-th-heading custom-scrollbar">
  <div className="max-w-[1600px] mx-auto space-y-6">
+
+ {/* Error Banner */}
+ {error && (
+ <div className="px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-400 flex items-center gap-2">
+ <span className="material-symbols-outlined text-sm">warning</span>
+ {error}
+ </div>
+ )}
 
  {/* Real-time Benefit KPIs from API */}
  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">

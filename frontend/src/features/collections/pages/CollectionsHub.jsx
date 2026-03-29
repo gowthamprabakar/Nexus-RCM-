@@ -68,6 +68,8 @@ export function CollectionsHub() {
 
  /* Audit-driven: root cause, diagnostics, prevention */
  const [rootCauseSummary, setRootCauseSummary] = useState(null);
+ const [agingRootCause, setAgingRootCause] = useState(null);
+ const [payerStats, setPayerStats] = useState([]);
  const [arDiagnostics, setArDiagnostics] = useState(null);
  const [preventionRisk, setPreventionRisk] = useState(null);
 
@@ -96,6 +98,8 @@ export function CollectionsHub() {
    api.rootCause.getSummary().catch(() => null).then(r => r && setRootCauseSummary(r));
    api.diagnostics.getFindings({ category: 'AR_AGING' }).catch(() => null).then(r => r && setArDiagnostics(r));
    api.prevention.scan(3).catch(() => null).then(r => r && setPreventionRisk(r));
+   api.ar.getAgingRootCause().catch(() => null).then(r => r && setAgingRootCause(r));
+   api.payments.getPayerStats().catch(() => null).then(r => Array.isArray(r) && setPayerStats(r));
 
    async function load() {
      const [ar, coll, queue, den, pay] = await Promise.all([
@@ -606,14 +610,23 @@ export function CollectionsHub() {
  </div>
  <p className="text-sm text-th-secondary mb-6">AI-identified drivers of outstanding balances by aging category</p>
  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
- {[
+ {(agingRootCause?.causes || agingRootCause?.items || [
  { cause: 'Missing Authorization', pct: 28, bucket: '61-90d', icon: 'shield', color: 'text-amber-400' },
  { cause: 'Payer Processing Delays', pct: 24, bucket: '91-120d', icon: 'schedule', color: 'text-orange-400' },
  { cause: 'Coding / Modifier Errors', pct: 19, bucket: '31-60d', icon: 'code', color: 'text-blue-400' },
  { cause: 'Timely Filing Risk', pct: 15, bucket: '121-180d', icon: 'warning', color: 'text-red-400' },
  { cause: 'Medical Necessity Denials', pct: 9, bucket: '61-90d', icon: 'local_hospital', color: 'text-purple-400' },
  { cause: 'Patient Responsibility', pct: 5, bucket: '0-30d', icon: 'person', color: 'text-th-secondary' },
- ].map((item) => (
+ ]).map((item, idx) => {
+ const iconMap = ['shield', 'schedule', 'code', 'warning', 'local_hospital', 'person'];
+ const colorMap = ['text-amber-400', 'text-orange-400', 'text-blue-400', 'text-red-400', 'text-purple-400', 'text-th-secondary'];
+ const itemCause = item.cause || item.reason || item.category || `Cause ${idx + 1}`;
+ const itemPct = item.pct || item.percentage || item.percent || 0;
+ const itemBucket = item.bucket || item.aging_bucket || '';
+ const itemIcon = item.icon || iconMap[idx % iconMap.length];
+ const itemColor = item.color || colorMap[idx % colorMap.length];
+ return { cause: itemCause, pct: itemPct, bucket: itemBucket, icon: itemIcon, color: itemColor };
+ }).map((item) => (
  <div key={item.cause} className="flex items-start gap-3 p-3 rounded-lg bg-th-surface-overlay border border-th-border/30 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
  <span className={`material-symbols-outlined ${item.color} mt-0.5`}>{item.icon}</span>
  <div className="flex-1 min-w-0">
@@ -706,34 +719,60 @@ export function CollectionsHub() {
  <div className="bg-th-surface-raised border border-th-border p-6 rounded-xl mb-8">
  <h3 className="text-lg font-bold mb-1 text-th-heading">Top Payers by A/R Balance</h3>
  <p className="text-sm text-th-secondary mb-6">Treemap visualization of capital concentration</p>
+ {(() => {
+ const fmtTreemap = (n) => {
+  if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return '$' + (n / 1000).toFixed(0) + 'k';
+  return '$' + n.toLocaleString();
+ };
+ const payerSource = payerStats.length > 0 ? payerStats :
+   (arSummary?.by_payer || arSummary?.payer_breakdown || []);
+ const sortedPayers = [...payerSource]
+  .map(p => ({ name: p.name || p.payer_name || p.payer || 'Unknown', balance: p.balance || p.total_paid || p.revenue_ytd || p.amount || 0 }))
+  .sort((a, b) => b.balance - a.balance);
+ const totalBalance = sortedPayers.reduce((s, p) => s + p.balance, 0) || 1;
+ const topPayer = sortedPayers[0];
+ const midPayers = sortedPayers.slice(1, 3);
+ const smallPayers = sortedPayers.slice(3, 6);
+ const othersCount = Math.max(0, sortedPayers.length - 6);
+ if (sortedPayers.length === 0) {
+  return (
+   <div className="flex items-center justify-center h-72 text-th-muted text-sm">
+    No payer breakdown data available.
+   </div>
+  );
+ }
+ return (
  <div className="grid grid-cols-12 grid-rows-2 h-72 gap-2 text-th-heading">
+ {topPayer && (
  <div className="col-span-6 row-span-2 bg-blue-600/10 border border-blue-500/20 rounded-lg p-6 flex flex-col justify-between hover:bg-blue-600/20 cursor-pointer transition-all hover:scale-[1.02]">
  <div>
- <p className="text-sm font-bold text-blue-300/80">Medicare Advantage</p>
- <p className="text-3xl font-black text-blue-400 mt-1 tabular-nums">$3.8M</p>
+ <p className="text-sm font-bold text-blue-300/80">{topPayer.name}</p>
+ <p className="text-3xl font-black text-blue-400 mt-1 tabular-nums">{fmtTreemap(topPayer.balance)}</p>
  </div>
- <p className="text-xs font-bold text-th-muted tabular-nums">30.5% of Portfolio</p>
+ <p className="text-xs font-bold text-th-muted tabular-nums">{((topPayer.balance / totalBalance) * 100).toFixed(1)}% of Portfolio</p>
  </div>
- <div className="col-span-3 row-span-1 bg-th-surface-overlay border border-th-border/30 rounded-lg p-4 hover:bg-th-surface-overlay/60 transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-center">
- <p className="text-xs font-bold text-th-secondary">BCBS Texas</p>
- <p className="text-xl font-bold">$1.4M</p>
+ )}
+ {midPayers.map((p, i) => (
+ <div key={i} className="col-span-3 row-span-1 bg-th-surface-overlay border border-th-border/30 rounded-lg p-4 hover:bg-th-surface-overlay/60 transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-center">
+ <p className="text-xs font-bold text-th-secondary">{p.name}</p>
+ <p className="text-xl font-bold tabular-nums">{fmtTreemap(p.balance)}</p>
  </div>
- <div className="col-span-3 row-span-1 bg-th-surface-overlay border border-th-border/30 rounded-lg p-4 hover:bg-th-surface-overlay/60 transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-center">
- <p className="text-xs font-bold text-th-secondary">Aetna National</p>
- <p className="text-xl font-bold">$1.2M</p>
+ ))}
+ {smallPayers.map((p, i) => (
+ <div key={i} className="col-span-2 row-span-1 bg-th-surface-overlay border border-th-border/30 rounded-lg p-3 hover:bg-th-surface-overlay/60 transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-center">
+ <p className="text-xs font-bold text-th-secondary">{p.name}</p>
+ <p className="text-lg font-bold tabular-nums">{fmtTreemap(p.balance)}</p>
  </div>
- <div className="col-span-2 row-span-1 bg-th-surface-overlay border border-th-border/30 rounded-lg p-3 hover:bg-th-surface-overlay/60 transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-center">
- <p className="text-xs font-bold text-th-secondary">Cigna</p>
- <p className="text-lg font-bold">$920k</p>
- </div>
- <div className="col-span-2 row-span-1 bg-th-surface-overlay border border-th-border/30 rounded-lg p-3 hover:bg-th-surface-overlay/60 transition-all hover:scale-[1.02] cursor-pointer flex flex-col justify-center">
- <p className="text-xs font-bold text-th-secondary">United</p>
- <p className="text-lg font-bold">$840k</p>
- </div>
+ ))}
+ {othersCount > 0 && (
  <div className="col-span-2 row-span-1 bg-th-surface-overlay/30 border-2 border-dashed border-th-border/40 rounded-lg p-3 flex items-center justify-center hover:bg-th-surface-overlay/50 transition-colors cursor-pointer">
- <p className="text-xs font-bold text-th-muted">14 Others</p>
+ <p className="text-xs font-bold text-th-muted">{othersCount} Others</p>
  </div>
+ )}
  </div>
+ );
+ })()}
  </div>
 
  {/* ── High-Value / High-Risk Worklist ──────────── */}

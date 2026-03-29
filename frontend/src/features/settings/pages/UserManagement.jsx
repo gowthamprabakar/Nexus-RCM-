@@ -22,32 +22,48 @@ export function UserManagement() {
 
  useEffect(() => {
   let cancelled = false;
+  function mapUsers(rawUsers) {
+   return rawUsers.map((u, i) => {
+    const name = u.name || u.user_name || u.username || `Agent ${u.user_id || u.id || i + 1}`;
+    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    return {
+     name,
+     email: u.email || `${name.toLowerCase().replace(/\s/g, '.')}@rcm.ai`,
+     role: u.role || 'Billing Specialist',
+     ava: initials,
+     color: COLORS[i % COLORS.length],
+     metrics: {
+      tasksCompleted: u.tasks_completed || u.completed || 0,
+      collectionsAmount: u.collections_amount || u.recovered || 0,
+      avgResolutionDays: u.avg_resolution_days || u.avg_days || null,
+     },
+     lastActive: u.last_active || u.last_login || u.updated_at || 'Unknown',
+     mfaEnabled: u.mfa_enabled !== undefined ? u.mfa_enabled : true,
+    };
+   });
+  }
   async function load() {
    setLoading(true);
    setError(null);
    try {
-    const data = await api.collections.getUserPerformance();
+    // Prefer the admin users endpoint; fall back to collections user performance
+    let rawUsers = null;
+    const adminData = await api.admin.getUsers();
+    if (adminData && Array.isArray(adminData.users) && adminData.users.length > 0) {
+     rawUsers = adminData.users;
+    } else if (adminData && Array.isArray(adminData) && adminData.length > 0) {
+     rawUsers = adminData;
+    }
+    // Fallback to collections endpoint if admin returned nothing
+    if (!rawUsers) {
+     const collData = await api.collections.getUserPerformance();
+     if (collData && collData.users && collData.users.length > 0) {
+      rawUsers = collData.users;
+     }
+    }
     if (cancelled) return;
-    if (data && data.users && data.users.length > 0) {
-     const mapped = data.users.map((u, i) => {
-      const name = u.name || u.user_name || `Agent ${u.user_id || i + 1}`;
-      const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-      return {
-       name,
-       email: u.email || `${name.toLowerCase().replace(/\s/g, '.')}@rcm.ai`,
-       role: u.role || 'Billing Specialist',
-       ava: initials,
-       color: COLORS[i % COLORS.length],
-       metrics: {
-        tasksCompleted: u.tasks_completed || u.completed || 0,
-        collectionsAmount: u.collections_amount || u.recovered || 0,
-        avgResolutionDays: u.avg_resolution_days || u.avg_days || null,
-       },
-       lastActive: u.last_active || u.last_login || 'Unknown',
-       mfaEnabled: u.mfa_enabled !== undefined ? u.mfa_enabled : true,
-      };
-     });
-     setUsers(mapped);
+    if (rawUsers && rawUsers.length > 0) {
+     setUsers(mapUsers(rawUsers));
     } else {
      setUsers(FALLBACK_USERS);
     }

@@ -5,21 +5,32 @@ export function AICodingRulebook() {
  const [searchTerm, setSearchTerm] = useState('');
  const [activePayer, setActivePayer] = useState('medicare');
  const [loading, setLoading] = useState(true);
- const [errorCategories, setErrorCategories] = useState([]);
+ const [error, setError] = useState(null);
+ const [auditData, setAuditData] = useState(null);
 
  useEffect(() => {
    async function load() {
      setLoading(true);
-     const errors = await api.crs.getErrorCategories();
-     setErrorCategories(errors || []);
-     setLoading(false);
+     setError(null);
+     try {
+       const data = await api.coding.getAudit();
+       if (!data) throw new Error('No audit data returned');
+       setAuditData(data);
+     } catch (err) {
+       console.error('Failed to load coding audit for rulebook:', err);
+       setError(err.message || 'Failed to load data');
+     } finally {
+       setLoading(false);
+     }
    }
    load();
  }, []);
 
- // Derive rule violation stats from real error categories
- const totalErrors = errorCategories.reduce((sum, c) => sum + (c.count || 0), 0);
- const topCategories = [...errorCategories].sort((a, b) => (b.count || 0) - (a.count || 0));
+ // Derive rule violation stats from coding API data
+ const denialsByCarc = auditData?.denials_by_carc || [];
+ const topErrorCpts = auditData?.top_error_cpt_codes || [];
+ const totalErrors = auditData?.total_coding_denials ?? 0;
+ const topCategories = denialsByCarc.sort((a, b) => (b.denial_count || 0) - (a.denial_count || 0));
 
  const payers = [
  { id: 'medicare', name: 'Medicare Part B', type: 'National - Primary', updates: '142 Updates', starred: true },
@@ -125,23 +136,38 @@ export function AICodingRulebook() {
  </div>
  </div>
 
- {/* Error Categories from API */}
- {!loading && errorCategories.length > 0 && (
+ {/* Error State */}
+ {error && (
+ <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-3">
+   <span className="material-symbols-outlined text-red-400">error</span>
+   <div>
+     <p className="text-sm font-bold text-red-400">Failed to load coding data</p>
+     <p className="text-xs text-red-400/70 mt-0.5">{error}</p>
+   </div>
+   <button onClick={() => window.location.reload()} className="ml-auto px-3 py-1.5 text-xs font-bold text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/10">Retry</button>
+ </div>
+ )}
+
+ {/* Coding Denials by CARC from API */}
+ {!loading && denialsByCarc.length > 0 && (
  <div className="bg-th-surface-raised rounded-xl border border-th-border overflow-hidden mb-8">
    <div className="px-6 py-4 border-b border-th-border flex justify-between items-center">
      <h2 className="font-bold text-th-heading flex items-center gap-2">
        <span className="material-symbols-outlined text-rose-400">error</span>
-       CRS Error Categories - Rule Violations
+       Coding Denials by CARC - Rule Violations
      </h2>
      <span className="text-xs font-bold text-rose-400 bg-rose-500/10 px-2 py-1 rounded-full tabular-nums">{totalErrors} Total</span>
    </div>
    <div className="grid grid-cols-2 md:grid-cols-4 gap-0 divide-x divide-th-border">
-     {topCategories.slice(0, 4).map((cat, i) => (
+     {topCategories.slice(0, 4).map((d, i) => (
        <div key={i} className="p-4 text-center">
-         <p className="text-[10px] font-bold text-th-muted uppercase tracking-widest mb-1">{cat.category || cat.name || `Category ${i+1}`}</p>
-         <p className="text-2xl font-black text-th-heading tabular-nums">{cat.count || 0}</p>
-         {cat.revenue_at_risk != null && (
-           <p className="text-[10px] text-rose-400 mt-1 font-bold tabular-nums">${(cat.revenue_at_risk / 1000).toFixed(1)}k at risk</p>
+         <p className="text-[10px] font-bold text-th-muted uppercase tracking-widest mb-1">{d.carc_code || `CARC ${i+1}`}</p>
+         <p className="text-2xl font-black text-th-heading tabular-nums">{d.denial_count || 0}</p>
+         {d.total_amount != null && d.total_amount > 0 && (
+           <p className="text-[10px] text-rose-400 mt-1 font-bold tabular-nums">${(d.total_amount / 1000).toFixed(1)}k at risk</p>
+         )}
+         {d.description && (
+           <p className="text-[9px] text-th-muted mt-1 truncate">{d.description}</p>
          )}
        </div>
      ))}

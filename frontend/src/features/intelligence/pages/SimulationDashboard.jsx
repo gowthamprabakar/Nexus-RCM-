@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { api } from '../../../services/api';
 
 /* ──────────────────────────────────────────────────────────────────────────
    Constants & Helpers
    ────────────────────────────────────────────────────────────────────────── */
-const API_BASE = 'http://localhost:5001/api/simulation/rcm';
 const POLL_INTERVAL = 30000;
 
 const SCENARIO_META = {
@@ -89,9 +89,8 @@ export function SimulationDashboard() {
   /* ── Fetch helpers ───────────────────────────────────────────────────── */
   const fetchSchedulerStatus = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/scheduler/status`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await api.simulation.getSchedulerStatus();
+      if (!data) return;
       setSchedulerStatus(data);
 
       // Extract cached scenario results from scheduler status
@@ -108,9 +107,8 @@ export function SimulationDashboard() {
 
   const fetchPayerAgents = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/agents`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await api.simulation.getRCMAgents();
+      if (!data) return;
       const agents = data.agents || data || [];
       if (Array.isArray(agents) && agents.length > 0) {
         setPayerAgents(agents);
@@ -145,8 +143,8 @@ export function SimulationDashboard() {
   const handleRunNow = useCallback(async (scenarioId) => {
     setRunningScenarios((prev) => new Set(prev).add(scenarioId));
     try {
-      const res = await fetch(`${API_BASE}/run-now/${scenarioId}`, { method: 'POST' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const result = await api.simulation.runScenarioNow(scenarioId);
+      if (!result) throw new Error('Run now returned no data');
       // Refresh status after a short delay to pick up new results
       setTimeout(() => {
         fetchSchedulerStatus();
@@ -583,14 +581,9 @@ function InterviewModal({ agent, onClose }) {
     setMessages((prev) => [...prev, { role: 'user', content: question }]);
 
     try {
-      const res = await fetch(`${API_BASE}/interview/${agentId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question }),
-      });
+      const data = await api.simulation.interviewAgent(agentId, question);
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      if (!data) throw new Error('No response from agent');
 
       setMessages((prev) => [
         ...prev,
