@@ -8,6 +8,7 @@ import {
   DateRangePicker,
   FilterChipGroup,
 } from '../../../components/ui';
+import { DenialRiskBadge } from '../../../components/predictions';
 
 const ITEMS_PER_PAGE = 25;
 
@@ -354,6 +355,7 @@ export function ClaimsWorkQueue() {
                 <SortHeader label="Payer" sortKey="payer.name" currentSort={sortConfig} onSort={handleSort} />
                 <SortHeader label="Amount" sortKey="amount" currentSort={sortConfig} onSort={handleSort} />
                 <SortHeader label="Risk Score" sortKey="risk_score" currentSort={sortConfig} onSort={handleSort} />
+                <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider text-th-secondary">Denial Risk</th>
                 <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider text-th-secondary">Insight</th>
                 <th className="px-4 py-4 text-xs font-bold uppercase tracking-wider text-th-secondary text-right">Action</th>
               </tr>
@@ -361,7 +363,7 @@ export function ClaimsWorkQueue() {
             <tbody className="divide-y divide-slate-700/30">
               {claims.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="text-center py-20">
+                  <td colSpan="9" className="text-center py-20">
                     <div className="flex flex-col items-center justify-center">
                       <span className="material-symbols-outlined text-4xl text-th-muted mb-2">inbox</span>
                       <p className="text-th-secondary font-bold">No Claims Found in Database</p>
@@ -371,7 +373,7 @@ export function ClaimsWorkQueue() {
                 </tr>
               ) : paginatedClaims.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="text-center py-12 text-th-secondary">
+                  <td colSpan="9" className="text-center py-12 text-th-secondary">
                     No claims match current filters.
                   </td>
                 </tr>
@@ -398,6 +400,9 @@ export function ClaimsWorkQueue() {
                     <td className="px-4 py-4 text-sm font-bold tabular-nums">${claim.amount ? claim.amount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}</td>
                     <td className="px-4 py-4">
                       <RiskTag score={claim.risk_score} />
+                    </td>
+                    <td className="px-4 py-4">
+                      <DenialRiskBadge claimId={claim.id} compact />
                     </td>
                     <td className="px-4 py-4">
                       <SmartBadge claim={claim} />

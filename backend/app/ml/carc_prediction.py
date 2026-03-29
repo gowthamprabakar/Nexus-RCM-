@@ -167,7 +167,7 @@ class CARCPredictionModel:
             FROM denials d
             JOIN claims c ON c.claim_id = d.claim_id
             JOIN payer_master pm ON pm.payer_id = c.payer_id
-            LEFT JOIN prior_authorization pa ON pa.claim_id = c.claim_id
+            LEFT JOIN prior_auth pa ON pa.claim_id = c.claim_id
             WHERE d.carc_code IS NOT NULL
             LIMIT 20000
         """)
@@ -199,7 +199,7 @@ class CARCPredictionModel:
                 EXTRACT(MONTH FROM c.date_of_service)
             FROM claims c
             JOIN payer_master pm ON pm.payer_id = c.payer_id
-            LEFT JOIN prior_authorization pa ON pa.claim_id = c.claim_id
+            LEFT JOIN prior_auth pa ON pa.claim_id = c.claim_id
             WHERE c.claim_id = :cid
         """)
         try:

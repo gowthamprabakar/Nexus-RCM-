@@ -7,6 +7,7 @@ import {
  FilterChipGroup,
  DateRangePicker,
 } from '../../../components/ui';
+import { PropensityBadge } from '../../../components/predictions';
 
 /* ── Queue task data with propensity scores ─────────────────────── */
 const queueTasks = [
@@ -378,6 +379,7 @@ export function CollectionsQueue() {
          <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-th-muted">Balance</th>
          <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-th-muted">Days in A/R</th>
          <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-th-muted">Propensity</th>
+         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-th-muted">Pay Pred.</th>
          <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-th-muted">Next AI Action</th>
         </tr>
        </thead>
@@ -417,6 +419,9 @@ export function CollectionsQueue() {
            <ConfidenceBar score={task.propensity} label="Propensity" size="sm" showBar showLabel />
           </td>
           <td className="px-6 py-4 whitespace-nowrap">
+           <PropensityBadge patientId={task.id} compact />
+          </td>
+          <td className="px-6 py-4 whitespace-nowrap">
            <div className="flex items-center gap-2">
             <span className={`text-sm font-semibold group-hover:text-primary transition-colors ${task.active ? 'text-primary' : 'text-th-heading'}`}>
              {task.nextAction}
@@ -437,7 +442,7 @@ export function CollectionsQueue() {
         ))}
         {filteredTasks.length === 0 && (
          <tr>
-          <td colSpan={7} className="px-6 py-12 text-center text-th-muted">
+          <td colSpan={8} className="px-6 py-12 text-center text-th-muted">
            No tasks match the selected filters.
           </td>
          </tr>

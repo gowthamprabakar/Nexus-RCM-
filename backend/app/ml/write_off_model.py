@@ -133,13 +133,19 @@ class WriteOffModel:
                 CASE WHEN c.status = 'SUBMITTED' AND c.submission_date < c.date_of_service + 90 THEN 1 ELSE 0 END,
                 1,
                 pm.adtp_days,
-                CASE WHEN c.status = 'WRITTEN_OFF' THEN 1 ELSE 0 END AS label
+                CASE
+                    WHEN c.status = 'WRITTEN_OFF' THEN 1
+                    WHEN c.status = 'DENIED'
+                         AND COALESCE(a_cnt.cnt, 0) = 0
+                         AND (CURRENT_DATE - c.date_of_service) > 180 THEN 1
+                    ELSE 0
+                END AS label
             FROM claims c
             JOIN payer_master pm ON pm.payer_id = c.payer_id
             LEFT JOIN (SELECT claim_id, COUNT(*) cnt FROM denials GROUP BY claim_id) d_cnt ON d_cnt.claim_id = c.claim_id
             LEFT JOIN (SELECT claim_id, COUNT(*) cnt FROM appeals GROUP BY claim_id) a_cnt ON a_cnt.claim_id = c.claim_id
             LEFT JOIN (SELECT claim_id, SUM(payment_amount) paid FROM era_payments GROUP BY claim_id) p_sum ON p_sum.claim_id = c.claim_id
-            WHERE c.status IN ('PAID', 'DENIED', 'WRITTEN_OFF', 'IN_PROCESS')
+            WHERE c.status IN ('PAID', 'DENIED', 'WRITTEN_OFF', 'SUBMITTED', 'ACKNOWLEDGED')
             LIMIT 20000
         """)
         try:

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../../services/api';
 import { AIInsightCard, ConfidenceBar, DateRangePicker, FilterChip, FilterChipGroup, RootCauseInvestigationPanel } from '../../../components/ui';
+import { AppealSuccessBadge } from '../../../components/predictions';
 
 // ── Shared currency formatter ───────────────────────────────────────────────
 function fmtCurrency(amount) {
@@ -715,17 +716,18 @@ export function DenialManagement() {
  <th className="px-6 py-4">RARC</th>
  <th className="px-6 py-4">Category</th>
  <th className="px-6 py-4">AI Confidence</th>
+ <th className="px-6 py-4">Appeal Pred.</th>
  <th className="px-6 py-4 text-right">Action</th>
  </tr>
  </thead>
  <tbody className="divide-y divide-th-border">
  {loading ? (
  <tr>
- <td colSpan="9" className="px-6 py-8 text-center text-th-muted">Loading live appeals data...</td>
+ <td colSpan="10" className="px-6 py-8 text-center text-th-muted">Loading live appeals data...</td>
  </tr>
  ) : paginatedAppeals.length === 0 ? (
  <tr>
- <td colSpan="9" className="px-6 py-8 text-center text-th-muted">No active appeals found.</td>
+ <td colSpan="10" className="px-6 py-8 text-center text-th-muted">No active appeals found.</td>
  </tr>
  ) : paginatedAppeals.map((appeal) => (
  <tr key={appeal.id} className="hover:bg-th-surface-overlay/50 transition-colors group">
@@ -760,6 +762,9 @@ export function DenialManagement() {
  showLabel={false}
  factors={["Prior auth documented", "Similar cases won", "Timely filing met", "Clinical notes available"]}
  />
+ </td>
+ <td className="px-6 py-4">
+ <AppealSuccessBadge denialId={appeal.id} compact />
  </td>
  <td className="px-6 py-4 text-right">
  <div className="flex items-center gap-1.5">

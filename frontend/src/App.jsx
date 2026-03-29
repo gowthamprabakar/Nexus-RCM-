@@ -13,6 +13,7 @@ import { PaymentIntelligenceLayout } from './features/analytics/layouts/PaymentI
 import { ClaimsPipelineLayout } from './features/analytics/layouts/ClaimsPipelineLayout';
 
 // ── Analytics Pages ────────────────────────────────────────────────────
+import OutcomeDashboard from './features/analytics/pages/OutcomeDashboard';
 import { RevenueReconciliation } from './features/finance/pages/RevenueReconciliation';
 import { ARAgingPage } from './features/analytics/pages/ARAgingPage';
 import { RootCauseClaimsPage } from './features/analytics/pages/RootCauseClaimsPage';
@@ -41,6 +42,7 @@ import { ClaimsWorkQueue } from './features/claims/pages/ClaimsWorkQueue';
 import { AutoFixCenter } from './features/claims/pages/AutoFixCenter';
 import { BatchActions } from './features/claims/pages/BatchActions';
 import { DenialManagement } from './features/denials/pages/DenialManagement';
+import AppealPipelineTracker from './features/denials/pages/AppealPipelineTracker';
 import { HighRiskClaims } from './features/denials/pages/HighRiskClaims';
 import { AppealGenerator } from './features/denials/pages/AppealGenerator';
 import { DenialWorkflowLog } from './features/denials/pages/DenialWorkflowLog';
@@ -189,6 +191,9 @@ function App() {
                     <Route path="era-bank-recon" element={<ERABankRecon />} />
                 </Route>
 
+                {/* Outcome Analytics */}
+                <Route path="analytics/outcomes" element={<OutcomeDashboard />} />
+
                 {/* Prevention Intelligence */}
                 <Route path="analytics/prevention" element={<PreventionDashboard />} />
 
@@ -220,6 +225,9 @@ function App() {
                     <Route path="appeals" element={<AppealGenerator />} />
                     <Route path="workflow-log" element={<DenialWorkflowLog />} />
                 </Route>
+
+                {/* Appeal Pipeline */}
+                <Route path="denials/appeal-pipeline" element={<AppealPipelineTracker />} />
 
                 {/* Collections Work Center */}
                 <Route path="work/collections" element={<CollectionsWorkCenterLayout />}>

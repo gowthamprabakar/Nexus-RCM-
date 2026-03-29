@@ -198,3 +198,214 @@ async def prediction_accuracy(
         return await get_prediction_accuracy(db, days=days)
     except Exception as e:
         return {"error": str(e)}
+
+
+# ---------------------------------------------------------------------------
+# ML Prediction endpoints (Sprint 15+)
+# ---------------------------------------------------------------------------
+
+@router.get("/payment-delay/{claim_id}")
+async def predict_payment_delay(
+    claim_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Predict expected payment delay for a claim."""
+    try:
+        from app.ml.payment_delay import PaymentDelayModel
+        model = PaymentDelayModel()
+        result = await model.predict_claim(db, claim_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/payer-anomalies")
+async def detect_payer_anomalies(
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Detect anomalous payer behavior patterns."""
+    try:
+        from app.ml.payer_anomaly import PayerAnomalyModel
+        model = PayerAnomalyModel()
+        anomalies = await model.detect_anomalies(db)
+        return {
+            "anomalies": anomalies,
+            "total": len(anomalies),
+            "anomalous_count": sum(1 for a in anomalies if a.get("is_anomaly")),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/propensity-to-pay/{patient_id}")
+async def predict_propensity(
+    patient_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Predict patient propensity to pay."""
+    try:
+        from app.ml.propensity_to_pay import PropensityToPayModel
+        model = PropensityToPayModel()
+        result = await model.predict_patient(db, patient_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/write-off-risk/{claim_id}")
+async def predict_write_off(
+    claim_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Predict write-off risk for a claim."""
+    try:
+        from app.ml.write_off_model import WriteOffModel
+        model = WriteOffModel()
+        result = await model.predict_claim(db, claim_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/provider-risk/{provider_id}")
+async def predict_provider_risk(
+    provider_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Score provider risk level."""
+    try:
+        from app.ml.provider_risk import ProviderRiskModel
+        model = ProviderRiskModel()
+        result = await model.score_provider(db, provider_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/carc-prediction/{claim_id}")
+async def predict_carc(
+    claim_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Predict CARC (Claim Adjustment Reason Code) for a claim."""
+    try:
+        from app.ml.carc_prediction import CARCPredictionModel
+        model = CARCPredictionModel()
+        result = await model.predict_claim(db, claim_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/composite/claim-value/{claim_id}")
+async def get_claim_value(
+    claim_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Compute composite expected net revenue for a claim."""
+    try:
+        from app.ml.composite_scores import CompositeScoreEngine
+        from app.ml.denial_probability import DenialProbabilityModel
+        from sqlalchemy import text
+
+        # Get denial probability
+        try:
+            dm = DenialProbabilityModel()
+            denial_result = await dm.predict_claim(db, claim_id)
+            denial_prob = denial_result.get("probability", 0.15)
+        except Exception:
+            denial_prob = 0.15
+
+        # Get claim charges and payer ADTP
+        r = await db.execute(text(
+            "SELECT c.total_charges, pm.adtp_days FROM claims c "
+            "JOIN payer_master pm ON pm.payer_id = c.payer_id "
+            "WHERE c.claim_id = :cid"
+        ), {"cid": claim_id})
+        row = r.fetchone()
+        if not row:
+            raise HTTPException(404, f"Claim {claim_id} not found")
+
+        cs = CompositeScoreEngine()
+        return cs.claim_expected_net_revenue(denial_prob, float(row[0]), float(row[1]))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/composite/payer-health/{payer_id}")
+async def get_payer_health(
+    payer_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Compute composite payer health score."""
+    try:
+        from app.ml.composite_scores import CompositeScoreEngine
+        from sqlalchemy import text
+
+        r = await db.execute(text(
+            "SELECT denial_rate, adtp_days FROM payer_master WHERE payer_id = :pid"
+        ), {"pid": payer_id})
+        row = r.fetchone()
+        if not row:
+            raise HTTPException(404, f"Payer {payer_id} not found")
+
+        cs = CompositeScoreEngine()
+        return cs.payer_health_score(
+            denial_rate=float(row[0] or 0.10),
+            adtp_trend=0,  # would need time-series
+            payment_consistency=0.95,
+            underpayment_rate=0.02,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/composite/org-health")
+async def get_org_health(
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Compute composite organization revenue health score."""
+    try:
+        from app.ml.composite_scores import CompositeScoreEngine
+        from sqlalchemy import text
+
+        # Get org-level metrics
+        r = await db.execute(text("""
+            SELECT
+                COUNT(*) as total,
+                COUNT(CASE WHEN status = 'DENIED' THEN 1 END) as denied,
+                COUNT(CASE WHEN status = 'PAID' THEN 1 END) as paid,
+                AVG(CURRENT_DATE - date_of_service) as avg_days_ar
+            FROM claims
+        """))
+        row = r.fetchone()
+        total = float(row[0] or 1)
+        denial_rate = float(row[1] or 0) / total
+        paid_rate = float(row[2] or 0) / total
+        days_ar = float(row[3] or 35)
+
+        cs = CompositeScoreEngine()
+        return cs.org_revenue_health_score(
+            ncr=paid_rate,
+            denial_rate=denial_rate,
+            days_in_ar=days_ar,
+            cost_to_collect=0.05,
+            first_pass_rate=1 - denial_rate,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/model-governance/status")
+async def get_model_governance_status() -> Any:
+    """Get governance status for all registered ML models."""
+    try:
+        from app.ml.model_governance import ModelGovernance
+        gov = ModelGovernance()
+        return {"models": gov.get_status()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -97,8 +97,7 @@ SELECT
                                                     AS month,
 
     -- Target: actual payment delay in days
-    EXTRACT(EPOCH FROM (ep.payment_date - c.submission_date)) / 86400
-                                                    AS payment_delay_days
+    (ep.payment_date - c.submission_date)            AS payment_delay_days
 
 FROM claims c
 JOIN payer_master pm      ON pm.payer_id    = c.payer_id
