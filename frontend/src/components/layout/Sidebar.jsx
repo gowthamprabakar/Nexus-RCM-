@@ -71,6 +71,11 @@ export function Sidebar() {
                     <SidebarLink to="/analytics/payments" icon="payments" label="Payment Intelligence" />
                     <SidebarLink to="/analytics/prevention" icon="health_and_safety" label="Prevention" isNew />
                     <SidebarLink to="/analytics/claims" icon="receipt_long" label="Claims Pipeline" />
+                    <SidebarLink to="/analytics/graph-explorer" icon="hub" label="Graph Explorer" isNew />
+                    <SidebarLink to="/analytics/compliance" icon="verified_user" label="Compliance Risk" isNew />
+                    <SidebarLink to="/analytics/payer-health" icon="vital_signs" label="Payer Health" isNew />
+                    <SidebarLink to="/analytics/provider-leaderboard" icon="leaderboard" label="Provider Leaderboard" isNew />
+                    <SidebarLink to="/payments/contract-variance" icon="difference" label="Contract Variance" isNew />
                 </div>
 
                 {/* ── WORK ── */}

@@ -29,6 +29,11 @@ import { ContractAudit } from './features/payments/pages/ContractAudit';
 import { ClaimsOverview } from './features/claims/pages/ClaimsOverview';
 import { ScrubDashboard } from './features/claims/pages/ScrubDashboard';
 import { PayerVariance } from './features/denials/pages/PayerVariance';
+import GraphExplorer from './features/analytics/pages/GraphExplorer';
+import ComplianceRiskDashboard from './features/analytics/pages/ComplianceRiskDashboard';
+import ContractVarianceDashboard from './features/payments/pages/ContractVarianceDashboard';
+import PayerHealthScorecard from './features/analytics/pages/PayerHealthScorecard';
+import ProviderLeaderboard from './features/analytics/pages/ProviderLeaderboard';
 
 // ── Work Center Layouts ────────────────────────────────────────────────
 import { ClaimsWorkCenterLayout } from './features/workcenters/layouts/ClaimsWorkCenterLayout';
@@ -196,6 +201,21 @@ function App() {
 
                 {/* Prevention Intelligence */}
                 <Route path="analytics/prevention" element={<PreventionDashboard />} />
+
+                {/* Graph Explorer */}
+                <Route path="analytics/graph-explorer" element={<GraphExplorer />} />
+
+                {/* Compliance Risk */}
+                <Route path="analytics/compliance" element={<ComplianceRiskDashboard />} />
+
+                {/* Contract Variance */}
+                <Route path="payments/contract-variance" element={<ContractVarianceDashboard />} />
+
+                {/* Payer Health Scorecard */}
+                <Route path="analytics/payer-health" element={<PayerHealthScorecard />} />
+
+                {/* Provider Leaderboard */}
+                <Route path="analytics/provider-leaderboard" element={<ProviderLeaderboard />} />
 
                 {/* Claims Pipeline */}
                 <Route path="analytics/claims" element={<ClaimsPipelineLayout />}>
