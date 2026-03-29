@@ -105,9 +105,9 @@ function ContractVarianceDashboard() {
     const raw = underpayments?.underpayments || underpayments?.items || [];
     return raw.map((item) => ({
       claim_id: item.claim_id || item.id || '-',
-      payer: item.payer || item.payer_name || '-',
-      billed: item.billed_amount ?? item.expected_amount ?? item.billed ?? 0,
-      paid: item.paid_amount ?? item.paid ?? 0,
+      payer: item.payer || item.payer_name || item.payer_id || '-',
+      billed: item.expected_amount ?? item.billed_amount ?? item.billed ?? 0,
+      paid: item.actual_paid ?? item.paid_amount ?? item.paid ?? 0,
       variance: item.underpaid_amount ?? item.variance ?? 0,
       variance_pct: item.variance_pct ?? item.underpaid_pct ?? 0,
     }));

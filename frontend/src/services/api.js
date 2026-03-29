@@ -1014,6 +1014,13 @@ export const api = {
                 return await res.json();
             } catch (err) { console.error('Provider risk error:', err); return null; }
         },
+        getProviderRiskAll: async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/predictions/provider-risk-all`);
+                if (!res.ok) throw new Error('provider risk all failed');
+                return await res.json();
+            } catch (err) { console.error('Provider risk all error:', err); return null; }
+        },
         getCarcPrediction: async (claimId) => {
             try {
                 const res = await fetch(`${BASE_URL}/predictions/carc-prediction/${claimId}`);

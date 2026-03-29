@@ -31,9 +31,9 @@ function rowSeverityClass(score) {
 function complianceGrade(summary) {
   if (!summary) return { grade: '--', color: 'text-th-muted' };
   const composite =
-    (summary.fca_score ?? summary.fcaScore ?? 50) * 0.4 +
-    (summary.overcoding_score ?? summary.overcodingScore ?? 50) * 0.3 +
-    (summary.audit_score ?? summary.auditScore ?? 50) * 0.3;
+    (summary.fca_risk_score ?? summary.fca_score ?? 50) * 0.4 +
+    (summary.overcoding?.high_risk_providers ?? summary.overcoding_score ?? 10) * 0.3 +
+    (summary.oig_high_risk_areas ?? summary.audit_score ?? 10) * 0.3;
   // Lower composite = better compliance
   const inverted = 100 - composite;
   if (inverted >= 90) return { grade: 'A', color: 'text-emerald-400' };
@@ -140,16 +140,23 @@ function ComplianceRiskDashboard() {
   }
 
   /* ── derived values ── */
-  const fcaScore = fca?.score ?? fca?.risk_score ?? 0;
-  const fcaFactors = fca?.risk_factors ?? fca?.factors ?? [];
+  const fcaScore = fca?.fca_risk_score ?? fca?.score ?? fca?.risk_score ?? 0;
+  const fcaRiskLevel = fca?.risk_level ?? 'UNKNOWN';
+  const fcaComponents = fca?.components ?? {};
+  const fcaFactors = Object.entries(fcaComponents).map(([k, v]) => ({
+    name: k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    score: v?.score ?? 0,
+    max: v?.max ?? 30,
+    ...v,
+  }));
   const fcaTrend = fca?.trend ?? fca?.trend_direction ?? 'stable';
   const fcaActions = fca?.recommended_actions ?? fca?.actions ?? [];
 
-  const auditLevel = audit?.risk_level ?? audit?.level ?? 'UNKNOWN';
+  const auditLevel = summary?.audit_risk_level ?? audit?.risk_level ?? audit?.level ?? 'UNKNOWN';
   const auditFocusAreas = audit?.focus_areas ?? audit?.focusAreas ?? [];
   const highRiskClaims = audit?.high_risk_claims ?? audit?.highRiskClaims ?? 0;
   const auditRecs =
-    audit?.recommendations ?? audit?.preparation_recommendations ?? [];
+    audit?.preparation_recommendations ?? audit?.recommendations ?? summary?.recommendations ?? [];
 
   const overcodingProviders = overcoding?.providers ?? overcoding?.data ?? [];
   const alertCount =

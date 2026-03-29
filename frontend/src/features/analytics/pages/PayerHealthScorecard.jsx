@@ -136,10 +136,11 @@ function PayerHealthScorecard() {
           return {
             payer_id: payerId,
             name: p.payer_name || p.name || payerId,
-            health_score: health?.health_score ?? health?.score ?? p.health_score ?? Math.floor(Math.random() * 100),
-            denial_rate: health?.denial_rate ?? p.denial_rate ?? p.denial_pct ?? 0,
-            adtp_days: health?.adtp_days ?? p.adtp_days ?? p.avg_days_to_pay ?? 0,
-            payment_consistency: health?.payment_consistency ?? p.payment_consistency ?? p.consistency_score ?? 0,
+            health_score: health?.score ?? health?.health_score ?? p.health_score ?? 50,
+            denial_rate: p.denial_rate ?? p.denial_pct ?? (health?.components?.denial_health ? (100 - health.components.denial_health) / 300 : 0.10),
+            adtp_days: p.adtp_days ?? p.avg_days_to_pay ?? (health?.components?.adtp_health ? Math.round((80 - health.components.adtp_health) / 200 * 30 + 30) : 30),
+            payment_consistency: health?.components?.payment_consistency ? health.components.payment_consistency / 100 : (p.payment_consistency ?? 0.95),
+            status: health?.status ?? 'UNKNOWN',
           };
         })
       );

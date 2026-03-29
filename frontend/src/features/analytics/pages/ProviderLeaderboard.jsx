@@ -98,9 +98,9 @@ function ProviderLeaderboard() {
       /* Try the bulk provider risk endpoint first */
       let data = null;
       try {
-        data = await api.predictions.getProviderRisk('all');
+        data = await api.predictions.getProviderRiskAll();
       } catch {
-        /* Endpoint may not support 'all', fall back to coding patterns */
+        /* Endpoint may not be available, fall back to coding patterns */
       }
 
       if (data && (Array.isArray(data) || data?.providers)) {
@@ -111,7 +111,7 @@ function ProviderLeaderboard() {
             risk_score: p.risk_score ?? p.score ?? 0,
             denial_rate: p.denial_rate ?? p.denial_pct ?? 0,
             claim_volume: p.claim_volume ?? p.total_claims ?? p.claims_count ?? 0,
-            top_risk_factor: p.top_risk_factor ?? p.primary_risk ?? p.risk_factors?.[0] ?? '-',
+            top_risk_factor: p.top_risk_factor ?? p.primary_risk ?? (typeof p.risk_factors?.[0] === 'string' ? p.risk_factors[0] : p.risk_factors?.[0]?.factor) ?? '-',
           }))
         );
       } else {

@@ -282,6 +282,20 @@ async def predict_provider_risk(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/provider-risk-all")
+async def predict_provider_risk_all(
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Score all providers."""
+    try:
+        from app.ml.provider_risk import ProviderRiskModel
+        model = ProviderRiskModel()
+        results = await model.score_all_providers(db)
+        return {"providers": results, "total": len(results)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/carc-prediction/{claim_id}")
 async def predict_carc(
     claim_id: str,
