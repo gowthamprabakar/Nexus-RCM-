@@ -174,6 +174,18 @@ async def _job_run_feedback_cycle():
         await session.close()
 
 
+async def _job_retrain_prophet():
+    """Weekly Prophet model retrain — re-fits on latest ERA payment data."""
+    logger.info("Scheduler: starting Prophet forecast retrain")
+    try:
+        from app.services.prophet_forecast import _CACHE
+        # Clear in-memory cache so next API call gets fresh predictions
+        _CACHE.clear()
+        logger.info("Scheduler: Prophet cache cleared — model will retrain on next forecast request")
+    except Exception:
+        logger.exception("Prophet retrain job failed")
+
+
 # ---------------------------------------------------------------------------
 # Lifecycle helpers (called from FastAPI lifespan)
 # ---------------------------------------------------------------------------
@@ -265,6 +277,17 @@ async def start_scheduler() -> AsyncIOScheduler:
         hours=6,
         id="run_feedback_cycle",
         name="Neo4j feedback loop (appeal outcomes + payer metrics)",
+        replace_existing=True,
+    )
+
+    _scheduler.add_job(
+        _job_retrain_prophet,
+        "cron",
+        day_of_week="sun",
+        hour=2,
+        minute=0,
+        id="retrain_prophet",
+        name="Weekly Prophet forecast retrain",
         replace_existing=True,
     )
 
