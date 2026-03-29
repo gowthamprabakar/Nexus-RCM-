@@ -449,7 +449,7 @@ async def analyze_denial_root_cause(db: AsyncSession, denial_id: str) -> dict:
             neo4j_evidence_summary = {
                 "graph_points": graph_pts,
                 "current_evidence": dict(evidence),
-                "top_cause": ranked[0][0] if total_pts > 0 and (ranked := sorted(evidence.items(), key=lambda x: x[1], reverse=True)) else None,
+                "top_cause": ranked[0][0] if sum(evidence.values()) > 0 and (ranked := sorted(evidence.items(), key=lambda x: x[1], reverse=True)) else None,
             } if evidence else {}
 
             mirofish_result = await _aio.wait_for(
@@ -541,7 +541,7 @@ async def analyze_denial_root_cause(db: AsyncSession, denial_id: str) -> dict:
                     parts.append(f"{cause} ({pct:.0f}%)")
             synthesis_finding = f"Root causes: {' → '.join(parts)}. Confidence: {confidence}%"
 
-        steps.append(_make_step(rca_id, 11, "EVIDENCE_SYNTHESIS", synthesis_finding, "PASS", bayesian_weight))
+        steps.append(_make_step(rca_id, 12, "EVIDENCE_SYNTHESIS", synthesis_finding, "PASS", bayesian_weight))
 
         # ── Create RootCauseAnalysis record ──────────────────────────────
         root_cause_group = ROOT_CAUSE_GROUPS.get(primary_root_cause, "PROCESS")
