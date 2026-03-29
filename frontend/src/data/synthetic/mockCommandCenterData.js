@@ -2,64 +2,116 @@ export const mockCommandCenterData = {
     // LAYER 1: Executive Pulse
     executive: {
         totalPipeline: {
-            value: "$14,250,000",
-            trend: "+8.4%",
+            value: "$14.2M",
+            trend: "+3.6%",
             trendLabel: "vs Last Month",
             isPositive: true,
             targetRoute: "/finance/reconciliation",
-            context: { view: "pipeline" }
+            context: { view: "pipeline" },
+            sparkline: [62, 68, 65, 71, 74, 72, 78],
+            sentiment: "positive"
         },
         cleanClaimRatio: {
-            value: "94.2%",
-            trend: "-1.2%",
-            trendLabel: "Scrub Failures",
-            isPositive: false,
+            value: "95.1%",
+            trend: "+1.4%",
+            trendLabel: "vs Last Month",
+            isPositive: true,
             targetRoute: "/claims-scrubbing",
-            context: { status: "clean" }
+            context: { status: "clean" },
+            sparkline: [91, 92, 93, 93, 94, 94, 95],
+            sentiment: "positive"
         },
         denialRate: {
-            value: "3.8%",
-            trend: "-0.5%",
-            trendLabel: "Improvement",
+            value: "4.8%",
+            trend: "-0.7%",
+            trendLabel: "vs Last Month",
             isPositive: true,
             targetRoute: "/denials/analytics",
-            context: { metric: "denial_rate" }
+            context: { metric: "denial_rate" },
+            sparkline: [6.2, 5.8, 5.5, 5.3, 5.1, 5.0, 4.8],
+            sentiment: "positive"
         },
         revenueAtRisk: {
             value: "$1.2M",
-            trend: "+12%",
+            trend: "+5.2%",
             trendLabel: "AI Detected",
             isPositive: false,
             status: "critical",
             targetRoute: "/denials/high-risk",
-            context: { risk: "high" }
+            context: { risk: "high" },
+            sparkline: [0.9, 1.0, 0.8, 1.1, 1.0, 1.1, 1.2],
+            sentiment: "negative"
         },
         systemHealth: {
             value: "98/100",
             trend: "Stable",
+            trendLabel: "",
             isPositive: true,
-            targetRoute: "/admin/integrations"
+            targetRoute: "/admin/integrations",
+            sparkline: [96, 97, 97, 98, 97, 98, 98],
+            sentiment: "neutral"
+        },
+        daysInAR: {
+            value: "38.2",
+            trend: "-2.1",
+            trendLabel: "days vs Last Month",
+            isPositive: true,
+            targetRoute: "/collections/hub",
+            context: { metric: "days_in_ar" },
+            sparkline: [44, 42, 41, 40, 39, 39, 38],
+            sentiment: "positive"
+        },
+        firstPassRate: {
+            value: "87.4%",
+            trend: "+1.8%",
+            trendLabel: "vs Last Month",
+            isPositive: true,
+            targetRoute: "/claims/work-queue",
+            context: { metric: "first_pass" },
+            sparkline: [83, 84, 84, 85, 86, 86, 87],
+            sentiment: "positive"
+        },
+        netCollectionRate: {
+            value: "96.3%",
+            trend: "+0.5%",
+            trendLabel: "vs Last Month",
+            isPositive: true,
+            targetRoute: "/finance/reconciliation",
+            context: { metric: "net_collection" },
+            sparkline: [95, 95, 96, 95, 96, 96, 96],
+            sentiment: "positive"
         }
     },
 
-    // LAYER 2: Lifecycle Flow
+    // LAYER 2: Lifecycle Flow (Complete RCM stages)
     lifecycle: [
         {
-            id: "unbilled",
-            stage: "Unbilled",
-            count: 452,
-            value: "$1.2M",
-            avgDwell: "2.1d",
-            sla: "3d",
+            id: "charge-captured",
+            stage: "Charge Captured",
+            count: 620,
+            value: "$2.1M",
+            avgDwell: "0.5d",
+            sla: "1d",
             status: "healthy",
             trend: "stable",
             targetRoute: "/claims"
         },
         {
-            id: "scrubbing",
-            stage: "Scrubbing",
+            id: "coded",
+            stage: "Coded",
+            count: 452,
+            value: "$1.6M",
+            avgDwell: "1.8d",
+            sla: "2d",
+            status: "healthy",
+            trend: "stable",
+            targetRoute: "/ai-coding/audit"
+        },
+        {
+            id: "scrubbed",
+            stage: "Scrubbed",
             count: 128,
-            value: "$840k",
+            value: "$840K",
             avgDwell: "0.8d",
             sla: "1d",
             status: "warning",
@@ -67,19 +119,30 @@ export const mockCommandCenterData = {
             targetRoute: "/claims/pre-batch-scrub/dashboard"
         },
         {
-            id: "billed",
-            stage: "Billed",
+            id: "submitted",
+            stage: "Submitted",
             count: 1102,
             value: "$4.5M",
-            avgDwell: "12d",
-            sla: "14d",
+            avgDwell: "1.2d",
+            sla: "2d",
+            status: "healthy",
+            trend: "stable",
+            targetRoute: "/claims/work-queue"
+        },
+        {
+            id: "acknowledged",
+            stage: "Acknowledged",
+            count: 980,
+            value: "$3.9M",
+            avgDwell: "3.5d",
+            sla: "5d",
             status: "healthy",
             trend: "stable",
             targetRoute: "/claims/work-queue"
         },
         {
             id: "adjudicated",
-            stage: "Adjudicated/AR",
+            stage: "Adjudicated",
             count: 890,
             value: "$3.8M",
             avgDwell: "35d",
@@ -90,9 +153,20 @@ export const mockCommandCenterData = {
         },
         {
             id: "posted",
-            stage: "Posted/Closed",
+            stage: "Posted",
             count: 2405,
             value: "$12.4M",
+            avgDwell: "1.0d",
+            sla: "2d",
+            status: "healthy",
+            trend: "stable",
+            targetRoute: "/finance/reconciliation"
+        },
+        {
+            id: "reconciled",
+            stage: "Reconciled",
+            count: 2180,
+            value: "$11.8M",
             avgDwell: "N/A",
             sla: "N/A",
             status: "healthy",

@@ -38,8 +38,18 @@ build/
 *.onnx
 *.pt
 *.pth
+*.joblib
 mlruns/
 .mlflow/
+ml_models/
+saved_models/
+artifacts/
+
+# Claude workspace
+.claude/
+
+# Large data files (regenerate with scripts)
+data/synthetic/*.csv
 
 # Database
 *.sqlite

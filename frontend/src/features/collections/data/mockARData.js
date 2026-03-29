@@ -3,9 +3,9 @@
 // KPI Metrics
 const kpis = {
     totalARBalance: {
-        current: 12450200,
-        previous: 12100000,
-        change: 2.4,
+        current: 5240000,
+        previous: 5080000,
+        change: 3.1,
         trend: 'up'
     },
     avgDaysOutstanding: {
@@ -16,7 +16,7 @@ const kpis = {
         trend: 'up'
     },
     projected30DCash: {
-        current: 4200000,
+        current: 2180000,
         confidence: 94,
         status: 'on-track'
     },
@@ -24,7 +24,9 @@ const kpis = {
         count: 184,
         potentialLoss: 640000,
         severity: 'high'
-    }
+    },
+    collectionRate: 97.2,
+    badDebtWriteOff: 2.1,
 };
 
 // 12-month AR Trend Data

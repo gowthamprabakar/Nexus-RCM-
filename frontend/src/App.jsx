@@ -1,177 +1,251 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
-import { ExecutiveDashboard } from './features/dashboard/pages/ExecutiveDashboard';
-import { CommandCenter } from './features/dashboard/pages/CommandCenter';
 
-import { ClaimScrubbing } from './features/claims/pages/ClaimScrubbing';
-import { AICodingLayout } from './features/coding/pages/AICodingLayout';
-import { CodingOptimizer } from './features/coding/pages/CodingOptimizer';
-import { AICodingAudit } from './features/coding/pages/AICodingAudit';
-import { AICodingCompliance } from './features/coding/pages/AICodingCompliance';
-import { AICodingRulebook } from './features/coding/pages/AICodingRulebook';
-import { DenialManagement } from './features/denials/pages/DenialManagement';
-import { AppealGenerator } from './features/denials/pages/AppealGenerator';
-import { DenialAnalytics } from './features/denials/pages/DenialAnalytics';
-import { DenialPreventionDashboard } from './features/denials/pages/DenialPreventionDashboard';
-import { HighRiskClaims } from './features/denials/pages/HighRiskClaims';
-import { ClaimDenialDetail } from './features/denials/pages/ClaimDenialDetail';
-import { DenialPredictionAnalysis } from './features/denials/pages/DenialPredictionAnalysis';
-import { PreventionWorkspace } from './features/denials/pages/PreventionWorkspace';
-import { DenialWorkflowLog } from './features/denials/pages/DenialWorkflowLog';
-import { EVVAutoRetryManager } from './features/denials/pages/EVVAutoRetryManager';
-import { COBAutoManager } from './features/denials/pages/COBAutoManager';
-import { BankReconciliation } from './features/denials/pages/BankReconciliation';
-import { CollectionsHub } from './features/collections/pages/CollectionsHub';
-import { CollectionsQueue } from './features/collections/pages/CollectionsQueue';
-import { PaymentPortal } from './features/collections/pages/PaymentPortal';
-import { AccountDetailsPage } from './features/collections/pages/AccountDetailsPage';
-import { AlertsQueue } from './features/collections/pages/AlertsQueue';
-import { RecoveryInsights } from './features/collections/pages/RecoveryInsights';
-import { PropensityScoreDetails } from './features/collections/pages/PropensityScoreDetails';
-import { CollectionsActionCenter } from './features/collections/pages/CollectionsActionCenter';
-import { PerformanceAnalytics } from './features/collections/pages/PerformanceAnalytics';
-import { CollectionsTimeline } from './features/collections/pages/CollectionsTimeline';
-import { PayerPerformance } from './features/finance/pages/PayerPerformance';
-import { AuditLog } from './features/finance/pages/AuditLog';
+// ── Command Center ─────────────────────────────────────────────────────
+import { CommandCenter } from './features/dashboard/pages/CommandCenter';
+import { ExecutiveDashboard } from './features/dashboard/pages/ExecutiveDashboard';
+
+// ── Analytics Layouts ──────────────────────────────────────────────────
+import { RevenueAnalyticsLayout } from './features/analytics/layouts/RevenueAnalyticsLayout';
+import { DenialAnalyticsLayout } from './features/analytics/layouts/DenialAnalyticsLayout';
+import { PaymentIntelligenceLayout } from './features/analytics/layouts/PaymentIntelligenceLayout';
+import { ClaimsPipelineLayout } from './features/analytics/layouts/ClaimsPipelineLayout';
+
+// ── Analytics Pages ────────────────────────────────────────────────────
 import { RevenueReconciliation } from './features/finance/pages/RevenueReconciliation';
-import { AdminDashboard } from './features/admin/pages/AdminDashboard';
-import { IntegrationHub } from './features/admin/pages/IntegrationHub';
-import { ETLDesigner } from './features/admin/pages/ETLDesigner';
-import { EVVDashboard } from './features/evv/pages/EVVDashboard';
-import { EVVVisitDetails } from './features/evv/pages/EVVVisitDetails';
-import { EVVFraudDetection } from './features/evv/pages/EVVFraudDetection';
-import { MCPAgentHub } from './features/developer/pages/MCPAgentHub';
-import { AIModelMonitor } from './features/developer/pages/AIModelMonitor';
-import { DataSchemaExplorer } from './features/developer/pages/DataSchemaExplorer';
-import { DriftLogs } from './features/developer/pages/ai/DriftLogs';
-import { ModelRegistry } from './features/developer/pages/ai/ModelRegistry';
-import { FeatureImportance } from './features/developer/pages/ai/FeatureImportance';
-import { PSIDistribution } from './features/developer/pages/ai/PSIDistribution';
-import { ClaimsAnalytics } from './features/analytics/pages/ClaimsAnalytics';
-import { InsuranceVerification } from './features/insurance/pages/InsuranceVerification';
-import { Reporting } from './features/reporting/pages/Reporting';
-import { PatientAccounts } from './features/patients/pages/PatientAccounts';
-import { APIManager } from './features/admin/pages/APIManager';
-import { Scheduler } from './features/admin/pages/Scheduler';
-import { IntegrationDebugger } from './features/admin/pages/IntegrationDebugger';
-// import { LidaAnalytics } from './features/analytics/pages/LidaAnalytics'; // Removed in favor of new module
-import { ReconciliationAdvanced } from './features/finance/pages/ReconciliationAdvanced';
-import { TransactionLedger } from './features/finance/pages/TransactionLedger';
-import { AIInsightDetail } from './features/finance/pages/AIInsightDetail';
-import { StateMandates } from './features/evv/pages/StateMandates';
-import { PayerVariance } from './features/denials/pages/PayerVariance';
-import { CollectionsCommand } from './features/collections/pages/CollectionsCommand';
-import { InsuranceLayout } from './features/insurance/pages/InsuranceLayout';
-import { PatientAccessHub } from './features/insurance/pages/PatientAccessHub';
-import { PriorAuthManager } from './features/insurance/pages/PriorAuthManager';
-import { BenefitAnalytics } from './features/insurance/pages/BenefitAnalytics';
-import { VerificationHistory } from './features/insurance/pages/VerificationHistory';
-import { ClaimsLayout } from './features/claims/pages/ClaimsLayout';
+import { ARAgingPage } from './features/analytics/pages/ARAgingPage';
+import { RootCauseClaimsPage } from './features/analytics/pages/RootCauseClaimsPage';
+import { CashFlowPage } from './features/analytics/pages/CashFlowPage';
+import { DenialAnalytics } from './features/denials/pages/DenialAnalytics';
+import { RootCauseIntelligence } from './features/analytics/pages/RootCauseIntelligence';
+import { ClaimRootCauseDetail } from './features/analytics/pages/ClaimRootCauseDetail';
+import { PaymentDashboard } from './features/payments/pages/PaymentDashboard';
+import { PayerPerformance } from './features/finance/pages/PayerPerformance';
+import { ERABankRecon } from './features/payments/pages/ERABankRecon';
+import { ADTPMonitor } from './features/analytics/pages/ADTPMonitor';
+import { ContractAudit } from './features/payments/pages/ContractAudit';
 import { ClaimsOverview } from './features/claims/pages/ClaimsOverview';
-import { ClaimsWorkQueue } from './features/claims/pages/ClaimsWorkQueue';
-import { BatchActions } from './features/claims/pages/BatchActions';
-import { MassScrub } from './features/claims/pages/MassScrub';
-import { RuleEngine } from './features/claims/pages/RuleEngine';
-import { PreBatchScrubLayout } from './features/claims/pages/PreBatchScrubLayout';
 import { ScrubDashboard } from './features/claims/pages/ScrubDashboard';
-import { ValidationQueue } from './features/claims/pages/ValidationQueue';
+import { PayerVariance } from './features/denials/pages/PayerVariance';
+
+// ── Work Center Layouts ────────────────────────────────────────────────
+import { ClaimsWorkCenterLayout } from './features/workcenters/layouts/ClaimsWorkCenterLayout';
+import { DenialWorkCenterLayout } from './features/workcenters/layouts/DenialWorkCenterLayout';
+import { CollectionsWorkCenterLayout } from './features/workcenters/layouts/CollectionsWorkCenterLayout';
+import { PaymentWorkCenterLayout } from './features/workcenters/layouts/PaymentWorkCenterLayout';
+import { AutomationDashboard } from './features/workcenters/pages/AutomationDashboard';
+
+// ── Work Center Pages ──────────────────────────────────────────────────
+import { ClaimsWorkQueue } from './features/claims/pages/ClaimsWorkQueue';
 import { AutoFixCenter } from './features/claims/pages/AutoFixCenter';
-import { ClaimValidationDetail } from './features/claims/pages/ClaimValidationDetail';
+import { BatchActions } from './features/claims/pages/BatchActions';
+import { DenialManagement } from './features/denials/pages/DenialManagement';
+import { HighRiskClaims } from './features/denials/pages/HighRiskClaims';
+import { AppealGenerator } from './features/denials/pages/AppealGenerator';
+import { DenialWorkflowLog } from './features/denials/pages/DenialWorkflowLog';
+import { CollectionsQueue } from './features/collections/pages/CollectionsQueue';
+import { AlertsQueue } from './features/collections/pages/AlertsQueue';
+import { PaymentPortal } from './features/collections/pages/PaymentPortal';
+import { ERAProcessing } from './features/payments/pages/ERAProcessing';
+import { PaymentPosting } from './features/payments/pages/PaymentPosting';
+import { ContractManager } from './features/payments/pages/ContractManager';
+
+// ── Intelligence ───────────────────────────────────────────────────────
 import { LidaLayout } from './features/lida/pages/LidaLayout';
 import { LidaDashboard } from './features/lida/pages/LidaDashboard';
 import { LidaChat } from './features/lida/pages/LidaChat';
 import { MECEReportBuilder } from './features/lida/pages/MECEReportBuilder';
 import { TicketHub } from './features/lida/pages/TicketHub';
+import { Reporting } from './features/reporting/pages/Reporting';
+import { RevenueForecast } from './features/intelligence/pages/RevenueForecast';
+import { SimulationDashboard } from './features/intelligence/pages/SimulationDashboard';
+import { StandardReports } from './features/intelligence/pages/StandardReports';
 
+// ── Specialty: Patient Access ──────────────────────────────────────────
+import { InsuranceLayout } from './features/insurance/pages/InsuranceLayout';
+import { PatientAccessHub } from './features/insurance/pages/PatientAccessHub';
+import { InsuranceVerification } from './features/insurance/pages/InsuranceVerification';
+import { PriorAuthManager } from './features/insurance/pages/PriorAuthManager';
+import { BenefitAnalytics } from './features/insurance/pages/BenefitAnalytics';
+import { VerificationHistory } from './features/insurance/pages/VerificationHistory';
+import { PatientAccounts } from './features/patients/pages/PatientAccounts';
+
+// ── Specialty: Coding & Charge ─────────────────────────────────────────
+import { AICodingLayout } from './features/coding/pages/AICodingLayout';
+import { CodingOptimizer } from './features/coding/pages/CodingOptimizer';
+import { AICodingAudit } from './features/coding/pages/AICodingAudit';
+import { AICodingCompliance } from './features/coding/pages/AICodingCompliance';
+import { AICodingRulebook } from './features/coding/pages/AICodingRulebook';
+
+// ── Specialty: EVV ─────────────────────────────────────────────────────
+import { EVVDashboard } from './features/evv/pages/EVVDashboard';
+import { EVVVisitDetails } from './features/evv/pages/EVVVisitDetails';
+import { EVVFraudDetection } from './features/evv/pages/EVVFraudDetection';
+import { StateMandates } from './features/evv/pages/StateMandates';
+import { EVVAutoRetryManager } from './features/denials/pages/EVVAutoRetryManager';
+
+// ── Settings & Admin ───────────────────────────────────────────────────
 import { SettingsLayout } from './features/settings/pages/SettingsLayout';
 import { BillingRules } from './features/settings/pages/BillingRules';
 import { AIConfiguration } from './features/settings/pages/AIConfiguration';
 import { UserManagement } from './features/settings/pages/UserManagement';
+import { AdminDashboard } from './features/admin/pages/AdminDashboard';
+import { IntegrationHub } from './features/admin/pages/IntegrationHub';
+import { ETLDesigner } from './features/admin/pages/ETLDesigner';
+import { APIManager } from './features/admin/pages/APIManager';
+import { Scheduler } from './features/admin/pages/Scheduler';
+import { AuditLog } from './features/finance/pages/AuditLog';
+
+// ── Remaining pages used by legacy redirects or deep links ─────────────
+import { ClaimDenialDetail } from './features/denials/pages/ClaimDenialDetail';
+import { DenialPredictionAnalysis } from './features/denials/pages/DenialPredictionAnalysis';
+import { DenialPreventionDashboard } from './features/denials/pages/DenialPreventionDashboard';
+import { PreventionWorkspace } from './features/denials/pages/PreventionWorkspace';
+import { COBAutoManager } from './features/denials/pages/COBAutoManager';
+import { CollectionsHub } from './features/collections/pages/CollectionsHub';
+import { AccountDetailsPage } from './features/collections/pages/AccountDetailsPage';
+import { RecoveryInsights } from './features/collections/pages/RecoveryInsights';
+import { PropensityScoreDetails } from './features/collections/pages/PropensityScoreDetails';
+import { CollectionsActionCenter } from './features/collections/pages/CollectionsActionCenter';
+import { PerformanceAnalytics } from './features/collections/pages/PerformanceAnalytics';
+import { CollectionsTimeline } from './features/collections/pages/CollectionsTimeline';
+import { ReconciliationAdvanced } from './features/finance/pages/ReconciliationAdvanced';
+import { PayerReconClaimsPage } from './features/finance/pages/PayerReconClaimsPage';
+import { BankReconciliation } from './features/denials/pages/BankReconciliation';
+import { TransactionLedger } from './features/finance/pages/TransactionLedger';
+import { AIInsightDetail } from './features/finance/pages/AIInsightDetail';
+import { PayerPaymentIntelligence } from './features/payments/pages/PayerPaymentIntelligence';
+import { ClaimsAnalytics } from './features/analytics/pages/ClaimsAnalytics';
+import { PreventionDashboard } from './features/analytics/pages/PreventionDashboard';
+import { ClaimScrubbing } from './features/claims/pages/ClaimScrubbing';
+import { ClaimValidationDetail } from './features/claims/pages/ClaimValidationDetail';
+import { ValidationQueue } from './features/claims/pages/ValidationQueue';
+import { MassScrub } from './features/claims/pages/MassScrub';
+import { RuleEngine } from './features/claims/pages/RuleEngine';
+import { PreBatchScrubLayout } from './features/claims/pages/PreBatchScrubLayout';
+import { AIPerformanceEngine } from './features/developer/pages/AIPerformanceEngine';
+import { MCPAgentHub } from './features/developer/pages/MCPAgentHub';
+import { AIModelMonitor } from './features/developer/pages/AIModelMonitor';
+import { DriftLogs } from './features/developer/pages/ai/DriftLogs';
+import { ModelRegistry } from './features/developer/pages/ai/ModelRegistry';
+import { FeatureImportance } from './features/developer/pages/ai/FeatureImportance';
+import { PSIDistribution } from './features/developer/pages/ai/PSIDistribution';
+import { DataSchemaExplorer } from './features/developer/pages/DataSchemaExplorer';
+
+// ── Stub pages for routes not yet built ────────────────────────────────
+const StubPage = ({ title, subtitle }) => (
+    <div className="flex-1 flex items-center justify-center p-8">
+        <div className="text-center">
+            <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <span className="material-symbols-outlined text-3xl text-primary">construction</span>
+            </div>
+            <h2 className="text-xl font-semibold text-th-heading mb-2">{title}</h2>
+            <p className="text-sm text-th-secondary">{subtitle || 'This module is being built.'}</p>
+        </div>
+    </div>
+);
 
 function App() {
     return (
         <Routes>
             <Route path="/" element={<Layout />}>
+
+                {/* ════════════════════════════════════════════════════════
+                    COMMAND CENTER
+                   ════════════════════════════════════════════════════════ */}
                 <Route index element={<CommandCenter />} />
-                <Route path="command-center" element={<CommandCenter />} />
-                <Route path="executive-dashboard" element={<ExecutiveDashboard />} />
-                <Route path="claims-scrubbing" element={<ClaimScrubbing />} />
-                <Route path="claims" element={<ClaimsLayout />}>
+
+                {/* ════════════════════════════════════════════════════════
+                    ANALYTICS
+                   ════════════════════════════════════════════════════════ */}
+
+                {/* Revenue Analytics */}
+                <Route path="analytics/revenue" element={<RevenueAnalyticsLayout />}>
+                    <Route index element={<Navigate to="overview" replace />} />
+                    <Route path="overview" element={<ExecutiveDashboard />} />
+                    <Route path="reconciliation" element={<RevenueReconciliation />} />
+                    <Route path="reconciliation/payer-claims" element={<PayerReconClaimsPage />} />
+                    <Route path="ar-aging" element={<ARAgingPage />} />
+                    <Route path="cash-flow" element={<CashFlowPage />} />
+                </Route>
+
+                {/* Denial Analytics */}
+                <Route path="analytics/denials" element={<DenialAnalyticsLayout />}>
+                    <Route index element={<Navigate to="overview" replace />} />
+                    <Route path="overview" element={<DenialAnalytics />} />
+                    <Route path="root-cause" element={<RootCauseIntelligence />} />
+                    <Route path="root-cause/claims" element={<RootCauseClaimsPage />} />
+                    <Route path="root-cause/claim/:claimId" element={<ClaimRootCauseDetail />} />
+                    <Route path="payer-patterns" element={<PayerVariance />} />
+                </Route>
+
+                {/* Payment Intelligence */}
+                <Route path="analytics/payments" element={<PaymentIntelligenceLayout />}>
+                    <Route index element={<Navigate to="overview" replace />} />
+                    <Route path="overview" element={<PaymentDashboard />} />
+                    <Route path="payer-profiles" element={<PayerPaymentIntelligence />} />
+                    <Route path="contract-audit" element={<ContractAudit />} />
+                    <Route path="era-bank-recon" element={<ERABankRecon />} />
+                </Route>
+
+                {/* Prevention Intelligence */}
+                <Route path="analytics/prevention" element={<PreventionDashboard />} />
+
+                {/* Claims Pipeline */}
+                <Route path="analytics/claims" element={<ClaimsPipelineLayout />}>
                     <Route index element={<Navigate to="overview" replace />} />
                     <Route path="overview" element={<ClaimsOverview />} />
-                    <Route path="work-queue" element={<ClaimsWorkQueue />} />
+                    <Route path="scrub-analytics" element={<ScrubDashboard />} />
+                </Route>
+
+                {/* ════════════════════════════════════════════════════════
+                    WORK CENTERS
+                   ════════════════════════════════════════════════════════ */}
+
+                {/* Claims Work Center */}
+                <Route path="work/claims" element={<ClaimsWorkCenterLayout />}>
+                    <Route index element={<Navigate to="queue" replace />} />
+                    <Route path="queue" element={<ClaimsWorkQueue />} />
+                    <Route path="auto-fix" element={<AutoFixCenter />} />
                     <Route path="batch" element={<BatchActions />} />
-                    <Route path="mass-scrub" element={<MassScrub />} />
-                    <Route path="rules" element={<RuleEngine />} />
-                    <Route path="pre-batch-scrub" element={<PreBatchScrubLayout />}>
-                        <Route index element={<Navigate to="dashboard" replace />} />
-                        <Route path="dashboard" element={<ScrubDashboard />} />
-                        <Route path="queue" element={<ValidationQueue />} />
-                        <Route path="auto-fix" element={<AutoFixCenter />} />
-                        <Route path="claim/:claimId" element={<ClaimValidationDetail />} />
-                    </Route>
+                    <Route path="scrub" element={<ScrubDashboard />} />
                 </Route>
-                <Route path="ai-coding" element={<AICodingLayout />}>
-                    <Route index element={<CodingOptimizer />} />
-                    <Route path="audit" element={<AICodingAudit />} />
-                    <Route path="compliance" element={<AICodingCompliance />} />
-                    <Route path="rulebook" element={<AICodingRulebook />} />
+
+                {/* Denial Work Center */}
+                <Route path="work/denials" element={<DenialWorkCenterLayout />}>
+                    <Route index element={<Navigate to="queue" replace />} />
+                    <Route path="queue" element={<DenialManagement />} />
+                    <Route path="high-risk" element={<HighRiskClaims />} />
+                    <Route path="appeals" element={<AppealGenerator />} />
+                    <Route path="workflow-log" element={<DenialWorkflowLog />} />
                 </Route>
-                <Route path="denials" element={<DenialManagement />} />
-                <Route path="denials/appeal" element={<AppealGenerator />} />
-                <Route path="denials/analytics" element={<DenialAnalytics />} />
-                <Route path="denials/prevention-dashboard" element={<DenialPreventionDashboard />} />
-                <Route path="denials/high-risk" element={<HighRiskClaims />} />
-                <Route path="denials/claim/:id" element={<ClaimDenialDetail />} />
-                <Route path="denials/prediction/:id" element={<DenialPredictionAnalysis />} />
-                <Route path="denials/workspace" element={<PreventionWorkspace />} />
-                <Route path="denials/workflow-log" element={<DenialWorkflowLog />} />
-                <Route path="automation/evv-retry" element={<EVVAutoRetryManager />} />
-                <Route path="automation/cob-manager" element={<COBAutoManager />} />
-                <Route path="reconciliation/bank-view" element={<BankReconciliation />} />
-                <Route path="collections" element={<CollectionsHub />} />
-                <Route path="collections/tasks" element={<CollectionsQueue />} />
-                <Route path="collections/portal" element={<PaymentPortal />} />
-                <Route path="collections/account/:accountId" element={<AccountDetailsPage />} />
-                <Route path="collections/alerts" element={<AlertsQueue />} />
-                <Route path="collections/recovery-insights" element={<RecoveryInsights />} />
-                <Route path="collections/propensity/:accountId" element={<PropensityScoreDetails />} />
-                <Route path="collections/action-center/:accountId" element={<CollectionsActionCenter />} />
-                <Route path="collections/performance" element={<PerformanceAnalytics />} />
-                <Route path="collections/timeline" element={<CollectionsTimeline />} />
-                <Route path="finance/payer-performance" element={<PayerPerformance />} />
-                <Route path="finance/audit-log" element={<AuditLog />} />
-                <Route path="finance/reconciliation" element={<RevenueReconciliation />} />
-                <Route path="admin/dashboard" element={<AdminDashboard />} />
-                <Route path="admin/integrations" element={<IntegrationHub />} />
-                <Route path="admin/etl-designer" element={<ETLDesigner />} />
-                <Route path="evv/dashboard" element={<EVVDashboard />} />
-                <Route path="evv/visit-details" element={<EVVVisitDetails />} />
-                <Route path="evv/fraud-detection" element={<EVVFraudDetection />} />
-                <Route path="developer/mcp-agents" element={<MCPAgentHub />} />
-                <Route path="developer/ai-monitor" element={<AIModelMonitor />}>
-                    <Route path="drift-logs" element={<DriftLogs />} />
-                    <Route path="registry" element={<ModelRegistry />} />
-                    <Route path="feature-importance" element={<FeatureImportance />} />
-                    <Route path="psi" element={<PSIDistribution />} />
+
+                {/* Collections Work Center */}
+                <Route path="work/collections" element={<CollectionsWorkCenterLayout />}>
+                    <Route index element={<Navigate to="queue" replace />} />
+                    <Route path="queue" element={<CollectionsQueue />} />
+                    <Route path="alerts" element={<AlertsQueue />} />
+                    <Route path="portal" element={<PaymentPortal />} />
                 </Route>
-                <Route path="developer/data-schema" element={<DataSchemaExplorer />} />
-                <Route path="claims-analytics" element={<ClaimsAnalytics />} />
-                <Route path="reporting" element={<Reporting />} />
-                <Route path="reporting" element={<Reporting />} />
-                <Route path="insurance-verification" element={<InsuranceLayout />}>
-                    <Route index element={<Navigate to="overview" replace />} />
-                    <Route path="overview" element={<PatientAccessHub />} />
-                    <Route path="eligibility" element={<InsuranceVerification />} />
-                    <Route path="auths" element={<PriorAuthManager />} />
-                    <Route path="benefits" element={<BenefitAnalytics />} />
-                    <Route path="history" element={<VerificationHistory />} />
+
+                {/* Payment Work Center */}
+                <Route path="work/payments" element={<PaymentWorkCenterLayout />}>
+                    <Route index element={<Navigate to="era" replace />} />
+                    <Route path="era" element={<ERAProcessing />} />
+                    <Route path="posting" element={<PaymentPosting />} />
+                    <Route path="contracts" element={<ContractManager />} />
                 </Route>
-                <Route path="admin/api-manager" element={<APIManager />} />
-                <Route path="admin/scheduler" element={<Scheduler />} />
-                <Route path="admin/debugger" element={<IntegrationDebugger />} />
-                <Route path="lida" element={<LidaLayout />}>
+
+                {/* Automation Dashboard */}
+                <Route path="work/automation" element={<AutomationDashboard />} />
+
+                {/* ════════════════════════════════════════════════════════
+                    INTELLIGENCE
+                   ════════════════════════════════════════════════════════ */}
+
+                {/* LIDA AI */}
+                <Route path="intelligence/lida" element={<LidaLayout />}>
                     <Route index element={<Navigate to="dashboard" replace />} />
                     <Route path="dashboard" element={<LidaDashboard />} />
                     <Route path="chat" element={<LidaChat />} />
@@ -179,23 +253,162 @@ function App() {
                     <Route path="tickets" element={<TicketHub />} />
                 </Route>
 
+                {/* Revenue Forecast */}
+                <Route path="intelligence/forecast" element={<RevenueForecast />} />
+
+                {/* Simulation Engine */}
+                <Route path="intelligence/simulation" element={<SimulationDashboard />} />
+
+                {/* Standard Reports */}
+                <Route path="intelligence/reports" element={<StandardReports />} />
+
+                {/* ════════════════════════════════════════════════════════
+                    SPECIALTY
+                   ════════════════════════════════════════════════════════ */}
+
+                {/* Patient Access */}
+                <Route path="specialty/patient-access" element={<InsuranceLayout />}>
+                    <Route index element={<Navigate to="overview" replace />} />
+                    <Route path="overview" element={<PatientAccessHub />} />
+                    <Route path="eligibility" element={<InsuranceVerification />} />
+                    <Route path="auths" element={<PriorAuthManager />} />
+                    <Route path="benefits" element={<BenefitAnalytics />} />
+                    <Route path="history" element={<VerificationHistory />} />
+                    <Route path="accounts" element={<PatientAccounts />} />
+                </Route>
+
+                {/* Coding & Charge */}
+                <Route path="specialty/coding" element={<AICodingLayout />}>
+                    <Route index element={<CodingOptimizer />} />
+                    <Route path="audit" element={<AICodingAudit />} />
+                    <Route path="compliance" element={<AICodingCompliance />} />
+                    <Route path="rulebook" element={<AICodingRulebook />} />
+                </Route>
+
+                {/* EVV Home Health */}
+                <Route path="specialty/evv" element={<Navigate to="/specialty/evv/dashboard" replace />} />
+                <Route path="specialty/evv/dashboard" element={<EVVDashboard />} />
+                <Route path="specialty/evv/visits" element={<EVVVisitDetails />} />
+                <Route path="specialty/evv/fraud" element={<EVVFraudDetection />} />
+                <Route path="specialty/evv/mandates" element={<StateMandates />} />
+                <Route path="specialty/evv/auto-retry" element={<EVVAutoRetryManager />} />
+
+                {/* ════════════════════════════════════════════════════════
+                    SETTINGS
+                   ════════════════════════════════════════════════════════ */}
                 <Route path="settings" element={<SettingsLayout />}>
-                    <Route index element={<Navigate to="profile" replace />} />
+                    <Route index element={<Navigate to="users" replace />} />
                     <Route path="billing-rules" element={<BillingRules />} />
                     <Route path="ai-config" element={<AIConfiguration />} />
                     <Route path="users" element={<UserManagement />} />
-                    {/* Placeholders for links not yet implemented */}
-                    <Route path="profile" element={<div className="p-10 font-bold text-gray-500">Practice Profile (Coming Soon)</div>} />
-                    <Route path="compliance" element={<div className="p-10 font-bold text-gray-500">Compliance & Audit (Coming Soon)</div>} />
                 </Route>
+                <Route path="admin/dashboard" element={<AdminDashboard />} />
+                <Route path="admin/integrations" element={<IntegrationHub />} />
+                <Route path="admin/etl-designer" element={<ETLDesigner />} />
+                <Route path="admin/api-manager" element={<APIManager />} />
+                <Route path="admin/scheduler" element={<Scheduler />} />
 
-                <Route path="finance/reconciliation-advanced" element={<ReconciliationAdvanced />} />
+                {/* ════════════════════════════════════════════════════════
+                    LEGACY REDIRECTS
+                    All old routes redirect to their new locations
+                   ════════════════════════════════════════════════════════ */}
+
+                {/* Intelligence Hub legacy */}
+                <Route path="command-center" element={<Navigate to="/" replace />} />
+                <Route path="executive-dashboard" element={<Navigate to="/analytics/revenue" replace />} />
+                <Route path="reporting" element={<Navigate to="/intelligence/forecast" replace />} />
+                <Route path="lida" element={<Navigate to="/intelligence/lida" replace />} />
+                <Route path="lida/*" element={<Navigate to="/intelligence/lida" replace />} />
+
+                {/* Patient Access legacy */}
+                <Route path="insurance-verification" element={<Navigate to="/specialty/patient-access" replace />} />
+                <Route path="insurance-verification/*" element={<Navigate to="/specialty/patient-access" replace />} />
+                <Route path="patient-accounts" element={<Navigate to="/specialty/patient-access/accounts" replace />} />
+
+                {/* Coding legacy */}
+                <Route path="ai-coding" element={<Navigate to="/specialty/coding" replace />} />
+                <Route path="ai-coding/*" element={<Navigate to="/specialty/coding" replace />} />
+
+                {/* Claims legacy */}
+                <Route path="claims" element={<Navigate to="/analytics/claims" replace />} />
+                <Route path="claims/overview" element={<Navigate to="/analytics/claims/overview" replace />} />
+                <Route path="claims/work-queue" element={<Navigate to="/work/claims/queue" replace />} />
+                <Route path="claims/batch" element={<Navigate to="/work/claims/batch" replace />} />
+                <Route path="claims/pre-batch-scrub" element={<Navigate to="/analytics/claims/scrub-analytics" replace />} />
+                <Route path="claims/pre-batch-scrub/*" element={<Navigate to="/analytics/claims/scrub-analytics" replace />} />
+                <Route path="claims/rules" element={<Navigate to="/work/claims/queue" replace />} />
+                <Route path="claims/mass-scrub" element={<Navigate to="/work/claims/queue" replace />} />
+                <Route path="claims/submission-tracking" element={<Navigate to="/analytics/claims" replace />} />
+                <Route path="claims/acknowledgments" element={<Navigate to="/analytics/claims" replace />} />
+                <Route path="claims-scrubbing" element={<Navigate to="/analytics/claims/scrub-analytics" replace />} />
+                <Route path="claims-analytics" element={<Navigate to="/analytics/claims" replace />} />
+
+                {/* Payments legacy */}
+                <Route path="payments/dashboard" element={<Navigate to="/analytics/payments" replace />} />
+                <Route path="payments/era-processing" element={<Navigate to="/work/payments/era" replace />} />
+                <Route path="payments/posting" element={<Navigate to="/work/payments/posting" replace />} />
+                <Route path="payments/contracts" element={<Navigate to="/work/payments/contracts" replace />} />
+                <Route path="payments/payer-intelligence" element={<Navigate to="/analytics/payments/payer-profiles" replace />} />
+                <Route path="payments/era-bank-recon" element={<Navigate to="/analytics/payments/era-bank-recon" replace />} />
+                <Route path="finance/payer-performance" element={<Navigate to="/analytics/payments/payer-profiles" replace />} />
+
+                {/* Denials legacy */}
+                <Route path="denials" element={<Navigate to="/work/denials/queue" replace />} />
+                <Route path="denials/analytics" element={<Navigate to="/analytics/denials" replace />} />
+                <Route path="denials/prevention-dashboard" element={<Navigate to="/analytics/denials" replace />} />
+                <Route path="denials/variance" element={<Navigate to="/analytics/denials/payer-patterns" replace />} />
+                <Route path="denials/high-risk" element={<Navigate to="/work/denials/high-risk" replace />} />
+                <Route path="denials/appeal" element={<Navigate to="/work/denials/appeals" replace />} />
+                <Route path="denials/workflow-log" element={<Navigate to="/work/denials/workflow-log" replace />} />
+                <Route path="denials/workspace" element={<Navigate to="/work/denials/queue" replace />} />
+                <Route path="denials/claim/:id" element={<ClaimDenialDetail />} />
+                <Route path="denials/prediction/:id" element={<DenialPredictionAnalysis />} />
+                <Route path="automation/cob-manager" element={<Navigate to="/work/automation" replace />} />
+
+                {/* Collections legacy */}
+                <Route path="collections" element={<Navigate to="/work/collections/queue" replace />} />
+                <Route path="collections/tasks" element={<Navigate to="/work/collections/queue" replace />} />
+                <Route path="collections/portal" element={<Navigate to="/work/collections/portal" replace />} />
+                <Route path="collections/alerts" element={<Navigate to="/work/collections/alerts" replace />} />
+                <Route path="collections/account/:accountId" element={<AccountDetailsPage />} />
+                <Route path="collections/recovery-insights" element={<Navigate to="/work/collections/queue" replace />} />
+                <Route path="collections/propensity/:accountId" element={<PropensityScoreDetails />} />
+                <Route path="collections/action-center/:accountId" element={<CollectionsActionCenter />} />
+                <Route path="collections/performance" element={<Navigate to="/work/collections/queue" replace />} />
+                <Route path="collections/timeline" element={<Navigate to="/work/collections/queue" replace />} />
+                <Route path="collections/statements" element={<Navigate to="/work/collections/queue" replace />} />
+
+                {/* Reconciliation legacy */}
+                <Route path="finance/reconciliation" element={<Navigate to="/analytics/revenue/reconciliation" replace />} />
+                <Route path="finance/reconciliation-advanced" element={<Navigate to="/analytics/revenue/reconciliation" replace />} />
                 <Route path="finance/reconciliation/transaction/:transactionId" element={<TransactionLedger />} />
                 <Route path="finance/insights/:insightId" element={<AIInsightDetail />} />
-                <Route path="evv/mandates" element={<StateMandates />} />
-                <Route path="denials/variance" element={<PayerVariance />} />
-                <Route path="collections/command" element={<CollectionsCommand />} />
-                <Route path="patient-accounts" element={<PatientAccounts />} />
+                <Route path="finance/audit-log" element={<Navigate to="/settings" replace />} />
+                <Route path="reconciliation/bank-view" element={<Navigate to="/analytics/payments/era-bank-recon" replace />} />
+                <Route path="reconciliation/ar-balance" element={<Navigate to="/analytics/payments/era-bank-recon" replace />} />
+
+                {/* EVV legacy */}
+                <Route path="evv/dashboard" element={<Navigate to="/specialty/evv/dashboard" replace />} />
+                <Route path="evv/visit-details" element={<Navigate to="/specialty/evv/visits" replace />} />
+                <Route path="evv/fraud-detection" element={<Navigate to="/specialty/evv/fraud" replace />} />
+                <Route path="evv/mandates" element={<Navigate to="/specialty/evv/mandates" replace />} />
+                <Route path="evv/billing-bridge" element={<Navigate to="/specialty/evv/dashboard" replace />} />
+                <Route path="automation/evv-retry" element={<Navigate to="/specialty/evv/auto-retry" replace />} />
+
+                {/* Analytics legacy */}
+                <Route path="analytics/root-cause" element={<Navigate to="/analytics/denials/root-cause" replace />} />
+                <Route path="analytics/root-cause/claim/:claimId" element={<ClaimRootCauseDetail />} />
+                <Route path="analytics/adtp" element={<Navigate to="/analytics/payments/overview" replace />} />
+                <Route path="analytics/payments/adtp" element={<Navigate to="/analytics/payments/overview" replace />} />
+
+                {/* AI Engine / Developer legacy */}
+                <Route path="ai-engine/performance" element={<Navigate to="/work/automation" replace />} />
+                <Route path="developer/mcp-agents" element={<Navigate to="/work/automation" replace />} />
+                <Route path="developer/ai-monitor" element={<Navigate to="/work/automation" replace />} />
+                <Route path="developer/ai-monitor/*" element={<Navigate to="/work/automation" replace />} />
+                <Route path="developer/data-schema" element={<Navigate to="/work/automation" replace />} />
+
+                {/* ── Catch-all ────────────────────────────────────────── */}
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
         </Routes>

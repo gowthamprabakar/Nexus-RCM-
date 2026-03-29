@@ -36,29 +36,29 @@ export function AuditLogModal({ onClose }) {
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-card-dark border border-slate-200 dark:border-border-dark w-full max-w-4xl h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-                <div className="p-6 border-b border-slate-200 dark:border-border-dark flex items-center justify-between shrink-0">
+            <div className="bg-white dark:bg-th-surface-raised border border-slate-200 dark:border-th-border w-full max-w-4xl h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+                <div className="p-6 border-b border-slate-200 dark:border-th-border flex items-center justify-between shrink-0">
                     <div>
                         <h3 className="text-lg font-bold flex items-center gap-2">
                             <span className="material-symbols-outlined text-primary">security</span>
                             System Audit & Performance Log
                         </h3>
-                        <p className="text-xs text-slate-500">Immutable record of all system actions and access events</p>
+                        <p className="text-xs text-th-muted">Immutable record of all system actions and access events</p>
                     </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+                    <button onClick={onClose} className="text-th-secondary hover:text-slate-600 dark:hover:text-th-heading transition-colors">
                         <span className="material-symbols-outlined">close</span>
                     </button>
                 </div>
 
-                <div className="p-4 border-b border-slate-200 dark:border-border-dark bg-slate-50/50 shrink-0">
+                <div className="p-4 border-b border-slate-200 dark:border-th-border bg-slate-50/50 shrink-0">
                     <div className="relative">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-th-secondary text-[18px]">search</span>
                         <input
                             type="text"
                             placeholder="Filter by user, action, or details..."
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 bg-white dark:bg-background-dark border border-slate-200 dark:border-border-dark rounded-lg text-sm focus:ring-1 focus:ring-primary outline-none"
+                            className="w-full pl-9 pr-4 py-2 bg-white dark:bg-background-dark border border-slate-200 dark:border-th-border rounded-lg text-sm focus:ring-1 focus:ring-primary outline-none"
                         />
                     </div>
                 </div>
@@ -66,28 +66,28 @@ export function AuditLogModal({ onClose }) {
                 <div className="flex-1 overflow-y-auto p-0">
                     {loading ? (
                         <div className="flex items-center justify-center h-full">
-                            <span className="material-symbols-outlined animate-spin text-3xl text-slate-400">progress_activity</span>
+                            <span className="material-symbols-outlined animate-spin text-3xl text-th-secondary">progress_activity</span>
                         </div>
                     ) : (
                         <table className="w-full text-left border-collapse">
-                            <thead className="bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10 text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">
+                            <thead className="bg-slate-50 dark:bg-th-surface-overlay/50 sticky top-0 z-10 text-[10px] uppercase font-bold text-th-muted dark:text-th-secondary">
                                 <tr>
-                                    <th className="px-6 py-3 border-b border-slate-200 dark:border-border-dark">Timestamp</th>
-                                    <th className="px-6 py-3 border-b border-slate-200 dark:border-border-dark">User</th>
-                                    <th className="px-6 py-3 border-b border-slate-200 dark:border-border-dark">Action</th>
-                                    <th className="px-6 py-3 border-b border-slate-200 dark:border-border-dark">Details</th>
-                                    <th className="px-6 py-3 border-b border-slate-200 dark:border-border-dark w-24">IP Addr</th>
+                                    <th className="px-6 py-3 border-b border-slate-200 dark:border-th-border">Timestamp</th>
+                                    <th className="px-6 py-3 border-b border-slate-200 dark:border-th-border">User</th>
+                                    <th className="px-6 py-3 border-b border-slate-200 dark:border-th-border">Action</th>
+                                    <th className="px-6 py-3 border-b border-slate-200 dark:border-th-border">Details</th>
+                                    <th className="px-6 py-3 border-b border-slate-200 dark:border-th-border w-24">IP Addr</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            <tbody className="divide-y divide-slate-100 dark:divide-th-border">
                                 {filteredLogs.map((log) => (
-                                    <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                                        <td className="px-6 py-3 text-xs text-slate-500 font-mono whitespace-nowrap">
+                                    <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-th-surface-overlay/30 transition-colors">
+                                        <td className="px-6 py-3 text-xs text-th-muted font-mono whitespace-nowrap">
                                             {new Date(log.timestamp).toLocaleString()}
                                         </td>
-                                        <td className="px-6 py-3 text-sm font-bold text-slate-700 dark:text-slate-200">
+                                        <td className="px-6 py-3 text-sm font-bold text-slate-700 dark:text-th-heading">
                                             <div className="flex items-center gap-2">
-                                                <div className="size-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500">
+                                                <div className="size-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-th-muted">
                                                     {log.user.charAt(0)}
                                                 </div>
                                                 {log.user}
@@ -103,10 +103,10 @@ export function AuditLogModal({ onClose }) {
                                                 {log.action}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-3 text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-md truncate" title={log.details}>
+                                        <td className="px-6 py-3 text-sm text-th-muted dark:text-th-secondary leading-relaxed max-w-md truncate" title={log.details}>
                                             {log.details}
                                         </td>
-                                        <td className="px-6 py-3 text-xs text-slate-400 font-mono">
+                                        <td className="px-6 py-3 text-xs text-th-secondary font-mono">
                                             {log.ip_address}
                                         </td>
                                     </tr>
@@ -116,7 +116,7 @@ export function AuditLogModal({ onClose }) {
                     )}
                 </div>
 
-                <div className="p-4 border-t border-slate-200 dark:border-border-dark bg-slate-50 dark:bg-card-dark/20 text-xs text-slate-500 flex justify-between">
+                <div className="p-4 border-t border-slate-200 dark:border-th-border bg-slate-50 dark:bg-th-surface-raised/20 text-xs text-th-muted flex justify-between">
                     <span>Showing {filteredLogs.length} events</span>
                     <button className="font-bold text-primary hover:underline">Export CSV</button>
                 </div>

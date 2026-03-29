@@ -1,182 +1,427 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../../../services/api';
+import { AIInsightCard, DateRangePicker, FilterChipGroup, PrescriptiveAction } from '../../../components/ui';
+
+const DATASET_ICONS = {
+  denials: { icon: 'gpp_bad', color: 'rose' },
+  payments: { icon: 'payments', color: 'emerald' },
+  claims: { icon: 'description', color: 'blue' },
+  ar: { icon: 'account_balance', color: 'amber' },
+  reconciliation: { icon: 'balance', color: 'purple' },
+};
+
+const STATIC_FALLBACK_LIDA_INSIGHTS = [
+  {
+    title: 'Revenue Leakage: $1.2M Identified',
+    description: 'LIDA detected systematic undercoding across 3 service lines. CPT code substitution pattern confirmed in 847 claims.',
+    confidence: 95,
+    impact: 'high',
+    category: 'Diagnostic',
+    action: 'Launch coding audit',
+    value: '$1.2M recovery',
+  },
+  {
+    title: 'Payer Mix Shift Detected',
+    description: 'Commercial payer mix declining 2.4% MoM. Medicaid mix increasing. Net revenue impact: -$82K/month if trend continues.',
+    confidence: 89,
+    impact: 'high',
+    category: 'Predictive',
+    action: 'Review referral sources',
+    value: '-$82K/month trend',
+  },
+  {
+    title: 'LIDA Automation Opportunity',
+    description: '42% of denial appeals are following the same template. Auto-appeal could free 14 FTE hours/week.',
+    confidence: 83,
+    impact: 'medium',
+    category: 'Prescriptive',
+    action: 'Enable auto-appeal workflow',
+    value: '14 FTE hrs/week',
+  },
+];
 
 export function LidaDashboard() {
-    return (
-        <div className="flex-1 overflow-y-auto h-full bg-[#f6f8f8] dark:bg-[#0d1117] p-8 text-slate-900 dark:text-white custom-scrollbar">
-            <header className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Predictive Analytics Dashboard</h1>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm">AI-driven insights for revenue optimization.</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-[#161b22] px-3 py-1.5 rounded-full">
-                        Admin User
-                    </span>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg text-sm font-bold hover:bg-primary/20 transition-colors">
-                        <span className="material-symbols-outlined text-lg">calendar_month</span>
-                        Last 30 Days
-                    </button>
-                </div>
-            </header>
+  const navigate = useNavigate();
 
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white dark:bg-[#161b22] p-5 rounded-xl border border-slate-200 dark:border-gray-800 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-3 opacity-10">
-                        <span className="material-symbols-outlined text-6xl">attach_money</span>
-                    </div>
-                    <p className="text-xs font-bold uppercase text-slate-500 mb-1">Predicted Revenue (30d)</p>
-                    <h3 className="text-3xl font-black text-slate-900 dark:text-white">$4.2M</h3>
-                    <p className="text-xs text-emerald-500 font-bold flex items-center gap-1 mt-2"><span className="material-symbols-outlined text-sm">trending_up</span> +12% vs last month</p>
-                </div>
-                <div className="bg-white dark:bg-[#161b22] p-5 rounded-xl border border-slate-200 dark:border-gray-800 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-3 opacity-10">
-                        <span className="material-symbols-outlined text-6xl">warning</span>
-                    </div>
-                    <p className="text-xs font-bold uppercase text-slate-500 mb-1">Denial Risk Alert</p>
-                    <h3 className="text-3xl font-black text-rose-500">14%</h3>
-                    <p className="text-xs text-rose-500 font-bold flex items-center gap-1 mt-2">Spike in 'Medical Necessity'</p>
-                </div>
-                <div className="bg-white dark:bg-[#161b22] p-5 rounded-xl border border-slate-200 dark:border-gray-800 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-3 opacity-10">
-                        <span className="material-symbols-outlined text-6xl">timelapse</span>
-                    </div>
-                    <p className="text-xs font-bold uppercase text-slate-500 mb-1">Avg Days to Pay</p>
-                    <h3 className="text-3xl font-black text-slate-900 dark:text-white">28</h3>
-                    <p className="text-xs text-emerald-500 font-bold flex items-center gap-1 mt-2"><span className="material-symbols-outlined text-sm">arrow_downward</span> -2 days improvement</p>
-                </div>
-                <div className="bg-white dark:bg-[#161b22] p-5 rounded-xl border border-slate-200 dark:border-gray-800 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-3 opacity-10">
-                        <span className="material-symbols-outlined text-6xl">auto_fix_high</span>
-                    </div>
-                    <p className="text-xs font-bold uppercase text-slate-500 mb-1">AI Auto-Fix Rate</p>
-                    <h3 className="text-3xl font-black text-primary">68%</h3>
-                    <p className="text-xs text-primary font-bold flex items-center gap-1 mt-2">Target: 75%</p>
-                </div>
-            </div>
+  // LIDA Health
+  const [lidaHealth, setLidaHealth] = useState(null);
+  const [healthLoading, setHealthLoading] = useState(true);
 
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* LIDA Insights Card */}
-                <div className="lg:col-span-1 bg-gradient-to-br from-primary to-blue-800 p-6 rounded-xl flex flex-col gap-6 text-white shadow-xl relative overflow-hidden">
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-4">
-                            <span className="material-symbols-outlined">auto_awesome</span>
-                            <h3 className="font-bold text-lg">LIDA Observations</h3>
-                        </div>
-                        <p className="text-sm opacity-90 leading-relaxed mb-6">
-                            "I've detected a significant anomaly in <strong className="text-amber-300">BlueCross PPO</strong> outpatient claims.
-                            Rejections for code 99214 have increased by 45% this week due to missing modifier 25."
-                        </p>
-                        <div className="p-4 bg-white/10 rounded-lg border border-white/20 backdrop-blur-sm">
-                            <h4 className="text-xs font-bold uppercase tracking-widest mb-3 text-white/70">Recommended Actions</h4>
-                            <ul className="space-y-3 text-sm">
-                                <li className="flex items-start gap-2">
-                                    <span className="material-symbols-outlined text-amber-300 text-base mt-0.5">bolt</span>
-                                    <span>Auto-append modifier 25 for qualifying visits.</span>
-                                </li>
-                                <li className="flex items-start gap-2">
-                                    <span className="material-symbols-outlined text-emerald-300 text-base mt-0.5">group</span>
-                                    <span>Alert Coding Team Lead (Sarah M.)</span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                    <button className="mt-auto w-full py-3 bg-white text-primary font-bold rounded-lg hover:bg-slate-100 transition-colors shadow-lg">
-                        Execute Fixes
-                    </button>
-                    {/* Decorative Background Elements */}
-                    <div className="absolute -bottom-10 -right-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+  // Datasets from LIDA
+  const [datasets, setDatasets] = useState([]);
+  const [datasetsLoading, setDatasetsLoading] = useState(true);
+  const [selectedDataset, setSelectedDataset] = useState('denials');
+
+  // AI-Generated Goals from LIDA
+  const [goals, setGoals] = useState([]);
+  const [goalsLoading, setGoalsLoading] = useState(false);
+
+  // Quick Stats from existing APIs
+  const [denialsSummary, setDenialsSummary] = useState(null);
+  const [paymentsSummary, setPaymentsSummary] = useState(null);
+  const [arSummary, setArSummary] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  // Recent AI Insights
+  const [lidaAiInsights, setLidaAiInsights] = useState(STATIC_FALLBACK_LIDA_INSIGHTS);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  // Filters
+  const [filterDateRange, setFilterDateRange] = useState('Last 30 Days');
+  const [filterPayer, setFilterPayer] = useState('All');
+  const [filterInsightType, setFilterInsightType] = useState('All');
+
+  // ── Load LIDA health + datasets on mount ──
+  useEffect(() => {
+    api.lida.health().then(r => {
+      setLidaHealth(r);
+      setHealthLoading(false);
+    }).catch(() => setHealthLoading(false));
+
+    api.lida.datasets().then(r => {
+      if (r?.datasets?.length) setDatasets(r.datasets);
+      setDatasetsLoading(false);
+    }).catch(() => setDatasetsLoading(false));
+  }, []);
+
+  // ── Load quick stats from existing APIs ──
+  useEffect(() => {
+    Promise.all([
+      api.denials.getSummary(),
+      api.payments.getSummary(),
+      api.ar.getSummary(),
+    ]).then(([d, p, a]) => {
+      setDenialsSummary(d);
+      setPaymentsSummary(p);
+      setArSummary(a);
+      setStatsLoading(false);
+    }).catch(() => setStatsLoading(false));
+  }, []);
+
+  // ── Load AI insights ──
+  useEffect(() => {
+    setAiLoading(true);
+    api.ai.getInsights('lida').then(r => {
+      if (r?.insights?.length) setLidaAiInsights(r.insights);
+      setAiLoading(false);
+    }).catch(() => setAiLoading(false));
+  }, []);
+
+  // ── Load goals when selectedDataset changes ──
+  useEffect(() => {
+    setGoalsLoading(true);
+    api.lida.goals(selectedDataset, 5).then(r => {
+      setGoals(r?.goals || []);
+      setGoalsLoading(false);
+    }).catch(() => {
+      setGoals([]);
+      setGoalsLoading(false);
+    });
+  }, [selectedDataset]);
+
+  const fmt = (v) => {
+    if (v == null) return '--';
+    if (typeof v === 'number') {
+      if (Math.abs(v) >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+      if (Math.abs(v) >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
+      return `$${v.toFixed(0)}`;
+    }
+    return String(v);
+  };
+
+  const activeFilterChips = [
+    ...(filterPayer !== 'All' ? [{ key: 'payer', label: 'Payer', value: filterPayer, color: 'blue' }] : []),
+    ...(filterInsightType !== 'All' ? [{ key: 'type', label: 'Type', value: filterInsightType, color: 'purple' }] : []),
+  ];
+
+  const handleRemoveChip = (key) => {
+    if (key === 'payer') setFilterPayer('All');
+    if (key === 'type') setFilterInsightType('All');
+  };
+
+  return (
+  <div className="flex-1 overflow-y-auto h-full p-8 text-th-heading custom-scrollbar">
+
+  {/* ── LIDA HEALTH STATUS ── */}
+  <div className="mb-6 flex items-center gap-4">
+    <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${
+      healthLoading ? 'border-th-border bg-th-surface-raised' :
+      lidaHealth?.ready ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/30 bg-amber-500/5'
+    }`}>
+      {healthLoading ? (
+        <span className="material-symbols-outlined text-th-muted text-sm animate-spin">progress_activity</span>
+      ) : lidaHealth?.ready ? (
+        <span className="material-symbols-outlined text-emerald-400 text-sm">check_circle</span>
+      ) : (
+        <span className="material-symbols-outlined text-amber-400 text-sm">warning</span>
+      )}
+      <div>
+        <p className="text-xs font-bold text-th-heading">LIDA Engine</p>
+        <p className="text-[10px] text-th-muted">
+          {healthLoading ? 'Checking...' :
+           lidaHealth?.ready ? 'Connected & Ready' :
+           `LIDA: ${lidaHealth?.lida_installed ? 'OK' : 'N/A'} | Ollama: ${lidaHealth?.ollama_reachable ? 'OK' : 'Offline'}`}
+        </p>
+      </div>
+    </div>
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-th-border bg-th-surface-raised">
+      <span className="material-symbols-outlined text-primary text-sm">database</span>
+      <span className="text-xs font-bold text-th-heading">{datasets.length} Datasets</span>
+    </div>
+  </div>
+
+  {/* ── TOP FILTER BAR ── */}
+  <div className="flex flex-wrap items-center gap-3 pb-5 mb-6 border-b border-th-border">
+    <DateRangePicker
+      value={filterDateRange}
+      onChange={(p) => setFilterDateRange(p.label)}
+    />
+    <div className="h-4 w-px bg-th-border" />
+    <div className="flex items-center gap-1.5">
+      <span className="material-symbols-outlined text-sm text-th-muted">business</span>
+      <select
+        value={filterPayer}
+        onChange={(e) => setFilterPayer(e.target.value)}
+        className="h-9 bg-th-surface-raised border border-th-border rounded-lg px-3 text-xs font-medium text-th-secondary hover:text-th-heading outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer"
+      >
+        {['All', 'Medicare', 'Medicaid', 'BCBS', 'Aetna', 'United'].map((p) => (
+          <option key={p} value={p}>{p === 'All' ? 'All Payers' : p}</option>
+        ))}
+      </select>
+    </div>
+    <div className="flex items-center gap-1.5">
+      <span className="material-symbols-outlined text-sm text-th-muted">psychology</span>
+      <select
+        value={filterInsightType}
+        onChange={(e) => setFilterInsightType(e.target.value)}
+        className="h-9 bg-th-surface-raised border border-th-border rounded-lg px-3 text-xs font-medium text-th-secondary hover:text-th-heading outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all cursor-pointer"
+      >
+        {['All', 'Predictive', 'Prescriptive', 'Diagnostic', 'Descriptive'].map((t) => (
+          <option key={t} value={t}>{t === 'All' ? 'All Insight Types' : t}</option>
+        ))}
+      </select>
+    </div>
+    {activeFilterChips.length > 0 && (
+      <>
+        <div className="h-4 w-px bg-th-border" />
+        <FilterChipGroup
+          filters={activeFilterChips}
+          onRemove={handleRemoveChip}
+          onClearAll={() => { setFilterPayer('All'); setFilterInsightType('All'); }}
+        />
+      </>
+    )}
+  </div>
+
+  {/* ── DATASET EXPLORER ── */}
+  <div className="mb-8">
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center gap-2">
+        <span className="material-symbols-outlined text-primary text-base">storage</span>
+        <span className="text-th-secondary text-xs font-semibold uppercase tracking-wider">Dataset Explorer</span>
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+          LIDA
+        </span>
+      </div>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3">
+      {datasetsLoading ? (
+        [1, 2, 3, 4, 5].map(i => (
+          <div key={i} className="bg-th-surface-raised border border-th-border rounded-xl p-4 animate-pulse">
+            <div className="h-4 w-1/2 bg-th-surface-overlay rounded mb-3" />
+            <div className="h-3 w-full bg-th-surface-overlay rounded" />
+          </div>
+        ))
+      ) : (
+        datasets.map((ds) => {
+          const meta = DATASET_ICONS[ds.name] || { icon: 'table_chart', color: 'blue' };
+          const isActive = selectedDataset === ds.name;
+          return (
+            <button
+              key={ds.name}
+              onClick={() => setSelectedDataset(ds.name)}
+              className={`text-left bg-th-surface-raised border rounded-xl p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg ${
+                isActive ? `border-${meta.color}-500 ring-1 ring-${meta.color}-500/50` : 'border-th-border hover:border-th-border-strong'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`material-symbols-outlined text-${meta.color}-400 text-lg`}>{meta.icon}</span>
+                <span className="text-sm font-bold text-th-heading capitalize">{ds.name}</span>
+              </div>
+              <p className="text-[11px] text-th-secondary leading-snug line-clamp-2">{ds.description}</p>
+              {isActive && (
+                <div className="mt-2 flex items-center gap-1">
+                  <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] text-emerald-400 font-bold">Selected</span>
                 </div>
+              )}
+            </button>
+          );
+        })
+      )}
+    </div>
+  </div>
 
-                {/* Revenue Forecast Chart (Mock) */}
-                <div className="lg:col-span-2 bg-white dark:bg-[#161b22] p-6 rounded-xl border border-slate-200 dark:border-gray-800 shadow-sm">
-                    <div className="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 className="text-xl font-bold">90-Day Revenue Forecast</h3>
-                            <p className="text-slate-500 text-sm">Predictive confidence interval at 95%</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-slate-500">
-                                <div className="w-2 h-2 rounded-full bg-slate-300"></div> Historical
-                            </span>
-                            <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-primary">
-                                <div className="w-2 h-2 rounded-full bg-primary"></div> Predicted
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Simplified Chart Representation */}
-                    <div className="h-64 flex items-end justify-between gap-2 relative">
-                        {/* Grid Lines */}
-                        <div className="absolute inset-0 flex flex-col justify-between pointer-events-none z-0">
-                            {[1, 2, 3, 4, 5].map(i => <div key={i} className="w-full h-px bg-slate-100 dark:bg-gray-800"></div>)}
-                        </div>
-
-                        {/* Bars / Line Approximation */}
-                        {[30, 45, 40, 50, 55, 60, 58, 65, 70, 72, 80, 85].map((h, i) => (
-                            <div key={i} className="group relative w-full h-full flex items-end z-10">
-                                <div
-                                    style={{ height: `${h}%` }}
-                                    className={`w-full rounded-t-sm transition-all hover:opacity-80 ${i > 7 ? 'bg-primary/80 dark:bg-primary custom-pattern' : 'bg-slate-300 dark:bg-slate-700'}`}
-                                ></div>
-                                {/* Tooltip */}
-                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black text-white text-xs px-2 py-1 rounded pointer-events-none whitespace-nowrap">
-                                    ${h * 85}k
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* Quick Actions / Recents */}
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="bg-white dark:bg-[#161b22] border border-slate-200 dark:border-gray-800 rounded-xl p-6">
-                    <h3 className="font-bold text-lg mb-4">Recent Inquiries</h3>
-                    <div className="space-y-4">
-                        {[
-                            { q: "Why did A/R days spike in NY?", time: "2h ago", status: "Resolved" },
-                            { q: "Top 5 denial reasons for CPT 73721", time: "5h ago", status: "Saved to Report" },
-                            { q: "Predict cash flow for Q4", time: "Yesterday", status: "Shared" },
-                        ].map((item, i) => (
-                            <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-[#0d1117] transition-colors cursor-pointer border border-transparent hover:border-slate-100 dark:hover:border-gray-800">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-primary/10 text-primary rounded-lg">
-                                        <span className="material-symbols-outlined text-sm">chat</span>
-                                    </div>
-                                    <span className="text-sm font-medium">{item.q}</span>
-                                </div>
-                                <span className="text-[10px] text-slate-500">{item.time}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-[#161b22] border border-slate-200 dark:border-gray-800 rounded-xl p-6">
-                    <h3 className="font-bold text-lg mb-4">System Health</h3>
-                    <div className="space-y-6">
-                        <div>
-                            <div className="flex justify-between text-sm mb-2">
-                                <span className="text-slate-500">Model Accuracy (Drift Monitor)</span>
-                                <span className="font-bold text-emerald-500">98.2%</span>
-                            </div>
-                            <div className="h-2 bg-slate-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                                <div className="h-full w-[98.2%] bg-emerald-500 rounded-full"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div className="flex justify-between text-sm mb-2">
-                                <span className="text-slate-500">Data Freshness</span>
-                                <span className="font-bold text-primary">Real-time</span>
-                            </div>
-                            <div className="flex gap-1">
-                                {[1, 1, 1, 1, 1].map((_, i) => <div key={i} className="h-2 flex-1 bg-primary rounded-full animate-pulse"></div>)}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  {/* ── AI-GENERATED GOALS ── */}
+  <div className="mb-8">
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center gap-2">
+        <span className="material-symbols-outlined text-purple-400 text-base">target</span>
+        <span className="text-th-secondary text-xs font-semibold uppercase tracking-wider">AI-Generated Goals</span>
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
+          {selectedDataset}
+        </span>
+      </div>
+      <button
+        onClick={() => {
+          setGoalsLoading(true);
+          api.lida.goals(selectedDataset, 5).then(r => {
+            setGoals(r?.goals || []);
+            setGoalsLoading(false);
+          }).catch(() => setGoalsLoading(false));
+        }}
+        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-th-surface-overlay border border-th-border text-xs text-th-heading hover:bg-th-surface-overlay/80 transition-colors"
+      >
+        <span className="material-symbols-outlined text-sm">refresh</span> Regenerate
+      </button>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+      {goalsLoading ? (
+        [1, 2, 3].map(i => (
+          <div key={i} className="bg-th-surface-raised border border-th-border rounded-xl p-4 space-y-3 animate-pulse">
+            <div className="h-4 w-3/4 bg-th-surface-overlay rounded" />
+            <div className="h-3 w-full bg-th-surface-overlay rounded" />
+            <div className="h-3 w-1/2 bg-th-surface-overlay rounded" />
+          </div>
+        ))
+      ) : goals.length === 0 ? (
+        <div className="col-span-full text-center py-8">
+          <span className="material-symbols-outlined text-3xl text-th-muted mb-2 block">psychology</span>
+          <p className="text-sm text-th-muted">No goals generated yet. Ensure LIDA + Ollama are running.</p>
         </div>
-    );
+      ) : (
+        goals.map((goal, idx) => (
+          <button
+            key={idx}
+            onClick={() => navigate(`/intelligence/lida/chat?q=${encodeURIComponent(goal.question)}`)}
+            className="text-left bg-th-surface-raised border border-th-border rounded-xl p-4 hover:-translate-y-0.5 hover:shadow-lg hover:border-purple-500/50 transition-all duration-200 cursor-pointer group"
+          >
+            <div className="flex items-start gap-2 mb-2">
+              <span className="material-symbols-outlined text-purple-400 text-base mt-0.5">lightbulb</span>
+              <p className="text-sm font-bold text-th-heading leading-snug group-hover:text-purple-400 transition-colors">{goal.question}</p>
+            </div>
+            {goal.rationale && (
+              <p className="text-[11px] text-th-secondary leading-relaxed mb-2 ml-6">{goal.rationale}</p>
+            )}
+            <div className="flex items-center justify-between ml-6">
+              {goal.visualization && (
+                <p className="text-[10px] text-primary font-medium">Chart: {goal.visualization}</p>
+              )}
+              <span className="text-[10px] text-purple-400 font-bold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                <span className="material-symbols-outlined text-xs">chat</span>
+                Ask LIDA
+              </span>
+            </div>
+          </button>
+        ))
+      )}
+    </div>
+  </div>
+
+  {/* ── QUICK STATS FROM EXISTING APIS ── */}
+  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div className="bg-th-surface-raised p-5 rounded-xl border border-th-border border-l-[3px] border-l-rose-500 relative overflow-hidden hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+      <div className="absolute top-0 right-0 p-3 opacity-10">
+        <span className="material-symbols-outlined text-6xl">gpp_bad</span>
+      </div>
+      <p className="text-xs font-semibold uppercase tracking-wider text-th-muted mb-1">Total Denials</p>
+      <h3 className="text-3xl font-black text-rose-400 tabular-nums">
+        {statsLoading ? '...' : denialsSummary?.total_denials?.toLocaleString() ?? '--'}
+      </h3>
+      <div className="flex items-center justify-between mt-2">
+        <p className="text-xs text-rose-400 font-bold tabular-nums">
+          {!statsLoading && denialsSummary?.denied_revenue_at_risk ? fmt(denialsSummary.denied_revenue_at_risk) + ' at risk' : ''}
+        </p>
+        <span className="ai-diagnostic">Diagnostic AI</span>
+      </div>
+    </div>
+    <div className="bg-th-surface-raised p-5 rounded-xl border border-th-border border-l-[3px] border-l-emerald-500 relative overflow-hidden hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+      <div className="absolute top-0 right-0 p-3 opacity-10">
+        <span className="material-symbols-outlined text-6xl">payments</span>
+      </div>
+      <p className="text-xs font-semibold uppercase tracking-wider text-th-muted mb-1">Total Payments</p>
+      <h3 className="text-3xl font-black text-emerald-400 tabular-nums">
+        {statsLoading ? '...' : fmt(paymentsSummary?.total_collected ?? paymentsSummary?.total_payments)}
+      </h3>
+      <div className="flex items-center justify-between mt-2">
+        <p className="text-xs text-emerald-400 font-bold tabular-nums">
+          {!statsLoading && paymentsSummary?.era_count ? `${paymentsSummary.era_count.toLocaleString()} ERAs` : ''}
+        </p>
+        <span className="ai-descriptive">Descriptive AI</span>
+      </div>
+    </div>
+    <div className="bg-th-surface-raised p-5 rounded-xl border border-th-border border-l-[3px] border-l-blue-500 relative overflow-hidden hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+      <div className="absolute top-0 right-0 p-3 opacity-10">
+        <span className="material-symbols-outlined text-6xl">account_balance</span>
+      </div>
+      <p className="text-xs font-semibold uppercase tracking-wider text-th-muted mb-1">Total A/R</p>
+      <h3 className="text-3xl font-black text-blue-400 tabular-nums">
+        {statsLoading ? '...' : fmt(arSummary?.total_ar ?? arSummary?.total_outstanding)}
+      </h3>
+      <div className="flex items-center justify-between mt-2">
+        <p className="text-xs text-blue-400 font-bold tabular-nums">
+          {!statsLoading && arSummary?.avg_days_in_ar ? `${arSummary.avg_days_in_ar} days avg` : ''}
+        </p>
+        <span className="ai-predictive">Predictive AI</span>
+      </div>
+    </div>
+    <div className="bg-th-surface-raised p-5 rounded-xl border border-th-border border-l-[3px] border-l-purple-500 relative overflow-hidden hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+      <div className="absolute top-0 right-0 p-3 opacity-10">
+        <span className="material-symbols-outlined text-6xl">auto_awesome</span>
+      </div>
+      <p className="text-xs font-semibold uppercase tracking-wider text-th-muted mb-1">LIDA Status</p>
+      <h3 className="text-3xl font-black text-th-heading tabular-nums">
+        {healthLoading ? '...' : lidaHealth?.ready ? 'Online' : 'Offline'}
+      </h3>
+      <div className="flex items-center justify-between mt-2">
+        <p className={`text-xs font-bold ${lidaHealth?.ready ? 'text-emerald-400' : 'text-amber-400'}`}>
+          {lidaHealth?.ready ? 'All systems operational' : 'Check Ollama'}
+        </p>
+        <span className="ai-prescriptive">Prescriptive AI</span>
+      </div>
+    </div>
+  </div>
+
+  {/* ── AI INSIGHTS PANEL ── */}
+  <div className="mb-8">
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center gap-2">
+        <span className="material-symbols-outlined text-amber-400 text-base">auto_awesome</span>
+        <span className="text-th-secondary text-xs font-semibold uppercase tracking-wider">Recent AI Insights</span>
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
+          LIDA AI
+        </span>
+      </div>
+      <span className="text-th-muted text-[10px] font-medium">Powered by LIDA + Ollama</span>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {aiLoading ? (
+        [1, 2, 3].map(i => (
+          <div key={i} className="bg-th-surface-raised border border-th-border rounded-xl p-5 space-y-3 animate-pulse">
+            <div className="h-4 w-3/4 bg-th-surface-overlay rounded" />
+            <div className="h-3 w-full bg-th-surface-overlay rounded" />
+            <div className="h-3 w-1/2 bg-th-surface-overlay rounded" />
+          </div>
+        ))
+      ) : (
+        lidaAiInsights.map((insight) => (
+          <AIInsightCard key={insight.title} {...insight} />
+        ))
+      )}
+    </div>
+  </div>
+
+  </div>
+  );
 }

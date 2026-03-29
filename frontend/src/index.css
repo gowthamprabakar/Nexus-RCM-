@@ -1,3 +1,269 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════
+   THEME SYSTEM — CSS Custom Properties
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Light Theme ── */
+:root {
+  --color-surface-base: 248 250 252;
+  --color-surface-raised: 255 255 255;
+  --color-surface-overlay: 241 245 249;
+  --color-surface-highlight: 219 234 254;
+  --color-surface-sidebar: 255 255 255;
+  --color-surface-header: 255 255 255;
+
+  --color-text-heading: 15 23 42;
+  --color-text-primary: 30 41 59;
+  --color-text-secondary: 100 116 139;
+  --color-text-muted: 148 163 184;
+  --color-text-inverted: 255 255 255;
+
+  --color-border-default: 226 232 240;
+  --color-border-subtle: 241 245 249;
+  --color-border-strong: 203 213 225;
+
+  --color-primary: 37 99 235;
+  --color-primary-hover: 29 78 216;
+  --color-primary-light: 59 130 246;
+  --color-primary-bg: 239 246 255;
+
+  --color-success: 16 185 129;
+  --color-warning: 245 158 11;
+  --color-danger: 239 68 68;
+  --color-info: 59 130 246;
+
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  --shadow-card-hover: 0 4px 12px -2px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-header: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+
+  color-scheme: light;
+}
+
+/* ── Dark Theme ── */
+.dark {
+  --color-surface-base: 11 17 32;
+  --color-surface-raised: 17 24 39;
+  --color-surface-overlay: 30 41 59;
+  --color-surface-highlight: 30 58 95;
+  --color-surface-sidebar: 7 12 24;
+  --color-surface-header: 7 12 24;
+
+  --color-text-heading: 255 255 255;
+  --color-text-primary: 226 232 240;
+  --color-text-secondary: 148 163 184;
+  --color-text-muted: 100 116 139;
+  --color-text-inverted: 15 23 42;
+
+  --color-border-default: 30 41 59;
+  --color-border-subtle: 30 41 59;
+  --color-border-strong: 51 65 85;
+
+  --color-primary: 37 99 235;
+  --color-primary-hover: 29 78 216;
+  --color-primary-light: 59 130 246;
+  --color-primary-bg: 30 58 95;
+
+  --color-success: 16 185 129;
+  --color-warning: 245 158 11;
+  --color-danger: 239 68 68;
+  --color-info: 59 130 246;
+
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.2), 0 1px 2px -1px rgb(0 0 0 / 0.15);
+  --shadow-card-hover: 0 4px 12px -2px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.15);
+  --shadow-header: none;
+
+  color-scheme: dark;
+}
+
+/* ── Base Styles ── */
+body {
+  background-color: rgb(var(--color-surface-base));
+  color: rgb(var(--color-text-primary));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--color-primary));
+  outline-offset: 2px;
+}
+
+/* Enterprise scrollbar */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-text-muted) / 0.2);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-text-muted) / 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   COMPONENT UTILITIES — using raw CSS (not @apply for theme vars)
+   ═══════════════════════════════════════════════════════ */
+
+@layer components {
+  /* Enterprise card */
+  .card {
+    background-color: rgb(var(--color-surface-raised));
+    border: 1px solid rgb(var(--color-border-default));
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow-card);
+  }
+
+  .card-hover {
+    background-color: rgb(var(--color-surface-raised));
+    border: 1px solid rgb(var(--color-border-default));
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.2s ease;
+  }
+  .card-hover:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Tile — enhanced card with padding */
+  .tile {
+    background-color: rgb(var(--color-surface-raised));
+    border: 1px solid rgb(var(--color-border-default));
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    box-shadow: var(--shadow-card);
+    transition: all 0.2s ease;
+  }
+  .tile:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply h-9 px-4 text-sm font-semibold rounded-lg text-white transition-colors;
+    background-color: rgb(var(--color-primary));
+  }
+  .btn-primary:hover {
+    background-color: rgb(var(--color-primary-hover));
+  }
+
+  .btn-secondary {
+    @apply h-9 px-4 text-sm font-medium rounded-lg transition-colors;
+    border: 1px solid rgb(var(--color-border-default));
+    color: rgb(var(--color-text-secondary));
+  }
+  .btn-secondary:hover {
+    background-color: rgb(var(--color-surface-overlay));
+    color: rgb(var(--color-text-heading));
+  }
+
+  .btn-ghost {
+    @apply h-9 px-4 text-sm font-medium rounded-lg transition-colors;
+    color: rgb(var(--color-text-muted));
+  }
+  .btn-ghost:hover {
+    background-color: rgb(var(--color-surface-overlay));
+    color: rgb(var(--color-text-heading));
+  }
+
+  /* Input */
+  .input {
+    @apply h-9 px-3 text-sm rounded-lg transition-colors;
+    border: 1px solid rgb(var(--color-border-default));
+    background-color: rgb(var(--color-surface-raised));
+    color: rgb(var(--color-text-heading));
+  }
+  .input::placeholder {
+    color: rgb(var(--color-text-muted));
+  }
+  .input:focus {
+    outline: none;
+    box-shadow: 0 0 0 1px rgb(var(--color-primary));
+    border-color: rgb(var(--color-primary));
+  }
+
+  /* KPI */
+  .kpi-value {
+    @apply text-2xl font-bold tracking-tight;
+    color: rgb(var(--color-text-heading));
+  }
+  .kpi-label {
+    @apply text-xs font-semibold uppercase tracking-wider;
+    color: rgb(var(--color-text-muted));
+  }
+
+  /* Section header */
+  .section-title {
+    @apply text-xs font-bold uppercase tracking-widest mb-3;
+    color: rgb(var(--color-text-muted));
+  }
+
+  /* AI level badges */
+  .ai-badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded font-bold uppercase tracking-wider;
+    font-size: 0.625rem;
+    line-height: 0.875rem;
+  }
+
+  .ai-descriptive {
+    @apply ai-badge text-blue-500;
+    background-color: rgb(59 130 246 / 0.12);
+  }
+  .dark .ai-descriptive {
+    @apply text-blue-400;
+    background-color: rgb(59 130 246 / 0.15);
+  }
+
+  .ai-diagnostic {
+    @apply ai-badge text-amber-600;
+    background-color: rgb(245 158 11 / 0.12);
+  }
+  .dark .ai-diagnostic {
+    @apply text-amber-400;
+    background-color: rgb(245 158 11 / 0.15);
+  }
+
+  .ai-predictive {
+    @apply ai-badge text-purple-600;
+    background-color: rgb(139 92 246 / 0.12);
+  }
+  .dark .ai-predictive {
+    @apply text-purple-400;
+    background-color: rgb(139 92 246 / 0.15);
+  }
+
+  .ai-prescriptive {
+    @apply ai-badge text-emerald-600;
+    background-color: rgb(16 185 129 / 0.12);
+  }
+  .dark .ai-prescriptive {
+    @apply text-emerald-400;
+    background-color: rgb(16 185 129 / 0.15);
+  }
+
+  /* Theme-aware table */
+  .th-table th {
+    @apply text-xs font-semibold uppercase tracking-wider px-4 py-3 text-left;
+    color: rgb(var(--color-text-muted));
+    border-bottom: 1px solid rgb(var(--color-border-default));
+  }
+  .th-table td {
+    @apply px-4 py-3 text-sm;
+    color: rgb(var(--color-text-primary));
+    border-bottom: 1px solid rgb(var(--color-border-default));
+  }
+  .th-table tr:hover td {
+    background-color: rgb(var(--color-surface-overlay));
+  }
+}

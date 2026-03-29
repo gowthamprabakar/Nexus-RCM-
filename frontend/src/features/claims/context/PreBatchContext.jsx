@@ -1,116 +1,156 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
-import { mockPreBatchData } from '../../../data/synthetic/mockPreBatchData';
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
+import { api } from '../../../services/api';
 
 const PreBatchContext = createContext();
 
+const DEFAULT_METRICS = {
+  totalClaims: 0,
+  passRate: 0,
+  autoFixRate: 0,
+  batchReadiness: 0,
+  avgCrsScore: 0,
+  denialsPreventedValue: 0,
+  statusBreakdown: { passed: 0, autoFixed: 0, reviewRequired: 0, blocked: 0 },
+  errorCategories: [],
+};
+
 export function PreBatchProvider({ children }) {
-    const [claims, setClaims] = useState(mockPreBatchData.claims);
-    const [metrics, setMetrics] = useState(mockPreBatchData.metrics);
-    const [selectedClaimId, setSelectedClaimId] = useState(null);
+  const [claims,    setClaims]    = useState([]);
+  const [metrics,   setMetrics]   = useState(DEFAULT_METRICS);
+  const [total,     setTotal]     = useState(0);
+  const [page,      setPage]      = useState(1);
+  const [loading,   setLoading]   = useState(true);
 
-    // Filter Logic
-    const [filters, setFilters] = useState({
-        search: '',
-        status: 'all', // all, passed, autofixed, review, blocked
-        payer: 'all'
+  const [filters, setFilters] = useState({
+    search:    '',
+    status:    'all',
+    payer:     'all',
+    claimType: 'all',
+  });
+
+  // ── Fetch summary KPIs ──────────────────────────────────────────────────
+  const fetchSummary = useCallback(async () => {
+    const [summary, categories] = await Promise.all([
+      api.crs.getSummary({ payerId: filters.payer, claimType: filters.claimType }),
+      api.crs.getErrorCategories(),
+    ]);
+    if (summary) {
+      setMetrics({ ...summary, errorCategories: categories });
+    }
+  }, [filters.payer, filters.claimType]);
+
+  // ── Fetch claims queue ──────────────────────────────────────────────────
+  const fetchQueue = useCallback(async (pg = 1) => {
+    setLoading(true);
+    const result = await api.crs.getQueue({
+      page:      pg,
+      size:      100,
+      status:    filters.status !== 'all' ? filters.status : undefined,
+      payerId:   filters.payer  !== 'all' ? filters.payer  : undefined,
+      claimType: filters.claimType !== 'all' ? filters.claimType : undefined,
+      search:    filters.search || undefined,
     });
+    setClaims(result.items || []);
+    setTotal(result.total || 0);
+    setPage(pg);
+    setLoading(false);
+  }, [filters]);
 
-    // Derived State: Active Claim
-    const selectedClaim = useMemo(() =>
-        claims.find(c => c.id === selectedClaimId),
-        [claims, selectedClaimId]);
+  // Initial load
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
 
-    // Derived State: Filtered Claims
-    const filteredClaims = useMemo(() => {
-        return claims.filter(claim => {
-            const matchesSearch = claim.patient.toLowerCase().includes(filters.search.toLowerCase()) ||
-                claim.id.toLowerCase().includes(filters.search.toLowerCase());
-            const matchesStatus = filters.status === 'all' ||
-                (filters.status === 'passed' && claim.status === 'Passed') ||
-                (filters.status === 'autofixed' && claim.status === 'Auto-Fixed') ||
-                (filters.status === 'review' && claim.status === 'Review Required') ||
-                (filters.status === 'blocked' && claim.status === 'Blocked');
-            const matchesPayer = filters.payer === 'all' || claim.payer === filters.payer;
+  useEffect(() => {
+    fetchQueue(1);
+  }, [fetchQueue]);
 
-            return matchesSearch && matchesStatus && matchesPayer;
-        });
-    }, [claims, filters]);
-
-    // Action: Auto-Fix a Claim
-    const applyAutoFix = (claimId, issueId) => {
-        setClaims(prev => prev.map(claim => {
-            if (claim.id === claimId) {
-                // Mark specific issue as 'applied'
-                const updatedIssues = claim.issues.map(issue =>
-                    issue.id === issueId ? { ...issue, applied: true } : issue
-                );
-
-                // If all issues are resolved, update status
-                const allResolved = updatedIssues.every(i => i.applied || i.autoFixAvailable);
-                // Simple logic: if we applied the fix, let's assume it worked for now and set to Auto-Fixed
-
-                return {
-                    ...claim,
-                    issues: updatedIssues,
-                    status: 'Auto-Fixed',
-                    batchReady: true
-                };
-            }
-            return claim;
-        }));
-
-        // Update Metrics (Simulated)
-        setMetrics(prev => ({
-            ...prev,
-            batchReadiness: Math.min(100, prev.batchReadiness + 1),
-            statusBreakdown: {
-                ...prev.statusBreakdown,
-                reviewRequired: prev.statusBreakdown.reviewRequired - 1,
-                autoFixed: prev.statusBreakdown.autoFixed + 1
-            }
-        }));
-    };
-
-    // Action: Apply All High Confidence Fixes
-    const applyAllHighConfidenceFixes = () => {
-        setClaims(prev => prev.map(claim => {
-            const hasHighConfidence = claim.issues.some(i => i.confidenceScore > 0.9 && i.autoFixAvailable && !i.applied);
-            if (hasHighConfidence) {
-                return {
-                    ...claim,
-                    status: 'Auto-Fixed',
-                    batchReady: true,
-                    issues: claim.issues.map(i => i.confidenceScore > 0.9 ? { ...i, applied: true } : i)
-                };
-            }
-            return claim;
-        }));
-    };
-
-    const value = {
-        claims,
-        filteredClaims,
-        metrics,
-        selectedClaimId,
-        setSelectedClaimId,
-        selectedClaim,
-        filters,
-        setFilters,
-        applyAutoFix,
-        applyAllHighConfidenceFixes
-    };
-
-    return (
-        <PreBatchContext.Provider value={value}>
-            {children}
-        </PreBatchContext.Provider>
+  // ── Client-side search filter (instant, no refetch) ────────────────────
+  const filteredClaims = useMemo(() => {
+    if (!filters.search) return claims;
+    const s = filters.search.toLowerCase();
+    return claims.filter(c =>
+      c.patient.toLowerCase().includes(s) ||
+      c.id.toLowerCase().includes(s)
     );
+  }, [claims, filters.search]);
+
+  // ── Action: optimistic auto-fix single claim ───────────────────────────
+  const applyAutoFix = useCallback((claimId, issueId) => {
+    setClaims(prev => prev.map(c => {
+      if (c.id !== claimId) return c;
+      const updatedIssues = c.issues.map(i =>
+        i.id === issueId ? { ...i, applied: true } : i
+      );
+      const allResolved = updatedIssues.every(i => i.applied || i.autoFixAvailable);
+      return { ...c, issues: updatedIssues, status: allResolved ? 'Auto-Fixed' : c.status, batchReady: allResolved };
+    }));
+    // Bump metrics optimistically
+    setMetrics(prev => ({
+      ...prev,
+      statusBreakdown: {
+        ...prev.statusBreakdown,
+        reviewRequired: Math.max(0, prev.statusBreakdown.reviewRequired - 1),
+        autoFixed: prev.statusBreakdown.autoFixed + 1,
+      },
+      batchReadiness: Math.min(100, prev.batchReadiness + 0.1),
+    }));
+  }, []);
+
+  // ── Action: apply all high-confidence fixes ────────────────────────────
+  const applyAllHighConfidenceFixes = useCallback(() => {
+    let fixedCount = 0;
+    setClaims(prev => prev.map(c => {
+      const hasHighConf = c.issues.some(i => i.confidenceScore > 0.9 && i.autoFixAvailable && !i.applied);
+      if (!hasHighConf) return c;
+      fixedCount++;
+      return {
+        ...c,
+        status:     'Auto-Fixed',
+        batchReady: true,
+        issues:     c.issues.map(i => i.confidenceScore > 0.9 ? { ...i, applied: true } : i),
+      };
+    }));
+    if (fixedCount > 0) {
+      setMetrics(prev => ({
+        ...prev,
+        statusBreakdown: {
+          ...prev.statusBreakdown,
+          reviewRequired: Math.max(0, prev.statusBreakdown.reviewRequired - fixedCount),
+          autoFixed:      prev.statusBreakdown.autoFixed + fixedCount,
+        },
+        batchReadiness: Math.min(100, prev.batchReadiness + fixedCount * 0.1),
+      }));
+    }
+  }, []);
+
+  const value = {
+    claims,
+    filteredClaims,
+    metrics,
+    total,
+    page,
+    loading,
+    filters,
+    setFilters,
+    fetchQueue,
+    applyAutoFix,
+    applyAllHighConfidenceFixes,
+    // legacy compat
+    selectedClaimId:    null,
+    setSelectedClaimId: () => {},
+    selectedClaim:      null,
+  };
+
+  return (
+    <PreBatchContext.Provider value={value}>
+      {children}
+    </PreBatchContext.Provider>
+  );
 }
 
 export function usePreBatch() {
-    const context = useContext(PreBatchContext);
-    if (!context) {
-        throw new Error('usePreBatch must be used within a PreBatchProvider');
-    }
-    return context;
+  const context = useContext(PreBatchContext);
+  if (!context) throw new Error('usePreBatch must be used within a PreBatchProvider');
+  return context;
 }

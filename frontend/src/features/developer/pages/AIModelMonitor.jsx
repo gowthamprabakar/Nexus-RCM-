@@ -4,104 +4,62 @@ import { cn } from '../../../lib/utils';
 import { AIModelOverview } from './ai/AIModelOverview';
 
 export function AIModelMonitor() {
-    const location = useLocation();
+ const location = useLocation();
 
-    // Check if we are at the root path to render the default overview
-    const isRoot = location.pathname === '/developer/ai-monitor' || location.pathname === '/developer/ai-monitor/';
+ const isRoot = location.pathname === '/developer/ai-monitor' || location.pathname === '/developer/ai-monitor/';
 
-    return (
-        <div className="bg-slate-50 dark:bg-[#0a1111] text-slate-900 dark:text-slate-100 min-h-screen flex flex-col font-sans">
-            {/* Top Navigation - Implemented by layout Shell */}
+ const navItems = [
+ { to: '/developer/ai-monitor', end: true, icon: 'dashboard', label: 'System Overview' },
+ { to: '/developer/ai-monitor/psi', icon: 'analytics', label: 'PSI Distribution' },
+ { to: '/developer/ai-monitor/feature-importance', icon: 'monitoring', label: 'Feature Importance' },
+ { to: '/developer/ai-monitor/registry', icon: 'history', label: 'Model Registry' },
+ { to: '/developer/ai-monitor/drift-logs', icon: 'table_chart', label: 'Drift Logs' },
+ ];
 
-            <main className="flex-1 flex overflow-hidden">
-                {/* Sidebar Navigation */}
-                <aside className="hidden lg:flex w-64 border-r border-slate-200 dark:border-[#283939] flex-col bg-white dark:bg-[#0a1111] shrink-0">
-                    <div className="p-4 space-y-2 flex-1">
-                        <NavLink
-                            to="/developer/ai-monitor"
-                            end
-                            className={({ isActive }) => cn(
-                                "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer",
-                                isActive
-                                    ? "bg-primary/10 text-primary border border-primary/20 font-semibold"
-                                    : "text-slate-500 dark:text-[#9db9b9] hover:bg-slate-100 dark:hover:bg-white/5"
-                            )}
-                        >
-                            <span className="material-symbols-outlined">dashboard</span>
-                            <span className="text-sm">System Overview</span>
-                        </NavLink>
+ return (
+ <div className="text-th-heading min-h-screen flex flex-col font-sans">
+ <main className="flex-1 flex overflow-hidden">
+ {/* Horizontal Tab Navigation replacing sidebar */}
+ <div className="flex-1 flex flex-col overflow-hidden">
+ <div className="px-6 pt-4 border-b border-th-border">
+ <div className="flex items-center gap-1 overflow-x-auto">
+ {navItems.map(item => (
+ <NavLink
+ key={item.to}
+ to={item.to}
+ end={item.end}
+ className={({ isActive }) => cn(
+ "flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap",
+ isActive
+ ? "border-primary text-primary"
+ : "border-transparent text-th-secondary hover:text-th-heading"
+ )}
+ >
+ <span className="material-symbols-outlined text-lg">{item.icon}</span>
+ {item.label}
+ </NavLink>
+ ))}
 
-                        <NavLink
-                            to="/developer/ai-monitor/psi"
-                            className={({ isActive }) => cn(
-                                "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer",
-                                isActive
-                                    ? "bg-primary/10 text-primary border border-primary/20 font-semibold"
-                                    : "text-slate-500 dark:text-[#9db9b9] hover:bg-slate-100 dark:hover:bg-white/5"
-                            )}
-                        >
-                            <span className="material-symbols-outlined">analytics</span>
-                            <span className="text-sm font-medium">PSI Distribution</span>
-                        </NavLink>
+ <div className="ml-auto flex items-center gap-3 pb-3">
+ <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg text-th-secondary">
+ <span className="material-symbols-outlined text-xs text-emerald-500">fiber_manual_record</span>
+ <span className="text-sm font-medium">Production</span>
+ </div>
+ <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-th-surface-raised border border-th-border text-th-heading">
+ <span className="material-symbols-outlined text-xs text-primary">radio_button_checked</span>
+ <span className="text-sm font-medium">Staging-Canary</span>
+ </div>
+ <span className="ai-predictive">Predictive AI</span>
+ </div>
+ </div>
+ </div>
 
-                        <NavLink
-                            to="/developer/ai-monitor/feature-importance"
-                            className={({ isActive }) => cn(
-                                "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer",
-                                isActive
-                                    ? "bg-primary/10 text-primary border border-primary/20 font-semibold"
-                                    : "text-slate-500 dark:text-[#9db9b9] hover:bg-slate-100 dark:hover:bg-white/5"
-                            )}
-                        >
-                            <span className="material-symbols-outlined">monitoring</span>
-                            <span className="text-sm font-medium">Feature Importance</span>
-                        </NavLink>
-
-                        <NavLink
-                            to="/developer/ai-monitor/registry"
-                            className={({ isActive }) => cn(
-                                "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer",
-                                isActive
-                                    ? "bg-primary/10 text-primary border border-primary/20 font-semibold"
-                                    : "text-slate-500 dark:text-[#9db9b9] hover:bg-slate-100 dark:hover:bg-white/5"
-                            )}
-                        >
-                            <span className="material-symbols-outlined">history</span>
-                            <span className="text-sm font-medium">Model Registry</span>
-                        </NavLink>
-
-                        <NavLink
-                            to="/developer/ai-monitor/drift-logs"
-                            className={({ isActive }) => cn(
-                                "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer",
-                                isActive
-                                    ? "bg-primary/10 text-primary border border-primary/20 font-semibold"
-                                    : "text-slate-500 dark:text-[#9db9b9] hover:bg-slate-100 dark:hover:bg-white/5"
-                            )}
-                        >
-                            <span className="material-symbols-outlined">table_chart</span>
-                            <span className="text-sm font-medium">Drift Logs</span>
-                        </NavLink>
-
-                        <div className="pt-4 mt-4 border-t border-slate-200 dark:border-[#283939]">
-                            <p className="px-3 mb-2 text-[10px] uppercase tracking-widest text-slate-400 dark:text-[#9db9b9]">Environments</p>
-                            <div className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-500 dark:text-[#9db9b9] hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
-                                <span className="material-symbols-outlined text-xs text-emerald-500">fiber_manual_record</span>
-                                <span className="text-sm font-medium">Production</span>
-                            </div>
-                            <div className="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-500 dark:text-[#9db9b9] hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer">
-                                <span className="material-symbols-outlined text-xs text-primary">radio_button_checked</span>
-                                <span className="text-sm font-medium text-slate-900 dark:text-white">Staging-Canary</span>
-                            </div>
-                        </div>
-                    </div>
-                </aside>
-
-                {/* Dashboard Content */}
-                <section className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-primary/50">
-                    {isRoot ? <AIModelOverview /> : <Outlet />}
-                </section>
-            </main>
-        </div>
-    );
+ {/* Dashboard Content */}
+ <section className="flex-1 overflow-y-auto p-6">
+ {isRoot ? <AIModelOverview /> : <Outlet />}
+ </section>
+ </div>
+ </main>
+ </div>
+ );
 }
