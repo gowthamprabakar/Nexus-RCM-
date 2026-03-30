@@ -93,6 +93,20 @@ async def analyze_denial_root_cause(db: AsyncSession, denial_id: str) -> dict:
         if not claim:
             return {"error": f"Claim {denial.claim_id} not found for denial"}
 
+        existing_rca = await db.execute(
+            select(RootCauseAnalysis).where(RootCauseAnalysis.denial_id == denial_id).limit(1)
+        )
+        existing = existing_rca.scalars().first()
+        if existing:
+            logger.debug("analyze_denial_root_cause: RCA already exists for denial %s — skipping", denial_id)
+            return {
+                "rca_id": existing.rca_id, "denial_id": denial_id,
+                "claim_id": claim.claim_id, "primary_root_cause": existing.primary_root_cause,
+                "confidence_score": existing.confidence_score,
+                "financial_impact": existing.financial_impact,
+                "skipped": True, "reason": "RCA already exists for this denial",
+            }
+
         rca_id = _gen_rca_id()
         steps = []
         # ALL weights start at ZERO — evidence only
@@ -477,10 +491,11 @@ async def analyze_denial_root_cause(db: AsyncSession, denial_id: str) -> dict:
                 "write_off_probability": _write_off_prob,
                 "predicted_carc_codes": _carc_top,
             }
+            _ev_sorted = sorted(evidence.items(), key=lambda x: x[1], reverse=True) if evidence else []
             neo4j_evidence_summary = {
                 "graph_points": graph_pts,
                 "current_evidence": dict(evidence),
-                "top_cause": ranked[0][0] if sum(evidence.values()) > 0 and (ranked := sorted(evidence.items(), key=lambda x: x[1], reverse=True)) else None,
+                "top_cause": _ev_sorted[0][0] if _ev_sorted and sum(evidence.values()) > 0 else None,
                 "ml_denial_risk": "HIGH" if _denial_prob >= 0.5 else "MEDIUM" if _denial_prob >= 0.25 else "LOW",
                 "ml_write_off_risk": "HIGH" if _write_off_prob >= 0.5 else "LOW",
                 "ml_predicted_carcs": _carc_top,

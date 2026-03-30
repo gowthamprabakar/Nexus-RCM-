@@ -106,27 +106,6 @@ async def _job_batch_rca():
         await session.close()
 
 
-async def _job_batch_validate_rca():
-    """Validate top 20 low-confidence root causes per run using Qwen3."""
-    session = await _get_session()
-    try:
-        from app.services.root_cause_validator import batch_validate
-        result = await batch_validate(session, limit=20)
-        await session.commit()
-        logger.info(
-            "batch_validate_rca: %d validated, %d agreed, %d disagreed, avg adj %.1f pts",
-            result.get("validated_count", 0),
-            result.get("agreed", 0),
-            result.get("disagreed", 0),
-            result.get("avg_adjustment", 0),
-        )
-    except Exception:
-        await session.rollback()
-        logger.exception("batch_validate_rca job failed")
-    finally:
-        await session.close()
-
-
 async def _job_refresh_diagnostics():
     """Placeholder: refresh cached diagnostic summaries."""
     logger.info(

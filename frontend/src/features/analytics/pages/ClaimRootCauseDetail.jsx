@@ -107,6 +107,7 @@ export function ClaimRootCauseDetail() {
   const [aiInsight, setAiInsight] = useState(null);
   const [validation, setValidation] = useState(null);
   const [validating, setValidating] = useState(false);
+  const [validateCooldown, setValidateCooldown] = useState(false);
   const [claimDiagnostic, setClaimDiagnostic] = useState(null);
 
   useEffect(() => {
@@ -750,6 +751,10 @@ export function ClaimRootCauseDetail() {
     try {
       const result = await api.rootCause.validateClaim(claim.claim_id || claimId);
       setValidation(result);
+      if (result?.validated) {
+        setValidateCooldown(true);
+        setTimeout(() => setValidateCooldown(false), 30000);
+      }
     } catch {
       setValidation({ validated: false, reasoning: 'Validation request failed' });
     } finally {
@@ -773,13 +778,18 @@ export function ClaimRootCauseDetail() {
             {/* Validate with AI button */}
             <button
               onClick={handleValidate}
-              disabled={validating}
+              disabled={validating || validateCooldown}
               className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {validating ? (
                 <>
                   <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
                   Validating...
+                </>
+              ) : validateCooldown ? (
+                <>
+                  <span className="material-symbols-outlined text-sm">check_circle</span>
+                  Validated
                 </>
               ) : (
                 <>
@@ -841,7 +851,11 @@ export function ClaimRootCauseDetail() {
                   <span className={validation.adjusted_confidence > validation.original_confidence ? 'text-emerald-400 font-bold' : validation.adjusted_confidence < validation.original_confidence ? 'text-rose-400 font-bold' : ''}>
                     {validation.adjusted_confidence}%
                   </span>
-                  <span className="ml-2 text-th-muted">({validation.validation_source})</span>
+                  <span className="ml-2 text-th-muted">
+                    ({validation.validation_source === 'qwen3' || validation.validation_source === 'ollama' ? 'AI Panel'
+                      : validation.validation_source === 'fallback' ? 'Unavailable'
+                      : validation.validation_source})
+                  </span>
                 </p>
               )}
             </div>
