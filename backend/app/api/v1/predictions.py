@@ -323,12 +323,18 @@ async def get_claim_value(
         from sqlalchemy import text
 
         # Get denial probability
+        model_loaded = True
         try:
             dm = DenialProbabilityModel()
             denial_result = await dm.predict_claim(db, claim_id)
             denial_prob = denial_result.get("probability", 0.15)
-        except Exception:
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Denial model unavailable for claim %s, using fallback: %s", claim_id, exc
+            )
             denial_prob = 0.15
+            model_loaded = False
 
         # Get claim charges and payer ADTP
         r = await db.execute(text(
@@ -341,7 +347,9 @@ async def get_claim_value(
             raise HTTPException(404, f"Claim {claim_id} not found")
 
         cs = CompositeScoreEngine()
-        return cs.claim_expected_net_revenue(denial_prob, float(row[0]), float(row[1]))
+        result = cs.claim_expected_net_revenue(denial_prob, float(row[0]), float(row[1]))
+        result["model_loaded"] = model_loaded
+        return result
     except HTTPException:
         raise
     except Exception as e:
@@ -358,6 +366,7 @@ async def get_payer_health(
         from app.ml.composite_scores import CompositeScoreEngine
         from sqlalchemy import text
 
+        # Get payer base data
         r = await db.execute(text(
             "SELECT denial_rate, adtp_days FROM payer_master WHERE payer_id = :pid"
         ), {"pid": payer_id})
@@ -365,12 +374,59 @@ async def get_payer_health(
         if not row:
             raise HTTPException(404, f"Payer {payer_id} not found")
 
+        denial_rate = float(row[0] or 0.10)
+
+        # Compute payment_consistency from era_payments
+        pc_result = await db.execute(text("""
+            SELECT
+                CASE WHEN COUNT(*) = 0 THEN 0.95
+                ELSE 1.0 - COUNT(CASE WHEN payment_amount <= 0 THEN 1 END)::float
+                     / GREATEST(COUNT(*), 1)
+                END AS payment_consistency
+            FROM era_payments ep
+            JOIN claims c ON c.claim_id = ep.claim_id
+            WHERE c.payer_id = :pid
+        """), {"pid": payer_id})
+        pc_row = pc_result.fetchone()
+        payment_consistency = float(pc_row[0]) if pc_row else 0.95
+
+        # Compute underpayment_rate from era_payments vs claims
+        ur_result = await db.execute(text("""
+            SELECT
+                CASE WHEN COUNT(*) = 0 THEN 0.02
+                ELSE COUNT(CASE WHEN ep.payment_amount < c.total_charges * 0.5 THEN 1 END)::float
+                     / GREATEST(COUNT(*), 1)
+                END AS underpayment_rate
+            FROM era_payments ep
+            JOIN claims c ON c.claim_id = ep.claim_id
+            WHERE c.payer_id = :pid AND ep.payment_amount > 0
+        """), {"pid": payer_id})
+        ur_row = ur_result.fetchone()
+        underpayment_rate = float(ur_row[0]) if ur_row else 0.02
+
+        # Compute adtp_trend from recent vs historical ADTP
+        adtp_result = await db.execute(text("""
+            SELECT
+                COALESCE(AVG(CASE WHEN ep.payment_date >= CURRENT_DATE - 90
+                    THEN ep.payment_date - c.date_of_service END), 0) AS recent_adtp,
+                COALESCE(AVG(CASE WHEN ep.payment_date < CURRENT_DATE - 90
+                    THEN ep.payment_date - c.date_of_service END), 0) AS historical_adtp
+            FROM era_payments ep
+            JOIN claims c ON c.claim_id = ep.claim_id
+            WHERE c.payer_id = :pid
+        """), {"pid": payer_id})
+        adtp_row = adtp_result.fetchone()
+        if adtp_row and adtp_row[1]:
+            adtp_trend = float(adtp_row[0] or 0) - float(adtp_row[1] or 0)
+        else:
+            adtp_trend = 0.0
+
         cs = CompositeScoreEngine()
         return cs.payer_health_score(
-            denial_rate=float(row[0] or 0.10),
-            adtp_trend=0,  # would need time-series
-            payment_consistency=0.95,
-            underpayment_rate=0.02,
+            denial_rate=denial_rate,
+            adtp_trend=adtp_trend,
+            payment_consistency=payment_consistency,
+            underpayment_rate=underpayment_rate,
         )
     except HTTPException:
         raise

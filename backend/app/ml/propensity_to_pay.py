@@ -24,16 +24,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = logging.getLogger(__name__)
 
 FEATURE_NAMES = [
-    "balance_amount",
+    "patient_resp_balance",
     "aging_days",
     "payer_type_encoded",
-    "has_insurance",
     "prior_payment_count",
     "prior_payment_ratio",
     "number_of_claims",
     "avg_claim_amount",
     "has_denials",
     "denial_rate",
+    "avg_pr_amount",
 ]
 
 _MODEL_DIR = Path(__file__).resolve().parent / "saved_models"
@@ -122,10 +122,10 @@ class PropensityToPayModel:
 
     def _fallback_predict(self, features: dict) -> dict:
         aging = features.get("aging_days", 60)
-        balance = features.get("balance_amount", 500)
-        has_ins = features.get("has_insurance", 1)
+        balance = features.get("patient_resp_balance", 500)
         ratio = features.get("prior_payment_ratio", 0.5)
-        score = max(0, min(1, 0.7 - aging / 500 - balance / 50000 + has_ins * 0.1 + ratio * 0.3))
+        prior_pay = min(features.get("prior_payment_count", 0) / 10, 0.2)
+        score = max(0, min(1, 0.7 - aging / 500 - balance / 50000 + prior_pay + ratio * 0.3))
         if score >= 0.70:
             tier = "HIGH"
         elif score >= 0.40:
@@ -148,10 +148,13 @@ class PropensityToPayModel:
                     MAX(CURRENT_DATE - c.date_of_service) AS max_aging,
                     SUM(CASE WHEN c.status = 'PAID' THEN 1 ELSE 0 END) AS paid_count,
                     SUM(CASE WHEN c.status IN ('DENIED', 'WRITTEN_OFF') THEN 1 ELSE 0 END) AS denied_count,
+                    COALESCE(SUM(ep.pr_amount), 0) AS total_pr_collected,
+                    AVG(COALESCE(ep.pr_amount, 0)) AS avg_pr_amount,
                     pm.payer_group,
                     pm.denial_rate AS payer_denial_rate
                 FROM claims c
                 JOIN payer_master pm ON pm.payer_id = c.payer_id
+                LEFT JOIN era_payments ep ON ep.claim_id = c.claim_id
                 GROUP BY c.patient_id, pm.payer_group, pm.denial_rate
                 HAVING COUNT(*) >= 2
             )
@@ -163,15 +166,17 @@ class PropensityToPayModel:
                     WHEN 'G3_COMMERCIAL_NATIONAL' THEN 2 WHEN 'G4_COMMERCIAL_REGIONAL' THEN 3
                     WHEN 'G5_MANAGED_MEDICAID' THEN 4 WHEN 'G6_STATE_MEDICAID' THEN 5
                     WHEN 'G7_WORKERS_COMP_AUTO' THEN 6 ELSE 7 END,
-                1,
                 paid_count,
                 CASE WHEN num_claims > 0 THEN paid_count::float / num_claims ELSE 0 END,
                 num_claims,
                 avg_charges,
                 CASE WHEN denied_count > 0 THEN 1 ELSE 0 END,
                 payer_denial_rate,
-                CASE WHEN paid_count::float / GREATEST(num_claims, 1) > 0.5 THEN 1 ELSE 0 END AS label
+                avg_pr_amount,
+                CASE WHEN SUM(total_pr_collected) / GREATEST(SUM(total_charges) * 0.1, 1) > 0.5 THEN 1 ELSE 0 END AS label
             FROM patient_stats
+            GROUP BY total_charges, max_aging, payer_group, paid_count, num_claims,
+                     avg_charges, denied_count, payer_denial_rate, avg_pr_amount, total_pr_collected
             LIMIT 10000
         """)
         try:
@@ -196,9 +201,11 @@ class PropensityToPayModel:
                 AVG(c.total_charges) AS avg_amt,
                 SUM(CASE WHEN c.status = 'PAID' THEN 1 ELSE 0 END) AS paid_cnt,
                 SUM(CASE WHEN c.status IN ('DENIED','WRITTEN_OFF') THEN 1 ELSE 0 END) AS denied_cnt,
-                pm.denial_rate
+                pm.denial_rate,
+                AVG(COALESCE(ep.pr_amount, 0)) AS avg_pr_amount
             FROM claims c
             JOIN payer_master pm ON pm.payer_id = c.payer_id
+            LEFT JOIN era_payments ep ON ep.claim_id = c.claim_id
             WHERE c.patient_id = :pid
             GROUP BY pm.payer_group, pm.denial_rate
             LIMIT 1
@@ -210,19 +217,19 @@ class PropensityToPayModel:
                 return None
             num_claims = float(row[3]) or 1
             return {
-                "balance_amount": float(row[0] or 0),
+                "patient_resp_balance": float(row[0] or 0),
                 "aging_days": int(row[1] or 0),
                 "payer_type_encoded": {"G1_FEDERAL_FFS": 0, "G2_MEDICARE_ADVANTAGE": 1,
                     "G3_COMMERCIAL_NATIONAL": 2, "G4_COMMERCIAL_REGIONAL": 3,
                     "G5_MANAGED_MEDICAID": 4, "G6_STATE_MEDICAID": 5,
                     "G7_WORKERS_COMP_AUTO": 6}.get(row[2], 7),
-                "has_insurance": 1,
                 "prior_payment_count": int(row[5] or 0),
                 "prior_payment_ratio": float(row[5] or 0) / num_claims,
                 "number_of_claims": int(row[3] or 0),
                 "avg_claim_amount": float(row[4] or 0),
                 "has_denials": 1 if (row[6] or 0) > 0 else 0,
                 "denial_rate": float(row[7] or 0),
+                "avg_pr_amount": float(row[8] or 0),
             }
         except Exception as exc:
             logger.warning("Patient feature extraction failed: %s", exc)

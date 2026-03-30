@@ -148,6 +148,13 @@ class CARCPredictionModel:
 
     async def _extract_training_data(self, db: AsyncSession) -> tuple:
         query = text("""
+            WITH provider_denial_rates AS (
+                SELECT c2.provider_id,
+                       COUNT(*) FILTER (WHERE c2.status = 'DENIED')::float / NULLIF(COUNT(*), 0) AS denial_rate_90d
+                FROM claims c2
+                WHERE c2.status IN ('DENIED', 'PAID')
+                GROUP BY c2.provider_id
+            )
             SELECT
                 CASE pm.payer_group
                     WHEN 'G1_FEDERAL_FFS' THEN 0 WHEN 'G2_MEDICARE_ADVANTAGE' THEN 1
@@ -157,17 +164,18 @@ class CARCPredictionModel:
                 c.total_charges,
                 CASE c.claim_type WHEN 'PROFESSIONAL' THEN 0 ELSE 1 END,
                 CASE WHEN pa.auth_id IS NOT NULL THEN 1 ELSE 0 END,
-                0.12,
+                COALESCE(pdr.denial_rate_90d, pm.denial_rate, 0.12) AS provider_denial_rate,
                 pm.denial_rate,
-                1,
+                (SELECT COUNT(*) FROM claim_lines cl WHERE cl.claim_id = c.claim_id) AS claim_line_count,
                 CASE WHEN c.total_charges > 5000 THEN 1 ELSE 0 END,
-                0,
+                CASE WHEN EXISTS (SELECT 1 FROM claim_lines cl WHERE cl.claim_id = c.claim_id AND (cl.modifier_1 IS NOT NULL OR cl.modifier_2 IS NOT NULL)) THEN 1 ELSE 0 END AS has_modifier,
                 EXTRACT(MONTH FROM c.date_of_service),
                 d.carc_code
             FROM denials d
             JOIN claims c ON c.claim_id = d.claim_id
             JOIN payer_master pm ON pm.payer_id = c.payer_id
             LEFT JOIN prior_auth pa ON pa.claim_id = c.claim_id
+            LEFT JOIN provider_denial_rates pdr ON pdr.provider_id = c.provider_id
             WHERE d.carc_code IS NOT NULL
             LIMIT 20000
         """)
@@ -192,14 +200,25 @@ class CARCPredictionModel:
 
     async def _extract_claim_features(self, db: AsyncSession, claim_id: str) -> Optional[dict]:
         query = text("""
+            WITH provider_denial_rates AS (
+                SELECT c2.provider_id,
+                       COUNT(*) FILTER (WHERE c2.status = 'DENIED')::float / NULLIF(COUNT(*), 0) AS denial_rate_90d
+                FROM claims c2
+                WHERE c2.status IN ('DENIED', 'PAID')
+                GROUP BY c2.provider_id
+            )
             SELECT
                 pm.payer_group, c.total_charges, c.claim_type,
                 CASE WHEN pa.auth_id IS NOT NULL THEN 1 ELSE 0 END,
+                COALESCE(pdr.denial_rate_90d, pm.denial_rate, 0.12) AS provider_denial_rate,
                 pm.denial_rate,
+                (SELECT COUNT(*) FROM claim_lines cl WHERE cl.claim_id = c.claim_id) AS claim_line_count,
+                CASE WHEN EXISTS (SELECT 1 FROM claim_lines cl WHERE cl.claim_id = c.claim_id AND (cl.modifier_1 IS NOT NULL OR cl.modifier_2 IS NOT NULL)) THEN 1 ELSE 0 END AS has_modifier,
                 EXTRACT(MONTH FROM c.date_of_service)
             FROM claims c
             JOIN payer_master pm ON pm.payer_id = c.payer_id
             LEFT JOIN prior_auth pa ON pa.claim_id = c.claim_id
+            LEFT JOIN provider_denial_rates pdr ON pdr.provider_id = c.provider_id
             WHERE c.claim_id = :cid
         """)
         try:
@@ -216,12 +235,12 @@ class CARCPredictionModel:
                 "total_charges": float(row[1] or 0),
                 "claim_type_encoded": 0 if row[2] == "PROFESSIONAL" else 1,
                 "has_prior_auth": int(row[3]),
-                "provider_denial_rate": 0.12,
-                "payer_denial_rate": float(row[4] or 0),
-                "claim_line_count": 1,
+                "provider_denial_rate": float(row[4] or 0.12),
+                "payer_denial_rate": float(row[5] or 0),
+                "claim_line_count": int(row[6] or 1),
                 "is_high_value": 1 if float(row[1] or 0) > 5000 else 0,
-                "has_modifier": 0,
-                "month_of_service": int(row[5] or 1),
+                "has_modifier": int(row[7] or 0),
+                "month_of_service": int(row[8] or 1),
             }
         except Exception as exc:
             logger.warning("CARC feature extraction failed: %s", exc)

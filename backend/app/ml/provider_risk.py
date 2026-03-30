@@ -44,7 +44,12 @@ class ProviderRiskModel:
             return {"provider_id": provider_id, "risk_score": 0,
                     "risk_factors": [], "peer_percentile": 50, "note": "No data"}
 
-        peer_stats = await self._get_peer_stats(db)
+        specialty_result = await db.execute(
+            text("SELECT specialty FROM providers WHERE provider_id = :pid"), {"pid": provider_id}
+        )
+        specialty_row = specialty_result.fetchone()
+        specialty = specialty_row[0] if specialty_row else None
+        peer_stats = await self._get_peer_stats(db, specialty=specialty)
         score, factors = self._compute_score(stats, peer_stats)
 
         peer_scores = []
@@ -68,30 +73,44 @@ class ProviderRiskModel:
         }
 
     async def score_all_providers(self, db: AsyncSession) -> list:
-        query = text("""
-            SELECT DISTINCT provider_id FROM claims
-            WHERE provider_id IS NOT NULL
-            LIMIT 50
+        batch_query = text("""
+            WITH prov_stats AS (
+                SELECT c.provider_id,
+                       COUNT(d.denial_id)::float / GREATEST(COUNT(c.claim_id), 1) AS denial_rate,
+                       AVG(c.total_charges) AS avg_charge,
+                       COUNT(c.claim_id) AS claim_volume
+                FROM claims c
+                LEFT JOIN denials d ON d.claim_id = c.claim_id
+                WHERE c.provider_id IS NOT NULL
+                GROUP BY c.provider_id
+                HAVING COUNT(c.claim_id) >= 5
+            )
+            SELECT * FROM prov_stats ORDER BY denial_rate DESC LIMIT 200
         """)
         try:
-            result = await db.execute(query)
-            provider_ids = [r[0] for r in result.fetchall()]
+            result = await db.execute(batch_query)
+            rows = result.fetchall()
         except Exception:
             return []
 
         peer_stats = await self._get_peer_stats(db)
         scores = []
-        for pid in provider_ids:
-            stats = await self._get_provider_stats(db, pid)
-            if stats:
-                score, factors = self._compute_score(stats, peer_stats)
-                scores.append({
-                    "provider_id": pid,
-                    "risk_score": round(score, 1),
-                    "risk_factors": factors[:3],
-                    "denial_rate": stats.get("denial_rate", 0),
-                    "claim_volume": stats.get("claim_volume", 0),
-                })
+        for row in rows:
+            stats = {
+                "denial_rate": float(row[1] or 0),
+                "denial_trend": 0,
+                "avg_charge": float(row[2] or 0),
+                "claim_volume": int(row[3] or 0),
+                "modifier_usage_rate": 0,
+            }
+            score, factors = self._compute_score(stats, peer_stats)
+            scores.append({
+                "provider_id": row[0],
+                "risk_score": round(score, 1),
+                "risk_factors": factors[:3],
+                "denial_rate": stats["denial_rate"],
+                "claim_volume": stats["claim_volume"],
+            })
         scores.sort(key=lambda x: x["risk_score"], reverse=True)
         return scores
 
@@ -182,14 +201,24 @@ class ProviderRiskModel:
                     0) AS trend_val
                 FROM prov_denials d
             )
+            ,modifier_stats AS (
+                SELECT
+                    COALESCE(
+                        COUNT(CASE WHEN cl.modifiers IS NOT NULL AND cl.modifiers != '' THEN 1 END)::float
+                        / GREATEST(COUNT(cl.claim_line_id), 1),
+                        0
+                    ) AS modifier_usage_rate
+                FROM claim_lines cl
+                WHERE cl.claim_id IN (SELECT claim_id FROM prov_claims)
+            )
             SELECT
                 r.denial_rate,
                 t.trend_val,
                 AVG(pc.total_charges) AS avg_charge,
                 COUNT(pc.claim_id) AS claim_volume,
-                0.15 AS modifier_usage_rate
-            FROM recent_dr r, trend t, prov_claims pc
-            GROUP BY r.denial_rate, t.trend_val
+                ms.modifier_usage_rate
+            FROM recent_dr r, trend t, prov_claims pc, modifier_stats ms
+            GROUP BY r.denial_rate, t.trend_val, ms.modifier_usage_rate
         """)
         try:
             result = await db.execute(query, {"pid": provider_id})
@@ -207,7 +236,7 @@ class ProviderRiskModel:
             logger.warning("Provider stats failed for %s: %s", provider_id, exc)
             return None
 
-    async def _get_peer_stats(self, db: AsyncSession) -> dict:
+    async def _get_peer_stats(self, db: AsyncSession, specialty: Optional[str] = None) -> dict:
         query = text("""
             SELECT
                 AVG(sub.dr) AS mean_dr, STDDEV(sub.dr) AS std_dr,
@@ -219,13 +248,15 @@ class ProviderRiskModel:
                     AVG(c.total_charges) AS avg_ch
                 FROM claims c
                 LEFT JOIN denials d ON d.claim_id = c.claim_id
+                JOIN providers p ON p.provider_id = c.provider_id
                 WHERE c.provider_id IS NOT NULL
+                  AND (:specialty IS NULL OR p.specialty = :specialty)
                 GROUP BY c.provider_id
                 HAVING COUNT(c.claim_id) >= 10
             ) sub
         """)
         try:
-            result = await db.execute(query)
+            result = await db.execute(query, {"specialty": specialty})
             row = result.fetchone()
             if not row:
                 return {"mean_denial_rate": 0.15, "std_denial_rate": 0.05,

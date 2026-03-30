@@ -179,6 +179,14 @@ class DenialProbabilityModel(BaseMLModel):
             X, y, test_size=0.2, random_state=42, stratify=y
         )
 
+        from sklearn.model_selection import StratifiedKFold, cross_val_score
+        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+        cv_auc_scores = cross_val_score(
+            GradientBoostingClassifier(n_estimators=200, max_depth=5, learning_rate=0.1,
+                                       subsample=0.8, min_samples_leaf=5, random_state=42),
+            X, y, cv=cv, scoring="roc_auc", n_jobs=-1
+        )
+
         self.model = GradientBoostingClassifier(
             n_estimators=200,
             max_depth=5,
@@ -196,6 +204,11 @@ class DenialProbabilityModel(BaseMLModel):
         auc = roc_auc_score(y_test, y_proba)
         acc = accuracy_score(y_test, y_pred)
 
+        from sklearn.metrics import precision_score, recall_score, f1_score
+        precision = precision_score(y_test, y_pred, zero_division=0)
+        recall = recall_score(y_test, y_pred, zero_division=0)
+        f1 = f1_score(y_test, y_pred, zero_division=0)
+
         importances = dict(
             zip(self.feature_names, self.model.feature_importances_.tolist())
         )
@@ -208,6 +221,11 @@ class DenialProbabilityModel(BaseMLModel):
         metrics = {
             "auc": round(auc, 4),
             "accuracy": round(acc, 4),
+            "precision": round(precision, 4),
+            "recall": round(recall, 4),
+            "f1": round(f1, 4),
+            "cv_auc_mean": round(float(cv_auc_scores.mean()), 4),
+            "cv_auc_std": round(float(cv_auc_scores.std()), 4),
             "train_samples": len(y_train),
             "test_samples": len(y_test),
             "denied_pct": round(float(np.mean(y)) * 100, 2),

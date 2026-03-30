@@ -43,6 +43,8 @@ FEATURE_NAMES: List[str] = [
     "claim_line_count",
     "is_high_value",
     "network_status_encoded",
+    "quarterly_end",
+    "claim_status_encoded",
 ]
 
 PAYER_GROUP_MAP = {
@@ -96,6 +98,10 @@ SELECT
     COALESCE(EXTRACT(MONTH FROM c.date_of_service)::int, 1)
                                                     AS month,
 
+    CASE WHEN EXTRACT(MONTH FROM c.date_of_service) IN (3,6,9,12) THEN 1 ELSE 0 END AS quarterly_end,
+
+    CASE c.status WHEN 'SUBMITTED' THEN 0 WHEN 'ACKNOWLEDGED' THEN 1 WHEN 'PENDING' THEN 2 ELSE 3 END AS claim_status_encoded,
+
     -- Target: actual payment delay in days
     (ep.payment_date - c.submission_date)            AS payment_delay_days
 
@@ -134,7 +140,12 @@ SELECT
     COALESCE(EXTRACT(DOW FROM c.submission_date::timestamp)::int, 0)
                                                     AS day_of_week,
     COALESCE(EXTRACT(MONTH FROM c.date_of_service)::int, 1)
-                                                    AS month
+                                                    AS month,
+
+    CASE WHEN EXTRACT(MONTH FROM c.date_of_service) IN (3,6,9,12) THEN 1 ELSE 0 END AS quarterly_end,
+
+    CASE c.status WHEN 'SUBMITTED' THEN 0 WHEN 'ACKNOWLEDGED' THEN 1 WHEN 'PENDING' THEN 2 ELSE 3 END AS claim_status_encoded
+
 FROM claims c
 JOIN payer_master pm      ON pm.payer_id    = c.payer_id
 LEFT JOIN LATERAL (
@@ -195,8 +206,11 @@ class PaymentDelayModel:
         rows = result.fetchall()
 
         if not rows:
-            logger.warning("No DB training data, generating synthetic data")
-            X, y = self._generate_synthetic_data()
+            raise ValueError(
+                "PaymentDelayModel requires era_payments data to train. "
+                "Ensure era_payments table is populated. "
+                f"Found 0 PAID claims with payment_date in era_payments."
+            )
         else:
             columns = list(result.keys())
             data = [dict(zip(columns, row)) for row in rows]
@@ -257,12 +271,12 @@ class PaymentDelayModel:
         predicted_days = float(self.model.predict(vector)[0])
         predicted_days = max(0, predicted_days)
 
-        # Estimate confidence interval using tree variance
-        tree_predictions = np.array([
-            tree[0].predict(vector)[0]
-            for tree in self.model.estimators_
-        ])
-        std_dev = float(np.std(tree_predictions))
+        # Correct variance estimate via staged predictions
+        staged = list(self.model.staged_predict(vector))
+        if len(staged) > 1:
+            std_dev = float(np.std([float(p[0]) for p in staged[-20:]]))
+        else:
+            std_dev = predicted_days * 0.15  # 15% fallback
 
         return {
             "predicted_days": round(predicted_days, 1),
@@ -388,40 +402,7 @@ class PaymentDelayModel:
             "network_status_encoded": NETWORK_STATUS_MAP.get(
                 row.get("network_status"), 2
             ),
+            "quarterly_end": 1 if row.get("month") in (3, 6, 9, 12) else 0,
+            "claim_status_encoded": int(row.get("claim_status_encoded", 0)),
         }
 
-    @staticmethod
-    def _generate_synthetic_data() -> tuple[np.ndarray, np.ndarray]:
-        """Generate synthetic training data for initial model fitting."""
-        rng = np.random.RandomState(42)
-        n = 2000
-
-        payer_adtp = rng.choice([7, 14, 21, 30, 45], n)
-        total_charges = rng.lognormal(mean=7.5, sigma=1.0, size=n)
-        claim_type = rng.choice([0, 1], n, p=[0.7, 0.3])
-        has_modifier = rng.choice([0, 1], n, p=[0.6, 0.4])
-        payer_denial_rate = rng.beta(2, 10, n)
-        payer_group = rng.choice(range(8), n)
-        day_of_week = rng.choice(range(7), n)
-        month = rng.choice(range(1, 13), n)
-        claim_line_count = rng.choice(range(1, 8), n)
-        is_high_value = (total_charges > 5000).astype(float)
-        network_status = rng.choice([0, 1, 2], n, p=[0.7, 0.2, 0.1])
-
-        X = np.column_stack([
-            payer_adtp, total_charges, claim_type, has_modifier,
-            payer_denial_rate, payer_group, day_of_week, month,
-            claim_line_count, is_high_value, network_status,
-        ])
-
-        # Payment delay is driven by payer ADTP + noise + modifiers
-        y = (
-            payer_adtp * 0.8
-            + network_status * 3
-            + is_high_value * 2
-            + claim_type * 1.5
-            + rng.normal(0, 3, n)
-        )
-        y = np.clip(y, 1, 90)
-
-        return X, y

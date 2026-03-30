@@ -185,6 +185,19 @@ async def _job_retrain_prophet():
     except Exception:
         logger.exception("Prophet retrain job failed")
 
+    # Log forecast accuracy after cache clear
+    session = await _get_session()
+    try:
+        from app.services.prophet_forecast import get_forecast_accuracy
+        accuracy = await get_forecast_accuracy(session)
+        mape = accuracy.get("overall_metrics", {}).get("mape", None)
+        if mape is not None:
+            logger.info("Prophet forecast accuracy: MAPE=%.2f%%", mape)
+            if mape > 15.0:
+                logger.warning("Prophet MAPE %.2f%% exceeds 15%% threshold", mape)
+    finally:
+        await session.close()
+
 
 # ---------------------------------------------------------------------------
 # Lifecycle helpers (called from FastAPI lifespan)

@@ -58,7 +58,7 @@ FEATURE_NAMES = [
     "denial_category",
     "carc_code",
     "denial_amount",
-    "days_since_denial",
+    "days_denial_to_submission",
     "root_cause_confidence",
     "financial_impact",
     "payer_denial_rate",
@@ -134,14 +134,22 @@ WHERE d.denial_id = :denial_id
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _encode_carc(code: Optional[str]) -> int:
-    """Hash CARC code string to a stable integer bucket."""
+CARC_GROUP_MAP = {
+    "CO-4": 0, "CO-97": 0,
+    "CO-16": 1, "CO-242": 1,
+    "CO-18": 2,
+    "CO-22": 3,
+    "CO-29": 4,
+    "CO-45": 5, "CO-50": 5, "CO-96": 5,
+    "CO-27": 6,
+    "CO-197": 7,
+    "PR-1": 8, "PR-2": 8, "PR-3": 8,
+}
+
+def _encode_carc(code):
     if not code:
         return -1
-    try:
-        return int(code)
-    except (ValueError, TypeError):
-        return abs(hash(code)) % 1000
+    return CARC_GROUP_MAP.get(str(code).upper(), 9)
 
 
 def _encode_denial_category(cat: Optional[str]) -> int:
@@ -270,6 +278,14 @@ class AppealSuccessModel:
             X, y, test_size=0.2, random_state=42, stratify=y if y.sum() >= 2 else None
         )
 
+        from sklearn.model_selection import StratifiedKFold, cross_val_score
+        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+        cv_auc_scores = cross_val_score(
+            GradientBoostingClassifier(n_estimators=200, max_depth=4, learning_rate=0.1,
+                                       subsample=0.8, min_samples_leaf=5, random_state=42),
+            X, y, cv=cv, scoring="roc_auc", n_jobs=-1
+        )
+
         clf = GradientBoostingClassifier(
             n_estimators=200,
             max_depth=4,
@@ -297,6 +313,8 @@ class AppealSuccessModel:
             "test_samples": len(y_test),
             "positive_rate": float(y.mean()),
             "auc_roc": auc,
+            "cv_auc_mean": round(float(cv_auc_scores.mean()), 4),
+            "cv_auc_std": round(float(cv_auc_scores.std()), 4),
             "classification_report": report,
             "feature_importances": dict(zip(FEATURE_NAMES, clf.feature_importances_.tolist())),
         }
@@ -423,7 +441,7 @@ class AppealSuccessModel:
             "denial_category": float(_encode_denial_category(denial_category)),
             "carc_code": float(_encode_carc(carc_code)),
             "denial_amount": float(denial_amount or 0.0),
-            "days_since_denial": float(days_since),
+            "days_denial_to_submission": float(days_since),
             "root_cause_confidence": float(confidence_score or 0),
             "financial_impact": float(financial_impact or 0.0),
             "payer_denial_rate": float(payer_denial_rate or 0.0),

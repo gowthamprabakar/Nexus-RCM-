@@ -64,9 +64,13 @@ class PayerAnomalyModel:
         self._scaler_std = X.std(axis=0) + 1e-8
         X_scaled = (X - self._scaler_mean) / self._scaler_std
 
+        high_denial_pct = sum(1 for row in features if row[0] > 0.25) / max(len(features), 1)
+        contamination = max(0.02, min(0.15, high_denial_pct))
+        logger.info("PayerAnomalyModel: estimated contamination=%.3f", contamination)
+
         self.model = IsolationForest(
             n_estimators=200,
-            contamination=0.05,
+            contamination=contamination,
             max_features=1.0,
             random_state=42,
         )
@@ -183,12 +187,12 @@ class PayerAnomalyModel:
                 pw.denial_count,
                 COALESCE(p.payment_count, 0) AS payment_count,
                 COALESCE(p.avg_payment, 0) AS avg_payment_amount,
-                COALESCE(pw.adtp_days - 30, 0) AS adtp_deviation,
+                0 AS adtp_deviation,
                 COALESCE(cw.claim_volume, 0) AS claim_volume
             FROM payer_weekly pw
             LEFT JOIN payments p ON p.payer_id = pw.payer_id AND p.week = pw.week
             LEFT JOIN claims_weekly cw ON cw.payer_id = pw.payer_id AND cw.week = pw.week
-            LIMIT 5000
+            LIMIT 50000
         """)
         try:
             result = await db.execute(query)
@@ -231,7 +235,7 @@ class PayerAnomalyModel:
                 COALESCE(rd.denial_count, 0),
                 COALESCE(rp.payment_count, 0),
                 COALESCE(rp.avg_payment, 0),
-                COALESCE(pm.adtp_days - 30, 0),
+                0,
                 COALESCE(rc.claim_volume, 0)
             FROM payer_master pm
             LEFT JOIN recent_denials rd ON rd.payer_id = pm.payer_id
