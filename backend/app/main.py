@@ -27,6 +27,16 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Scheduler failed to start (non-fatal): %s", exc)
 
+    try:
+        from app.db.session import AsyncSessionLocal
+        from app.services.automation_engine import load_persisted_rule_states
+        async with AsyncSessionLocal() as db:
+            await load_persisted_rule_states(db)
+            await db.commit()
+        logger.info("Automation rule states loaded from DB.")
+    except Exception as exc:
+        logger.warning("Rule state load failed (non-fatal, using defaults): %s", exc)
+
     yield
 
     # ── Shutdown ─────────────────────────────────────────────────────

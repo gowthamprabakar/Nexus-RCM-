@@ -143,7 +143,9 @@ async def _handle_root_cause_classification(
     trigger = _parse_trigger_data(action)
     claim_id = trigger.get("claim_id")
     denial_id = trigger.get("denial_id")
-    category = trigger.get("category")
+    # Prefer denial_category (actual Denial.denial_category value, e.g. "Coding")
+    # over category (finding type, e.g. "DENIAL_PATTERN") which never matches.
+    category = trigger.get("denial_category") or trigger.get("category")
 
     updated_ids = []
 

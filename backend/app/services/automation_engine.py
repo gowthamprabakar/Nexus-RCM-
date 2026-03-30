@@ -620,12 +620,18 @@ async def _create_action_from_finding(db: AsyncSession, rule: dict, finding: dic
                 status = "EXECUTED"
             else:
                 status = "PENDING"
+                logger.debug(
+                    "HITL: rule %s in %s phase — queued for approval "
+                    "(confidence=%d, threshold=%d)",
+                    rule["rule_id"], phase, confidence_score, rule_threshold,
+                )
 
         trigger_data = {
             "finding_id": finding.get("finding_id"),
             "title": finding.get("title"),
             "category": finding.get("category"),
             "severity": finding.get("severity"),
+            "denial_category": metadata.get("top_denial_category", ""),
         }
 
         # Enrich AUTO-004 with propensity data
