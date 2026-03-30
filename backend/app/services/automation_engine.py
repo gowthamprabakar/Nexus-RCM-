@@ -57,7 +57,7 @@ AUTOMATION_RULES = [
         "trigger": "diagnostic_finding",
         "condition": {"category": "PAYMENT_FLOW", "min_confidence": 95},
         "action_template": "Auto-post ERA payments for {payer} (${impact:,.0f})",
-        "enabled": True,
+        "enabled": False,  # DISABLED: trigger source cannot supply individual claim_id
         "requires_approval": False,
     },
     {
@@ -104,7 +104,7 @@ AUTOMATION_RULES = [
         "condition": {"status": "REJECTED", "fixable": True, "min_crs_confidence": 85},
         "action_template": "Flag {count} rejected claims for resubmission after auto-fix (CRS confidence > 85%)",
         "enabled": True,
-        "requires_approval": False,
+        "requires_approval": True,  # REQUIRES APPROVAL: RCA confirms root cause but NOT that the error was corrected
     },
     {
         "rule_id": "AUTO-009",
@@ -121,7 +121,7 @@ AUTOMATION_RULES = [
         "trigger": "auth_expiry",
         "condition": {"expiry_window_days": 14},
         "action_template": "Generate auth renewal request for {count} claims with prior auth expiring within 14 days",
-        "enabled": True,
+        "enabled": False,  # DISABLED: _find_auth_expiry_claims() returns [] — table not modelled
         "requires_approval": True,
     },
     {
@@ -130,7 +130,7 @@ AUTOMATION_RULES = [
         "trigger": "eligibility_stale",
         "condition": {"stale_hours": 48},
         "action_template": "Trigger 270/271 eligibility re-verification for {count} claims (last check > 48h before DOS)",
-        "enabled": True,
+        "enabled": False,  # DISABLED: _find_stale_eligibility_claims() returns [] — table not modelled
         "requires_approval": False,
     },
     {
@@ -229,6 +229,17 @@ async def evaluate_rules(db: AsyncSession) -> list:
     except Exception as e:
         logger.warning("Payer anomaly pre-compute failed (non-blocking): %s", e)
 
+    hitl_maturity_cache = {}
+    try:
+        from app.services.hitl_framework import get_rule_maturity
+        for _rule in AUTOMATION_RULES:
+            if _rule.get("enabled") and not _rule.get("requires_approval", True):
+                maturity = await get_rule_maturity(db, _rule["rule_id"])
+                hitl_maturity_cache[_rule["rule_id"]] = maturity
+        logger.info("automation_engine: HITL maturity loaded for %d rules", len(hitl_maturity_cache))
+    except Exception as e:
+        logger.warning("HITL maturity pre-compute failed: %s", e)
+
     for rule in AUTOMATION_RULES:
         if not rule["enabled"]:
             continue
@@ -237,21 +248,21 @@ async def evaluate_rules(db: AsyncSession) -> list:
             if rule["trigger"] == "diagnostic_finding":
                 matched = _match_diagnostic_findings(rule, findings)
                 for finding in matched:
-                    action = await _create_action_from_finding(db, rule, finding, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
+                    action = await _create_action_from_finding(db, rule, finding, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache, hitl_maturity_cache=hitl_maturity_cache)
                     if action:
                         triggered.append(action)
 
             elif rule["trigger"] == "root_cause_cluster":
                 clusters = await _find_root_cause_clusters(db, rule)
                 for cluster in clusters:
-                    action = await _create_action_from_cluster(db, rule, cluster, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
+                    action = await _create_action_from_cluster(db, rule, cluster, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache, hitl_maturity_cache=hitl_maturity_cache)
                     if action:
                         triggered.append(action)
 
             elif rule["trigger"] == "threshold_breach":
                 breaches = await _find_threshold_breaches(db, rule)
                 for breach in breaches:
-                    action = await _create_action_from_breach(db, rule, breach, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
+                    action = await _create_action_from_breach(db, rule, breach, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache, hitl_maturity_cache=hitl_maturity_cache)
                     if action:
                         triggered.append(action)
 
@@ -259,7 +270,7 @@ async def evaluate_rules(db: AsyncSession) -> list:
                 # AUTO-008: Find rejected claims with fixable CRS issues
                 hits = await _find_rejected_fixable_claims(db, rule)
                 for hit in hits:
-                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
+                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache, hitl_maturity_cache=hitl_maturity_cache)
                     if action:
                         triggered.append(action)
 
@@ -267,7 +278,7 @@ async def evaluate_rules(db: AsyncSession) -> list:
                 # AUTO-009: Claims approaching payer filing deadline
                 hits = await _find_filing_deadline_claims(db, rule)
                 for hit in hits:
-                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
+                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache, hitl_maturity_cache=hitl_maturity_cache)
                     if action:
                         triggered.append(action)
 
@@ -275,7 +286,7 @@ async def evaluate_rules(db: AsyncSession) -> list:
                 # AUTO-010: Claims with prior auth expiring soon
                 hits = await _find_auth_expiry_claims(db, rule)
                 for hit in hits:
-                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
+                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache, hitl_maturity_cache=hitl_maturity_cache)
                     if action:
                         triggered.append(action)
 
@@ -283,7 +294,7 @@ async def evaluate_rules(db: AsyncSession) -> list:
                 # AUTO-011: Claims with stale eligibility checks
                 hits = await _find_stale_eligibility_claims(db, rule)
                 for hit in hits:
-                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
+                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache, hitl_maturity_cache=hitl_maturity_cache)
                     if action:
                         triggered.append(action)
 
@@ -291,7 +302,7 @@ async def evaluate_rules(db: AsyncSession) -> list:
                 # AUTO-012: Duplicate claim detection
                 hits = await _find_duplicate_claims(db, rule)
                 for hit in hits:
-                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
+                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache, hitl_maturity_cache=hitl_maturity_cache)
                     if action:
                         triggered.append(action)
 
@@ -401,7 +412,9 @@ async def _find_threshold_breaches(db: AsyncSession, rule: dict) -> list:
 
 
 async def _find_rejected_fixable_claims(db: AsyncSession, rule: dict) -> list:
-    """AUTO-008: Find rejected/denied claims with fixable CRS issues (confidence > 85%)."""
+    """AUTO-008: Find rejected/denied claims with fixable CRS issues (confidence > 85%).
+    Returns one finding PER CLAIM so each action carries its own claim_id / denial_id.
+    """
     condition = rule["condition"]
     min_confidence = condition.get("min_crs_confidence", 85)
     try:
@@ -419,6 +432,7 @@ async def _find_rejected_fixable_claims(db: AsyncSession, rule: dict) -> list:
             .where(
                 and_(
                     RootCauseAnalysis.confidence_score >= min_confidence,
+                    Claim.status.not_in(["PAID", "SUBMITTED", "WRITTEN_OFF"]),
                 )
             )
         )
@@ -427,18 +441,24 @@ async def _find_rejected_fixable_claims(db: AsyncSession, rule: dict) -> list:
         if not results:
             return []
 
-        total_impact = sum(float(r.denial_amount or 0) for r in results)
-        return [{
-            "finding_id": "auto008-rejected-fixable",
-            "title": f"{len(results)} denied claims with fixable root causes",
-            "category": "CLAIM_RESUBMISSION",
-            "severity": "HIGH",
-            "confidence_score": int(sum(r.confidence_score for r in results) / len(results)),
-            "affected_claims_count": len(results),
-            "impact_amount": total_impact,
-            "root_causes": list(set(r.primary_root_cause for r in results if r.primary_root_cause)),
-            "metadata": {},
-        }]
+        findings = []
+        for r in results:
+            findings.append({
+                "finding_id": f"auto008-{r.claim_id}-{r.denial_id}",
+                "title": f"Rejected claim {r.claim_id} fixable via RCA ({r.primary_root_cause or 'unknown'})",
+                "category": "CLAIM_RESUBMISSION",
+                "severity": "HIGH",
+                "confidence_score": int(r.confidence_score or 0),
+                "affected_claims_count": 1,
+                "impact_amount": float(r.denial_amount or 0),
+                "root_causes": [r.primary_root_cause] if r.primary_root_cause else [],
+                "metadata": {
+                    "claim_id": r.claim_id,
+                    "denial_id": r.denial_id,
+                    "payer_id": r.payer_id,
+                },
+            })
+        return findings
     except Exception as e:
         logger.error(f"_find_rejected_fixable_claims failed: {e}")
         return []
@@ -560,7 +580,7 @@ async def _find_duplicate_claims(db: AsyncSession, rule: dict) -> list:
         return []
 
 
-async def _create_action_from_finding(db: AsyncSession, rule: dict, finding: dict, propensity_cache=None, payer_anomaly_cache=None) -> Optional[dict]:
+async def _create_action_from_finding(db: AsyncSession, rule: dict, finding: dict, propensity_cache=None, payer_anomaly_cache=None, hitl_maturity_cache=None) -> Optional[dict]:
     """Create an automation action from a diagnostic finding."""
     try:
         # Check for duplicate (same rule + same finding title already pending)
@@ -588,7 +608,18 @@ async def _create_action_from_finding(db: AsyncSession, rule: dict, finding: dic
         )
 
         action_id = _gen_action_id()
-        status = "PENDING" if rule["requires_approval"] else "EXECUTED"
+        if rule["requires_approval"]:
+            status = "PENDING"
+        else:
+            from app.services.hitl_framework import should_auto_execute
+            maturity = (hitl_maturity_cache or {}).get(rule["rule_id"], {})
+            phase = maturity.get("phase", "LEARNING")
+            rule_threshold = rule.get("condition", {}).get("min_confidence", 85)
+            confidence_score = finding.get("confidence_score", 0)
+            if should_auto_execute(phase, confidence_score, rule_threshold):
+                status = "EXECUTED"
+            else:
+                status = "PENDING"
 
         trigger_data = {
             "finding_id": finding.get("finding_id"),
@@ -604,6 +635,12 @@ async def _create_action_from_finding(db: AsyncSession, rule: dict, finding: dic
             trigger_data["propensity_high_count"] = high_tier
             trigger_data["propensity_very_low_count"] = very_low_tier
             trigger_data["propensity_model_scored"] = len(propensity_cache)
+
+        # Enrich AUTO-008 with per-claim identifiers
+        if rule["rule_id"] == "AUTO-008":
+            trigger_data["claim_id"] = metadata.get("claim_id", "")
+            trigger_data["denial_id"] = metadata.get("denial_id", "")
+            trigger_data["payer_id"] = metadata.get("payer_id", "")
 
         # Enrich AUTO-007 with anomaly data
         if rule["rule_id"] == "AUTO-007" and payer_anomaly_cache:
@@ -631,12 +668,28 @@ async def _create_action_from_finding(db: AsyncSession, rule: dict, finding: dic
 
         db.add(action)
 
+        if status == "EXECUTED":
+            try:
+                await db.flush()
+                from app.services.action_executor import execute_real_action
+                exec_result = await execute_real_action(db, action)
+                action.outcome = json.dumps(exec_result.get("details", {}))[:200]
+                if not exec_result.get("success", True):
+                    action.status = "FAILED"
+                    action.outcome = f"Handler error: {exec_result.get('details', {}).get('error', 'unknown')}"[:200]
+            except Exception as exc:
+                logger.error("Auto-execution dispatch failed for action %s (rule %s): %s", action_id, rule["rule_id"], exc)
+                action.status = "FAILED"
+                action.outcome = f"Dispatch error: {str(exc)[:170]}"
+
+        result_status = action.status
+
         return {
             "action_id": action_id,
             "rule_id": rule["rule_id"],
             "rule_name": rule["name"],
             "suggested_action": action_text[:500],
-            "status": status,
+            "status": result_status,
             "affected_claims": finding.get("affected_claims_count", 0),
             "estimated_impact": round(finding.get("impact_amount", 0), 2),
             "confidence": finding.get("confidence_score", 0),
@@ -647,7 +700,7 @@ async def _create_action_from_finding(db: AsyncSession, rule: dict, finding: dic
         return None
 
 
-async def _create_action_from_cluster(db: AsyncSession, rule: dict, cluster: dict, propensity_cache=None, payer_anomaly_cache=None) -> Optional[dict]:
+async def _create_action_from_cluster(db: AsyncSession, rule: dict, cluster: dict, propensity_cache=None, payer_anomaly_cache=None, hitl_maturity_cache=None) -> Optional[dict]:
     """Create an automation action from a root cause cluster."""
     try:
         # Check for duplicate
@@ -711,7 +764,7 @@ async def _create_action_from_cluster(db: AsyncSession, rule: dict, cluster: dic
         return None
 
 
-async def _create_action_from_breach(db: AsyncSession, rule: dict, breach: dict, propensity_cache=None, payer_anomaly_cache=None) -> Optional[dict]:
+async def _create_action_from_breach(db: AsyncSession, rule: dict, breach: dict, propensity_cache=None, payer_anomaly_cache=None, hitl_maturity_cache=None) -> Optional[dict]:
     """Create an automation action from a threshold breach."""
     return None  # Placeholder for future implementation
 
@@ -938,15 +991,77 @@ async def get_rules(db: AsyncSession) -> list:
     return rules_with_stats
 
 
-async def toggle_rule(db: AsyncSession, rule_id: str, enabled: bool) -> dict:
-    """Enable or disable an automation rule."""
+async def toggle_rule(db: AsyncSession, rule_id: str, enabled: bool, updated_by: str = "system") -> dict:
+    """Enable or disable an automation rule and persist to DB."""
+    from sqlalchemy import text
+
+    found_rule = None
     for rule in AUTOMATION_RULES:
         if rule["rule_id"] == rule_id:
             rule["enabled"] = enabled
-            return {
-                "rule_id": rule_id,
-                "name": rule["name"],
-                "enabled": enabled,
-            }
+            found_rule = rule
+            break
 
-    return {"error": f"Rule {rule_id} not found"}
+    if not found_rule:
+        return {"error": f"Rule {rule_id} not found"}
+
+    try:
+        await db.execute(
+            text("""
+                INSERT INTO automation_rule_state (rule_id, enabled, updated_at, updated_by)
+                VALUES (:rule_id, :enabled, NOW(), :updated_by)
+                ON CONFLICT (rule_id) DO UPDATE
+                SET enabled = EXCLUDED.enabled,
+                    updated_at = EXCLUDED.updated_at,
+                    updated_by = EXCLUDED.updated_by
+            """),
+            {"rule_id": rule_id, "enabled": enabled, "updated_by": updated_by},
+        )
+        await db.flush()
+        logger.info("toggle_rule: persisted %s enabled=%s by %s", rule_id, enabled, updated_by)
+    except Exception as e:
+        logger.warning("toggle_rule: DB persist failed for %s: %s (in-memory state updated)", rule_id, e)
+
+    return {
+        "rule_id": rule_id,
+        "name": found_rule["name"],
+        "enabled": enabled,
+    }
+
+
+async def load_persisted_rule_states(db: AsyncSession) -> None:
+    """Load saved rule enabled/disabled states from DB and overlay onto AUTOMATION_RULES.
+    Should be called once at application startup."""
+    from sqlalchemy import text
+
+    try:
+        # Ensure table exists
+        await db.execute(text("""
+            CREATE TABLE IF NOT EXISTS automation_rule_state (
+                rule_id VARCHAR(20) PRIMARY KEY,
+                enabled BOOLEAN NOT NULL,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_by VARCHAR(50)
+            )
+        """))
+        await db.flush()
+
+        rows = await db.execute(text("SELECT rule_id, enabled FROM automation_rule_state"))
+        persisted = {r.rule_id: r.enabled for r in rows.fetchall()}
+
+        if not persisted:
+            logger.info("load_persisted_rule_states: no persisted states found, using defaults")
+            return
+
+        applied = 0
+        for rule in AUTOMATION_RULES:
+            if rule["rule_id"] in persisted:
+                rule["enabled"] = persisted[rule["rule_id"]]
+                applied += 1
+
+        logger.info(
+            "load_persisted_rule_states: applied %d persisted states (%d in DB)",
+            applied, len(persisted),
+        )
+    except Exception as e:
+        logger.warning("load_persisted_rule_states failed: %s (using defaults)", e)

@@ -1100,9 +1100,9 @@ async def appeal_draft(
             body.update({
                 "patient_name":    f"{patient.first_name} {patient.last_name}" if patient else body.get("patient_name", "N/A"),
                 "date_of_service": str(claim.date_of_service) if claim else body.get("date_of_service", "N/A"),
-                "payer_name":      payer.name if payer else body.get("payer_name", "N/A"),
+                "payer_name":      payer.payer_name if payer else body.get("payer_name", "N/A"),
                 "billed_amount":   float(claim.total_charges) if claim else body.get("billed_amount", 0),
-                "denied_amount":   float(denial.denied_amount) if denial else body.get("denied_amount", 0),
+                "denied_amount":   float(denial.denial_amount) if denial else body.get("denied_amount", 0),
                 "denial_reason":   denial.denial_category if denial else body.get("denial_reason", "N/A"),
                 "carc_code":       denial.carc_code if denial else body.get("carc_code", "N/A"),
             })
@@ -1142,7 +1142,7 @@ async def call_script(
             task, patient, payer = row
             body.update({
                 "patient_name":    f"{patient.first_name} {patient.last_name}" if patient else body.get("patient_name", "N/A"),
-                "payer_name":      payer.name if payer else body.get("payer_name", "N/A"),
+                "payer_name":      payer.payer_name if payer else body.get("payer_name", "N/A"),
                 "balance":         float(task.balance),
                 "days_outstanding": task.days_outstanding,
                 "action_type":     task.action_type,

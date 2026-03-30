@@ -558,28 +558,48 @@ Be specific and clinical. Output only plain text, no JSON, no markdown."""
 # ── Core Ollama caller ────────────────────────────────────────────────────────
 
 async def _call_ollama(prompt: str, model: str = PRIMARY_MODEL) -> str:
-    """Call Ollama generate endpoint. Falls back to mistral if llama3 fails."""
-    # Disable Qwen3 thinking mode for faster responses
-    if "qwen3" in model.lower() and "/no_think" not in prompt:
-        prompt = prompt.rstrip() + " /no_think"
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
-        "options": {
-            "temperature": 0.3,   # low temp = factual, consistent
-            "num_predict": 512,
+    """Call Ollama endpoint. Uses /api/chat for Qwen3, /api/generate for others.
+    Falls back to mistral if primary model fails."""
+    is_qwen3 = "qwen3" in model.lower()
+
+    if is_qwen3:
+        # Qwen3: use /api/chat with think disabled for faster, deterministic output
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+            "think": False,
+            "options": {
+                "temperature": 0.3,
+                "num_predict": 512,
+            },
         }
-    }
+        endpoint = f"{OLLAMA_BASE_URL}/api/chat"
+    else:
+        # Non-Qwen3: use /api/generate
+        payload = {
+            "model": model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": 0.3,
+                "num_predict": 512,
+            },
+        }
+        endpoint = f"{OLLAMA_BASE_URL}/api/generate"
+
     try:
         async with _ollama_semaphore:
             async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
-                resp = await client.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload)
+                resp = await client.post(endpoint, json=payload)
                 resp.raise_for_status()
-                return resp.json().get("response", "").strip()
+                data = resp.json()
+                if is_qwen3:
+                    return (data.get("message", {}).get("content", "")).strip()
+                return data.get("response", "").strip()
     except Exception as e:
         if model == PRIMARY_MODEL:
-            logger.warning(f"llama3 failed ({e}), falling back to mistral")
+            logger.warning(f"Primary model failed ({e}), falling back to {FALLBACK_MODEL}")
             return await _call_ollama(prompt, model=FALLBACK_MODEL)
         raise RuntimeError(f"Ollama unavailable: {e}")
 
