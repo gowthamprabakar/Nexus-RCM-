@@ -357,22 +357,24 @@ async def interview_payer_agent(
     if not question:
         raise HTTPException(status_code=400, detail="question is required")
 
-    # ── 1. Try MiroFish proxy ────────────────────────────────────────────────
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.post(
-                f"http://localhost:5001/api/simulation/interview/{agent_id}",
-                json={"question": question},
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                return {
-                    "response": data.get("response", ""),
-                    "agent_name": data.get("agent_name", agent_id),
-                    "source": "mirofish",
-                }
-    except Exception as exc:
-        logger.debug("MiroFish interview proxy unavailable: %s", exc)
+    # ── 1. Try MiroFish proxy — only if reachability cache says online ────────
+    from app.services.mirofish_bridge import _is_mirofish_running
+    if await _is_mirofish_running():
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    f"http://localhost:5001/api/simulation/interview/{agent_id}",
+                    json={"question": question},
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return {
+                        "response": data.get("response", ""),
+                        "agent_name": data.get("agent_name", agent_id),
+                        "source": "mirofish",
+                    }
+        except Exception as exc:
+            logger.debug("MiroFish interview proxy failed: %s", exc)
 
     # ── 2. Fallback: Qwen3 via Ollama with payer persona ────────────────────
     try:
@@ -393,29 +395,52 @@ async def interview_payer_agent(
             "Be specific about denial patterns, payment timelines, and payer policies."
         )
 
+        import os
+        _model = os.environ.get("OLLAMA_MODEL", "qwen3:4b")
+        _is_qwen3 = "qwen3" in _model.lower()
+
         async with httpx.AsyncClient(timeout=30.0) as client:
-            resp = await client.post(
-                "http://localhost:11434/api/chat",
-                json={
-                    "model": "qwen3",
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": question},
-                    ],
-                    "stream": False,
-                },
-            )
+            if _is_qwen3:
+                resp = await client.post(
+                    "http://localhost:11434/api/chat",
+                    json={
+                        "model": _model,
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": question},
+                        ],
+                        "stream": False,
+                        "think": False,
+                        "options": {"temperature": 0.3, "num_predict": 300},
+                    },
+                )
+            else:
+                resp = await client.post(
+                    "http://localhost:11434/api/generate",
+                    json={
+                        "model": _model,
+                        "system": system_prompt,
+                        "prompt": question,
+                        "stream": False,
+                        "options": {"temperature": 0.3, "num_predict": 300},
+                    },
+                )
             if resp.status_code == 200:
                 data = resp.json()
+                answer = (
+                    data.get("message", {}).get("content", "")
+                    if _is_qwen3
+                    else data.get("response", "")
+                )
                 return {
-                    "response": data.get("message", {}).get("content", ""),
+                    "response": answer.strip(),
                     "agent_name": agent_name,
-                    "source": "qwen3_fallback",
+                    "source": "ollama_fallback",
                 }
             else:
                 raise HTTPException(
                     status_code=502,
-                    detail=f"Qwen3 returned status {resp.status_code}",
+                    detail=f"Ollama returned status {resp.status_code}",
                 )
     except HTTPException:
         raise
