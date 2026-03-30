@@ -8,6 +8,7 @@ schema context. Results are always from the real database.
 import os
 import logging
 import re
+import asyncio
 import hashlib
 from datetime import datetime
 from typing import Optional
@@ -19,6 +20,9 @@ logger = logging.getLogger(__name__)
 # Cache for generated SQL + results
 _sql_cache = {}
 _SQL_CACHE_TTL = 300  # 5 minutes
+
+# ── Ollama concurrency limiter ───────────────────────────────────────────────
+_ollama_semaphore = asyncio.Semaphore(3)
 
 # Complete database schema for Ollama
 DB_SCHEMA = """
@@ -178,14 +182,15 @@ QUESTION: {question}
 SELECT"""
 
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
-            resp = await client.post("http://localhost:11434/api/generate", json={
-                "model": os.environ.get("OLLAMA_MODEL", "qwen3:4b"),
-                "prompt": prompt,
-                "stream": False,
-                "options": {"temperature": 0.1, "num_predict": 500}
-            })
-            raw_sql = resp.json().get("response", "").strip()
+        async with _ollama_semaphore:
+            async with httpx.AsyncClient(timeout=20) as client:
+                resp = await client.post("http://localhost:11434/api/generate", json={
+                    "model": os.environ.get("OLLAMA_MODEL", "qwen3:4b"),
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {"temperature": 0.1, "num_predict": 500}
+                })
+                raw_sql = resp.json().get("response", "").strip()
     except Exception as e:
         return {"success": False, "error": f"Ollama unavailable: {e}", "method": "llm_sql"}
 

@@ -32,6 +32,9 @@ FALLBACK_MODEL  = "mistral"
 TIMEOUT_SECONDS = 60
 CACHE_TTL       = 300  # 5 minutes
 
+# ── Ollama concurrency limiter — max 3 simultaneous insight calls ─────────────
+_ollama_semaphore = asyncio.Semaphore(3)
+
 # ── In-memory cache ───────────────────────────────────────────────────────────
 _cache: dict[str, tuple[float, object]] = {}
 
@@ -569,10 +572,11 @@ async def _call_ollama(prompt: str, model: str = PRIMARY_MODEL) -> str:
         }
     }
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
-            resp = await client.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload)
-            resp.raise_for_status()
-            return resp.json().get("response", "").strip()
+        async with _ollama_semaphore:
+            async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
+                resp = await client.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload)
+                resp.raise_for_status()
+                return resp.json().get("response", "").strip()
     except Exception as e:
         if model == PRIMARY_MODEL:
             logger.warning(f"llama3 failed ({e}), falling back to mistral")

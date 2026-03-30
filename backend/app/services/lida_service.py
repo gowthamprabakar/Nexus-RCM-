@@ -13,6 +13,7 @@ Performance optimizations:
 - Intent complexity router adjusts prompt size & max_tokens
 - DataFrame cache (TTL=5 min) avoids re-querying for chart generation
 """
+import asyncio
 import os
 import re
 import logging
@@ -155,8 +156,8 @@ def _classify_intent(question: str) -> str:
 
 _INTENT_MAX_TOKENS = {
     'simple': 500,
-    'moderate': 1000,
-    'complex': 2000,
+    'moderate': 1500,
+    'complex': 4000,
 }
 
 _INTENT_TEMPERATURE = {
@@ -178,6 +179,9 @@ def _is_root_cause_question(question: str) -> bool:
 
 # ── FIX 4: DataFrame Cache (TTL=5 min) ───────────────────────────────────────
 _df_cache = {}
+
+# ── Ollama concurrency limiter — max 3 simultaneous calls ────────────────────
+_ollama_semaphore = asyncio.Semaphore(3)
 
 
 # ── Chart detection keywords (broadened) ─────────────────────────────────────
@@ -239,7 +243,7 @@ async def get_rcm_dataframe(db: AsyncSession, dataset: str = "denials") -> pd.Da
             JOIN claims c ON d.claim_id = c.claim_id
             JOIN payer_master pm ON c.payer_id = pm.payer_id
             LEFT JOIN root_cause_analysis rca ON d.denial_id = rca.denial_id
-            LIMIT 5000
+            ORDER BY d.denial_date DESC NULLS LAST LIMIT 5000
         """,
         "payments": """
             SELECT e.era_id, e.payment_amount, e.payment_date, e.allowed_amount,
@@ -247,7 +251,7 @@ async def get_rcm_dataframe(db: AsyncSession, dataset: str = "denials") -> pd.Da
                    pm.payer_name, pm.payer_group
             FROM era_payments e
             JOIN payer_master pm ON e.payer_id = pm.payer_id
-            LIMIT 5000
+            ORDER BY e.payment_date DESC NULLS LAST LIMIT 5000
         """,
         "claims": """
             SELECT c.claim_id, c.status, c.total_charges, c.date_of_service,
@@ -255,7 +259,7 @@ async def get_rcm_dataframe(db: AsyncSession, dataset: str = "denials") -> pd.Da
                    pm.payer_name, pm.payer_group
             FROM claims c
             JOIN payer_master pm ON c.payer_id = pm.payer_id
-            LIMIT 5000
+            ORDER BY c.date_of_service DESC NULLS LAST LIMIT 5000
         """,
         "ar": """
             SELECT c.claim_id, c.total_charges, c.status, c.date_of_service,
@@ -264,14 +268,14 @@ async def get_rcm_dataframe(db: AsyncSession, dataset: str = "denials") -> pd.Da
             FROM claims c
             JOIN payer_master pm ON c.payer_id = pm.payer_id
             WHERE c.status NOT IN ('PAID', 'WRITTEN_OFF', 'VOIDED')
-            LIMIT 5000
+            ORDER BY c.date_of_service ASC NULLS LAST LIMIT 5000
         """,
         "reconciliation": """
             SELECT br.payer_name, br.era_received_amount, br.bank_deposit_amount,
                    br.era_bank_variance, br.reconciliation_status, br.float_days,
                    br.week_start_date
             FROM bank_reconciliation br
-            LIMIT 2000
+            ORDER BY br.week_start_date DESC NULLS LAST LIMIT 2000
         """
     }
 
@@ -734,7 +738,8 @@ ANSWER:"""
         model_name = os.environ.get("OLLAMA_MODEL", "qwen3:4b")
         is_qwen3 = "qwen3" in model_name.lower()
 
-        async with httpx.AsyncClient(timeout=45) as client:
+        async with _ollama_semaphore:
+          async with httpx.AsyncClient(timeout=45) as client:
             if is_qwen3:
                 # Qwen3 via chat API: use thinking=false to disable reasoning
                 resp = await client.post("http://localhost:11434/api/chat", json={
@@ -802,14 +807,14 @@ ANSWER:"""
     # Skip chart in ask() — use /lida/chart endpoint separately for charts
     viz = None
     chart_b64 = None
-    if False and _should_try_chart(question):
+    if _should_try_chart(question):
         try:
             viz = await generate_visualization(db, dataset, question)
             # Extract the raster from the first chart if available
             if viz and viz.get("charts"):
                 chart_b64 = viz["charts"][0].get("raster")
         except Exception as e:
-            logger.error(f"Visualization generation failed in answer_question: {e}")
+            logger.warning(f"Inline chart generation skipped: {e}")
 
     result = {
         "question": question,

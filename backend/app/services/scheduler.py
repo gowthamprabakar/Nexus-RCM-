@@ -106,6 +106,27 @@ async def _job_batch_rca():
         await session.close()
 
 
+async def _job_batch_validate_rca():
+    """Validate top 20 low-confidence root causes per run using Qwen3."""
+    session = await _get_session()
+    try:
+        from app.services.root_cause_validator import batch_validate
+        result = await batch_validate(session, limit=20)
+        await session.commit()
+        logger.info(
+            "batch_validate_rca: %d validated, %d agreed, %d disagreed, avg adj %.1f pts",
+            result.get("validated_count", 0),
+            result.get("agreed", 0),
+            result.get("disagreed", 0),
+            result.get("avg_adjustment", 0),
+        )
+    except Exception:
+        await session.rollback()
+        logger.exception("batch_validate_rca job failed")
+    finally:
+        await session.close()
+
+
 async def _job_refresh_diagnostics():
     """Placeholder: refresh cached diagnostic summaries."""
     logger.info(
@@ -170,6 +191,27 @@ async def _job_run_feedback_cycle():
     except Exception:
         await session.rollback()
         logger.exception("run_feedback_cycle job failed")
+    finally:
+        await session.close()
+
+
+async def _job_batch_validate_rca():
+    """Validate top 20 low-confidence root causes per run using Qwen3."""
+    session = await _get_session()
+    try:
+        from app.services.root_cause_validator import batch_validate
+        result = await batch_validate(session, limit=20)
+        await session.commit()
+        logger.info(
+            "batch_validate_rca: %d validated, %d agreed, %d disagreed, avg adj %.1f pts",
+            result.get("validated_count", 0),
+            result.get("agreed", 0),
+            result.get("disagreed", 0),
+            result.get("avg_adjustment", 0),
+        )
+    except Exception:
+        await session.rollback()
+        logger.exception("batch_validate_rca job failed")
     finally:
         await session.close()
 
@@ -301,6 +343,15 @@ async def start_scheduler() -> AsyncIOScheduler:
         minute=0,
         id="retrain_prophet",
         name="Weekly Prophet forecast retrain",
+        replace_existing=True,
+    )
+
+    _scheduler.add_job(
+        _job_batch_validate_rca,
+        "interval",
+        minutes=30,
+        id="batch_validate_rca",
+        name="Validate low-confidence root causes",
         replace_existing=True,
     )
 

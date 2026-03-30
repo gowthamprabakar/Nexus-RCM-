@@ -14,13 +14,38 @@ logger = logging.getLogger(__name__)
 
 # ── Report type keywords for auto-detection ──────────────────────────────────
 REPORT_KEYWORDS = {
-    'denial_summary': ['denial summary', 'denial report', 'denials report', 'denial overview'],
-    'payer_performance': ['payer performance', 'payer report', 'payer analysis', 'payer metrics'],
-    'root_cause': ['root cause report', 'root cause analysis report', 'rca report', 'root cause summary'],
-    'reconciliation': ['reconciliation report', 'recon report', 'bank reconciliation', 'era reconciliation'],
-    'ar_aging': ['ar aging', 'aging report', 'accounts receivable report', 'ar report', 'aging summary'],
-    'payment_analysis': ['payment analysis', 'payment report', 'payment summary', 'era payment report'],
-    'prevention': ['prevention report', 'preventable report', 'prevention summary', 'claim readiness report'],
+    'denial_summary': [
+        'denial summary', 'denial report', 'denials report', 'denial overview',
+        'show denials', 'summarize denials', 'denial breakdown', 'denial analysis',
+        'denial statistics', 'give me denials',
+    ],
+    'payer_performance': [
+        'payer performance', 'payer report', 'payer analysis', 'payer metrics',
+        'payer summary', 'payer breakdown', 'payer comparison', 'payer stats',
+        'how are payers performing', 'payer scorecard',
+    ],
+    'root_cause': [
+        'root cause report', 'root cause analysis report', 'rca report', 'root cause summary',
+        'root cause breakdown', 'what are root causes', 'root cause overview', 'denial root cause',
+    ],
+    'reconciliation': [
+        'reconciliation report', 'recon report', 'bank reconciliation', 'era reconciliation',
+        'reconciliation summary', 'era bank report', 'variance report',
+    ],
+    'ar_aging': [
+        'ar aging', 'aging report', 'accounts receivable report', 'ar report', 'aging summary',
+        'aging breakdown', 'ar summary', 'aging analysis', 'how old is ar',
+        'outstanding claims report', 'days outstanding',
+    ],
+    'payment_analysis': [
+        'payment analysis', 'payment report', 'payment summary', 'era payment report',
+        'payment breakdown', 'payment overview', 'era summary', 'how much was paid',
+        'payment dashboard',
+    ],
+    'prevention': [
+        'prevention report', 'preventable report', 'prevention summary', 'claim readiness report',
+        'prevention analysis', 'preventable denials', 'what can we prevent', 'alert summary',
+    ],
 }
 
 
