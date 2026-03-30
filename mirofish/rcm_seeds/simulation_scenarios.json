@@ -1,0 +1,118 @@
+{
+  "version": "1.0",
+  "generated": "2025-01-01",
+  "scenarios": [
+    {
+      "id": "auto-appeal-coding",
+      "name": "Auto-Appeal Coding Denials",
+      "description": "Simulate impact of automated appeal workflow for coding-related denials. Models payer response to systematic CPT/modifier correction with clinical documentation.",
+      "type": "what_if",
+      "parameters": {
+        "target_denial_category": "CODING",
+        "reduction_pct": 35,
+        "avg_denied_claim_value": 3200,
+        "affected_claims": 8500,
+        "total_amount_at_risk": 27200000,
+        "appeal_success_rate": 0.62,
+        "implementation_weeks": 8
+      },
+      "simulation_agents": ["UnitedHealthcare", "Blue Cross Blue Shield", "Aetna", "Cigna"],
+      "expected_outcomes": {
+        "revenue_recovery_low": 5200000,
+        "revenue_recovery_high": 9800000,
+        "denial_rate_change": -2.1,
+        "ar_days_change": -3.5
+      }
+    },
+    {
+      "id": "humana-auth-policy",
+      "name": "Humana Auth Policy Change",
+      "description": "Model the impact of Humana expanded prior authorization requirements for surgical CPT codes. Assess pre-authorization workflow adjustments needed to prevent denials.",
+      "type": "what_if",
+      "parameters": {
+        "target_payer": "Humana",
+        "target_denial_category": "AUTHORIZATION",
+        "reduction_pct": 45,
+        "avg_denied_claim_value": 4800,
+        "affected_claims": 2200,
+        "total_amount_at_risk": 10560000,
+        "appeal_success_rate": 0.41,
+        "implementation_weeks": 4
+      },
+      "simulation_agents": ["Humana"],
+      "expected_outcomes": {
+        "revenue_recovery_low": 2100000,
+        "revenue_recovery_high": 4800000,
+        "denial_rate_change": -1.8,
+        "ar_days_change": -2.2
+      }
+    },
+    {
+      "id": "pre-submission-eligibility",
+      "name": "Pre-Submission Eligibility Verification",
+      "description": "Project revenue impact of real-time eligibility verification before claim submission. Targets eligibility-lapse denials through automated 270/271 batch checks.",
+      "type": "what_if",
+      "parameters": {
+        "target_denial_category": "ELIGIBILITY",
+        "reduction_pct": 70,
+        "avg_denied_claim_value": 2100,
+        "affected_claims": 12000,
+        "total_amount_at_risk": 25200000,
+        "appeal_success_rate": 0.25,
+        "implementation_weeks": 6
+      },
+      "simulation_agents": ["UnitedHealthcare", "Blue Cross Blue Shield", "Aetna", "Humana", "Cigna", "Medicare"],
+      "expected_outcomes": {
+        "revenue_recovery_low": 8400000,
+        "revenue_recovery_high": 15100000,
+        "denial_rate_change": -3.8,
+        "ar_days_change": -5.1
+      }
+    },
+    {
+      "id": "medicare-timely-filing",
+      "name": "Medicare Timely Filing Recovery",
+      "description": "Simulate revenue recovery by tightening Medicare claim submission timelines. Focuses on claims submitted beyond 60 days of date of service.",
+      "type": "what_if",
+      "parameters": {
+        "target_payer": "Medicare",
+        "target_denial_category": "TIMELY_FILING",
+        "reduction_pct": 80,
+        "avg_denied_claim_value": 1850,
+        "affected_claims": 3400,
+        "total_amount_at_risk": 6290000,
+        "appeal_success_rate": 0.15,
+        "implementation_weeks": 3
+      },
+      "simulation_agents": ["Medicare"],
+      "expected_outcomes": {
+        "revenue_recovery_low": 1800000,
+        "revenue_recovery_high": 4200000,
+        "denial_rate_change": -0.9,
+        "ar_days_change": -1.4
+      }
+    },
+    {
+      "id": "90-day-cash-flow",
+      "name": "90-Day Cash Flow Optimisation",
+      "description": "Model combined effect of denial reduction and AR acceleration across all payers over 90 days. Composite scenario combining top three intervention strategies.",
+      "type": "forecast",
+      "parameters": {
+        "forecast_horizon_days": 90,
+        "denial_reduction_pct": 25,
+        "total_monthly_claims": 85000,
+        "avg_claim_value": 2800,
+        "target_denial_categories": ["CODING", "ELIGIBILITY", "AUTHORIZATION"],
+        "total_amount_at_risk": 238000000,
+        "implementation_weeks": 12
+      },
+      "simulation_agents": ["UnitedHealthcare", "Blue Cross Blue Shield", "Aetna", "Humana", "Cigna", "Medicare"],
+      "expected_outcomes": {
+        "revenue_recovery_low": 18500000,
+        "revenue_recovery_high": 32000000,
+        "denial_rate_change": -4.2,
+        "ar_days_change": -7.8
+      }
+    }
+  ]
+}

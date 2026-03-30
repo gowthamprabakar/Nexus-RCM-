@@ -1,0 +1,5 @@
+{
+  "version": "1.0",
+  "note": "Emergency seed fallback only. Live agent profiles are built from payer_agents.build_payer_agents(db). This file is used only when the DB query fails.",
+  "agents": []
+}

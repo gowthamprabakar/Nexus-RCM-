@@ -1,0 +1,303 @@
+{
+  "rcm_process_flow": {
+    "description": "Revenue Cycle Management process stages from patient encounter to payment",
+    "stages": [
+      {
+        "stage": 1,
+        "name": "Patient Registration & Eligibility",
+        "description": "Verify patient demographics, insurance eligibility, and benefits before service delivery",
+        "key_metrics": ["eligibility_verification_rate", "registration_error_rate"]
+      },
+      {
+        "stage": 2,
+        "name": "Prior Authorization",
+        "description": "Obtain required authorizations from payers before rendering services",
+        "key_metrics": ["auth_approval_rate", "auth_turnaround_days"]
+      },
+      {
+        "stage": 3,
+        "name": "Charge Capture & Coding",
+        "description": "Capture charges for services rendered and assign appropriate CPT/ICD-10 codes",
+        "key_metrics": ["coding_accuracy_rate", "charge_lag_days"]
+      },
+      {
+        "stage": 4,
+        "name": "Claim Submission",
+        "description": "Submit clean claims to payers electronically via clearinghouse",
+        "key_metrics": ["clean_claim_rate", "first_pass_rate"]
+      },
+      {
+        "stage": 5,
+        "name": "Payment Posting & Reconciliation",
+        "description": "Post payments, adjustments, and denials from ERA/EOB remittances",
+        "key_metrics": ["posting_lag_days", "payment_variance_rate"]
+      },
+      {
+        "stage": 6,
+        "name": "Denial Management & Appeals",
+        "description": "Work denied claims through root cause analysis, correction, and appeal submission",
+        "key_metrics": ["denial_rate", "appeal_success_rate", "denial_overturn_rate"]
+      },
+      {
+        "stage": 7,
+        "name": "A/R Follow-up & Collections",
+        "description": "Follow up on unpaid claims, manage aging buckets, and escalate to collections",
+        "key_metrics": ["days_in_ar", "collection_rate", "bad_debt_rate"]
+      }
+    ]
+  },
+
+  "common_denial_reasons": {
+    "description": "Top 10 CARC (Claim Adjustment Reason Codes) causing denials",
+    "codes": [
+      {
+        "carc": "CO-16",
+        "name": "MISSING_INFO",
+        "description": "Claim/service lacks information or has submission/billing error(s)",
+        "frequency_pct": 18.2,
+        "avg_resolution_days": 12,
+        "preventable": true
+      },
+      {
+        "carc": "CO-4",
+        "name": "CODING_MISMATCH",
+        "description": "The procedure code is inconsistent with the modifier used or a required modifier is missing",
+        "frequency_pct": 15.7,
+        "avg_resolution_days": 18,
+        "preventable": true
+      },
+      {
+        "carc": "CO-197",
+        "name": "AUTH_REQUIRED",
+        "description": "Precertification/authorization/notification absent",
+        "frequency_pct": 14.3,
+        "avg_resolution_days": 22,
+        "preventable": true
+      },
+      {
+        "carc": "CO-29",
+        "name": "TIMELY_FILING",
+        "description": "The time limit for filing has expired",
+        "frequency_pct": 10.1,
+        "avg_resolution_days": 5,
+        "preventable": true
+      },
+      {
+        "carc": "CO-27",
+        "name": "ELIGIBILITY_LAPSE",
+        "description": "Expenses incurred after coverage terminated",
+        "frequency_pct": 9.9,
+        "avg_resolution_days": 15,
+        "preventable": true
+      },
+      {
+        "carc": "OA-23",
+        "name": "MEDICAL_NECESSITY",
+        "description": "The impact of this claim/service on the patient's condition warrants further review",
+        "frequency_pct": 8.6,
+        "avg_resolution_days": 28,
+        "preventable": false
+      },
+      {
+        "carc": "CO-50",
+        "name": "NOT_COVERED",
+        "description": "These are non-covered services because this is not deemed a medical necessity",
+        "frequency_pct": 7.2,
+        "avg_resolution_days": 20,
+        "preventable": false
+      },
+      {
+        "carc": "CO-18",
+        "name": "DUPLICATE_CLAIM",
+        "description": "Exact duplicate claim/service already processed",
+        "frequency_pct": 6.1,
+        "avg_resolution_days": 8,
+        "preventable": true
+      },
+      {
+        "carc": "PI-204",
+        "name": "BUNDLING",
+        "description": "This service/equipment/drug is not covered under the patient benefit plan",
+        "frequency_pct": 5.4,
+        "avg_resolution_days": 16,
+        "preventable": true
+      },
+      {
+        "carc": "CO-45",
+        "name": "CONTRACTUAL_ADJUSTMENT",
+        "description": "Charge exceeds fee schedule/maximum allowable or contracted/legislated fee",
+        "frequency_pct": 4.5,
+        "avg_resolution_days": 10,
+        "preventable": false
+      }
+    ]
+  },
+
+  "payer_behavior_profiles": {
+    "description": "Top 5 payers with typical behavior metrics",
+    "payers": [
+      {
+        "name": "UnitedHealthcare",
+        "payer_type": "Commercial",
+        "avg_adtp_days": 32,
+        "denial_rate_pct": 8.2,
+        "appeal_success_rate_pct": 62,
+        "top_denial_categories": ["CODING_MISMATCH", "AUTH_REQUIRED", "MEDICAL_NECESSITY"],
+        "payment_predictability": "moderate"
+      },
+      {
+        "name": "Medicare",
+        "payer_type": "Government",
+        "avg_adtp_days": 18,
+        "denial_rate_pct": 5.1,
+        "appeal_success_rate_pct": 78,
+        "top_denial_categories": ["TIMELY_FILING", "MISSING_INFO", "NOT_COVERED"],
+        "payment_predictability": "high"
+      },
+      {
+        "name": "Humana",
+        "payer_type": "Commercial",
+        "avg_adtp_days": 38,
+        "denial_rate_pct": 11.4,
+        "appeal_success_rate_pct": 55,
+        "top_denial_categories": ["AUTH_REQUIRED", "ELIGIBILITY_LAPSE", "CODING_MISMATCH"],
+        "payment_predictability": "low"
+      },
+      {
+        "name": "Blue Cross Blue Shield",
+        "payer_type": "Commercial",
+        "avg_adtp_days": 28,
+        "denial_rate_pct": 7.6,
+        "appeal_success_rate_pct": 68,
+        "top_denial_categories": ["MISSING_INFO", "BUNDLING", "DUPLICATE_CLAIM"],
+        "payment_predictability": "moderate"
+      },
+      {
+        "name": "Aetna",
+        "payer_type": "Commercial",
+        "avg_adtp_days": 35,
+        "denial_rate_pct": 9.8,
+        "appeal_success_rate_pct": 58,
+        "top_denial_categories": ["CODING_MISMATCH", "MEDICAL_NECESSITY", "AUTH_REQUIRED"],
+        "payment_predictability": "moderate"
+      }
+    ]
+  },
+
+  "root_cause_categories": {
+    "description": "Root cause taxonomy for denial analysis",
+    "categories": [
+      {
+        "id": "RC-001",
+        "name": "CODING_ERROR",
+        "description": "Incorrect CPT/ICD-10 code assignment, modifier errors, or code mismatch between diagnosis and procedure",
+        "preventable": true,
+        "automation_eligible": true
+      },
+      {
+        "id": "RC-002",
+        "name": "ELIGIBILITY_LAPSE",
+        "description": "Patient coverage terminated, inactive policy, or benefits exhausted before service date",
+        "preventable": true,
+        "automation_eligible": true
+      },
+      {
+        "id": "RC-003",
+        "name": "AUTH_MISSING",
+        "description": "Required prior authorization not obtained or expired before service rendered",
+        "preventable": true,
+        "automation_eligible": true
+      },
+      {
+        "id": "RC-004",
+        "name": "TIMELY_FILING",
+        "description": "Claim submitted after payer-specific filing deadline",
+        "preventable": true,
+        "automation_eligible": true
+      },
+      {
+        "id": "RC-005",
+        "name": "DOCUMENTATION_GAP",
+        "description": "Insufficient clinical documentation to support medical necessity or level of service",
+        "preventable": true,
+        "automation_eligible": false
+      },
+      {
+        "id": "RC-006",
+        "name": "PAYER_POLICY_CHANGE",
+        "description": "Payer updated coverage policy, fee schedule, or billing requirements without adequate notice",
+        "preventable": false,
+        "automation_eligible": false
+      },
+      {
+        "id": "RC-007",
+        "name": "PATIENT_DATA_ERROR",
+        "description": "Incorrect patient demographics, insurance ID, or subscriber information on claim",
+        "preventable": true,
+        "automation_eligible": true
+      }
+    ]
+  },
+
+  "automation_rules": {
+    "description": "Current automation rules in the NEXUS RCM system",
+    "rules": [
+      {
+        "rule_id": "AUTO-001",
+        "name": "Auto-Resubmit Missing Info",
+        "trigger": "denial_code = 'CO-16' AND missing_field IS NOT NULL",
+        "action": "Populate missing field from patient record and resubmit",
+        "success_rate_pct": 87,
+        "avg_savings_per_claim": 245
+      },
+      {
+        "rule_id": "AUTO-002",
+        "name": "Duplicate Claim Detector",
+        "trigger": "claim matches existing by (patient_id, service_date, cpt_code, payer_id)",
+        "action": "Flag as potential duplicate and prevent submission",
+        "success_rate_pct": 95,
+        "avg_savings_per_claim": 180
+      },
+      {
+        "rule_id": "AUTO-003",
+        "name": "Eligibility Pre-Check",
+        "trigger": "new_claim AND patient.last_eligibility_check > 7 days",
+        "action": "Run real-time 270/271 eligibility check before submission",
+        "success_rate_pct": 92,
+        "avg_savings_per_claim": 310
+      },
+      {
+        "rule_id": "AUTO-004",
+        "name": "Timely Filing Alert",
+        "trigger": "claim.age > (payer.filing_limit - 14 days) AND status = 'pending'",
+        "action": "Escalate to priority queue with countdown timer",
+        "success_rate_pct": 78,
+        "avg_savings_per_claim": 520
+      },
+      {
+        "rule_id": "AUTO-005",
+        "name": "Coding Validation",
+        "trigger": "pre_submission AND (cpt_code, icd10_code) pair NOT IN valid_combinations",
+        "action": "Flag for coder review with suggested corrections",
+        "success_rate_pct": 83,
+        "avg_savings_per_claim": 290
+      },
+      {
+        "rule_id": "AUTO-006",
+        "name": "Auth Expiry Monitor",
+        "trigger": "authorization.expiry_date < service_date + 3 days",
+        "action": "Alert scheduling team and initiate re-authorization request",
+        "success_rate_pct": 71,
+        "avg_savings_per_claim": 680
+      },
+      {
+        "rule_id": "AUTO-007",
+        "name": "Appeal Auto-Generation",
+        "trigger": "denial AND appeal_eligible AND denial_category IN ('CODING_MISMATCH', 'MEDICAL_NECESSITY')",
+        "action": "Generate appeal letter with supporting documentation references",
+        "success_rate_pct": 64,
+        "avg_savings_per_claim": 1250
+      }
+    ]
+  }
+}
