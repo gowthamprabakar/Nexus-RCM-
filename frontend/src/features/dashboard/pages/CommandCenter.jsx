@@ -229,6 +229,7 @@ export function CommandCenter() {
  const [rootCauseSummary, setRootCauseSummary] = useState(null);
  const [preventionAlerts, setPreventionAlerts] = useState(null);
  const [forecastData, setForecastData] = useState(null);
+ const [forecastAccuracy, setForecastAccuracy] = useState(null);
  const [collectionsSummary, setCollectionsSummary] = useState(null);
 
  useEffect(() => {
@@ -243,7 +244,7 @@ export function CommandCenter() {
          api.payments.getSummary().catch(() => null),
          api.rootCause.getSummary().catch(() => null),
          api.diagnostics.getFindings().catch(() => null),
-         api.forecast.prophetWeekly(4).catch(() => null),
+         Promise.all([api.forecast.prophetWeekly(4).catch(() => null), api.forecast.prophetAccuracy().catch(() => null)]),
          api.collections.getSummary().catch(() => null),
        ]);
 
@@ -257,7 +258,11 @@ export function CommandCenter() {
        if (rootCauseRes) setRootCauseSummary(rootCauseRes);
 
        // Store forecast and collections data
-       if (forecastRes) setForecastData(forecastRes);
+       if (forecastRes) {
+         const [weeklyData, accuracyData] = Array.isArray(forecastRes) ? forecastRes : [forecastRes, null];
+         if (weeklyData) setForecastData(weeklyData);
+         if (accuracyData) setForecastAccuracy(accuracyData);
+       }
        if (collectionsRes) setCollectionsSummary(collectionsRes);
 
        // Load prevention alerts (non-blocking)
@@ -484,14 +489,14 @@ export function CommandCenter() {
      <span className="text-xs text-th-secondary">
        <strong className="text-th-heading">4-Week Forecast:</strong>{' '}
        <span className="tabular-nums font-bold text-blue-400">
-         {forecastData?.total_forecast != null
+         {forecastData?.total_forecast?.length > 0
            ? `$${(forecastData.total_forecast.reduce((s, w) => s + (w.predicted || 0), 0) / 1e6).toFixed(1)}M`
            : '$106.1M'}
        </span>
        <span className="mx-1.5 text-th-muted">|</span>
        Model: <strong className="text-th-heading">{forecastData?.model_backend || forecastData?.model || 'Prophet'}</strong>
        <span className="mx-1.5 text-th-muted">|</span>
-       Accuracy: <strong className="text-emerald-400">{forecastData?.overall_metrics?.mape != null ? `${(100 - forecastData.overall_metrics.mape).toFixed(1)}%` : forecastData?.accuracy != null ? `${forecastData.accuracy}%` : 'N/A'}</strong>
+       Accuracy: <strong className="text-emerald-400">{forecastAccuracy?.overall_metrics?.mape != null ? `${(100 - forecastAccuracy.overall_metrics.mape).toFixed(1)}%` : 'N/A'}</strong>
      </span>
      <span className="material-symbols-outlined text-xs text-th-muted opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
    </button>
