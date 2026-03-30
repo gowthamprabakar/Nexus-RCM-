@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
-MIROFISH_VALIDATION_TIMEOUT = 3.0  # seconds
+MIROFISH_VALIDATION_TIMEOUT = 5.0  # seconds
 
 
 async def validate_suggestion(
@@ -55,27 +55,24 @@ async def validate_suggestion(
     try:
         from app.services.mirofish_bridge import query_mirofish_for_rca
 
-        # Build the validation payload from the suggestion
-        validation_context = {
-            "claim_id": claim_context.get("claim_id") or claim_context.get("denial_id", ""),
-            "payer_id": claim_context.get("payer_id", ""),
-            "provider_id": claim_context.get("provider_id", ""),
-            "denial_category": claim_context.get("denial_category", ""),
-            "carc_code": claim_context.get("carc_code", ""),
-            "denial_amount": float(claim_context.get("denial_amount", 0)),
-        }
+        from app.services.ml_enrichment import build_mirofish_context
 
-        neo4j_evidence = {
-            "suggestion_action": suggestion.get("action", ""),
-            "suggestion_confidence": suggestion.get("confidence", 0),
-            "suggestion_category": suggestion.get("category", ""),
-            "estimated_impact": suggestion.get("estimated_impact", 0),
-            "validation_mode": True,
-        }
+        enriched_claim_context, ml_intelligence = await asyncio.wait_for(
+            build_mirofish_context(
+                db=db,
+                denial_id=claim_context.get("denial_id", ""),
+                claim_id=claim_context.get("claim_id", ""),
+                payer_id=claim_context.get("payer_id", ""),
+                provider_id=claim_context.get("provider_id", ""),
+                suggestion=suggestion,
+                rca_result=claim_context.get("rca_result"),
+                appeal_prediction=claim_context.get("appeal_prediction"),
+            ),
+            timeout=MIROFISH_VALIDATION_TIMEOUT,
+        )
 
-        # Call MiroFish with 3s timeout
         mirofish_result = await asyncio.wait_for(
-            query_mirofish_for_rca(validation_context, neo4j_evidence),
+            query_mirofish_for_rca(enriched_claim_context, ml_intelligence),
             timeout=MIROFISH_VALIDATION_TIMEOUT,
         )
 

@@ -309,11 +309,17 @@ async def run_denial_pipeline(db: AsyncSession, denial_id: str) -> dict:
             try:
                 from app.services.suggestion_validator import validate_suggestion
 
+                inv_data = investigation.get("investigation") or investigation.get("root_cause_analysis") or {}
                 claim_context = {
                     "denial_id": denial_id,
-                    "claim_id": investigation.get("investigation", {}).get("claim_id", "") if investigation.get("investigation") else "",
-                    "payer_id": investigation.get("investigation", {}).get("payer_id", "") if investigation.get("investigation") else "",
-                    "denial_category": suggestion.get("category", ""),
+                    "claim_id": inv_data.get("claim_id", ""),
+                    "payer_id": inv_data.get("payer_id", ""),
+                    "provider_id": inv_data.get("provider_id", ""),
+                    "denial_category": suggestion.get("category", "") or inv_data.get("denial_category", ""),
+                    "carc_code": inv_data.get("carc_code", ""),
+                    "denial_amount": float(inv_data.get("financial_impact", 0) or 0),
+                    "rca_result": inv_data,
+                    "appeal_prediction": investigation.get("appeal_prediction"),
                 }
                 validation = await validate_suggestion(db, suggestion, claim_context)
 
@@ -426,10 +432,17 @@ async def run_claim_pipeline(db: AsyncSession, claim_id: str) -> dict:
             try:
                 from app.services.suggestion_validator import validate_suggestion
 
+                inv_data = investigation.get("investigation") or {}
                 claim_context = {
                     "claim_id": claim_id,
-                    "payer_id": investigation.get("investigation", {}).get("payer_id", "") if investigation.get("investigation") else "",
+                    "denial_id": "",
+                    "payer_id": inv_data.get("payer_id", ""),
+                    "provider_id": inv_data.get("provider_id", ""),
                     "denial_category": suggestion.get("category", ""),
+                    "carc_code": "",
+                    "denial_amount": 0.0,
+                    "rca_result": inv_data,
+                    "appeal_prediction": None,
                 }
                 validation = await validate_suggestion(db, suggestion, claim_context)
 

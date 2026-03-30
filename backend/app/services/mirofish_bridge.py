@@ -75,6 +75,19 @@ async def export_rcm_state(db: AsyncSession) -> dict:
         """))
         payer_rows = payer_mix.all()
 
+        try:
+            from app.ml.payer_anomaly import PayerAnomalyModel
+            am = PayerAnomalyModel()
+            anomalies = await am.detect_anomalies(db)
+            anomalous_payers = [
+                {"payer_id": a["payer_id"], "anomaly_score": a["anomaly_score"]}
+                for a in anomalies if a.get("is_anomaly")
+            ]
+        except Exception:
+            anomalous_payers = []
+
+        from datetime import date
+
         return {
             "denial_distribution": [
                 {
@@ -101,6 +114,11 @@ async def export_rcm_state(db: AsyncSession) -> dict:
                 }
                 for row in payer_rows
             ],
+            "anomalous_payers": anomalous_payers,
+            "ml_snapshot": {
+                "generated_at": str(date.today()),
+                "anomalous_payer_count": len(anomalous_payers),
+            },
         }
     except Exception as e:
         logger.error(f"Failed to export RCM state: {e}")

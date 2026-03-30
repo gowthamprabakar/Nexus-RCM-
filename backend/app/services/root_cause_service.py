@@ -438,6 +438,34 @@ async def analyze_denial_root_cause(db: AsyncSession, denial_id: str) -> dict:
             from app.services.mirofish_bridge import query_mirofish_for_rca
             import asyncio as _aio
 
+            _denial_prob = 0.0
+            _write_off_prob = 0.0
+            _carc_top = []
+            try:
+                from app.ml.denial_probability import DenialProbabilityModel
+                _dm = DenialProbabilityModel()
+                _dm.load()
+                _dp_result = await _aio.wait_for(_dm.predict_claim(db, claim.claim_id), timeout=2.0)
+                _denial_prob = float(_dp_result.get("probability", 0))
+            except Exception:
+                pass
+
+            try:
+                from app.ml.write_off_model import WriteOffModel
+                _wm = WriteOffModel()
+                _wo_result = await _aio.wait_for(_wm.predict_claim(db, claim.claim_id), timeout=2.0)
+                _write_off_prob = float(_wo_result.get("write_off_probability", 0))
+            except Exception:
+                pass
+
+            try:
+                from app.ml.carc_prediction import CARCPredictionModel
+                _cm = CARCPredictionModel()
+                _carc_result = await _aio.wait_for(_cm.predict_claim(db, claim.claim_id), timeout=2.0)
+                _carc_top = [p["carc_code"] for p in _carc_result.get("top_3_carc", [])]
+            except Exception:
+                pass
+
             claim_context = {
                 "claim_id": claim.claim_id,
                 "payer_id": claim.payer_id,
@@ -445,12 +473,18 @@ async def analyze_denial_root_cause(db: AsyncSession, denial_id: str) -> dict:
                 "denial_category": denial.denial_category,
                 "carc_code": carc,
                 "denial_amount": float(denial.denial_amount or 0),
+                "denial_probability": _denial_prob,
+                "write_off_probability": _write_off_prob,
+                "predicted_carc_codes": _carc_top,
             }
             neo4j_evidence_summary = {
                 "graph_points": graph_pts,
                 "current_evidence": dict(evidence),
                 "top_cause": ranked[0][0] if sum(evidence.values()) > 0 and (ranked := sorted(evidence.items(), key=lambda x: x[1], reverse=True)) else None,
-            } if evidence else {}
+                "ml_denial_risk": "HIGH" if _denial_prob >= 0.5 else "MEDIUM" if _denial_prob >= 0.25 else "LOW",
+                "ml_write_off_risk": "HIGH" if _write_off_prob >= 0.5 else "LOW",
+                "ml_predicted_carcs": _carc_top,
+            }
 
             mirofish_result = await _aio.wait_for(
                 query_mirofish_for_rca(claim_context, neo4j_evidence_summary),

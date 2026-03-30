@@ -193,6 +193,42 @@ async def evaluate_rules(db: AsyncSession) -> list:
         logger.error(f"Failed to generate diagnostics for rule evaluation: {e}")
         findings = []
 
+    # -- Pre-computation Block 1: Propensity cache for AUTO-004 --
+    import asyncio as _aio
+    propensity_cache = {}
+    try:
+        from app.ml.propensity_to_pay import PropensityToPayModel
+        from sqlalchemy import text
+        prop_model = PropensityToPayModel()
+        aged_result = await db.execute(text("""
+            SELECT DISTINCT c.patient_id
+            FROM claims c
+            WHERE c.status NOT IN ('PAID', 'WRITTEN_OFF', 'VOIDED')
+              AND (CURRENT_DATE - c.date_of_service) > 90
+            LIMIT 200
+        """))
+        patient_ids = [r[0] for r in aged_result.fetchall()]
+        for pid in patient_ids:
+            try:
+                score = await _aio.wait_for(prop_model.predict_patient(db, pid), timeout=1.0)
+                propensity_cache[pid] = score
+            except Exception:
+                pass
+        logger.info("automation_engine: propensity cache built for %d patients", len(propensity_cache))
+    except Exception as e:
+        logger.warning("Propensity pre-compute failed (non-blocking): %s", e)
+
+    # -- Pre-computation Block 2: Payer anomaly cache for AUTO-007 --
+    payer_anomaly_cache = {}
+    try:
+        from app.ml.payer_anomaly import PayerAnomalyModel
+        am = PayerAnomalyModel()
+        anomaly_list = await _aio.wait_for(am.detect_anomalies(db), timeout=5.0)
+        payer_anomaly_cache = {a["payer_id"]: a for a in anomaly_list if a.get("is_anomaly")}
+        logger.info("automation_engine: %d anomalous payers detected by model", len(payer_anomaly_cache))
+    except Exception as e:
+        logger.warning("Payer anomaly pre-compute failed (non-blocking): %s", e)
+
     for rule in AUTOMATION_RULES:
         if not rule["enabled"]:
             continue
@@ -201,21 +237,21 @@ async def evaluate_rules(db: AsyncSession) -> list:
             if rule["trigger"] == "diagnostic_finding":
                 matched = _match_diagnostic_findings(rule, findings)
                 for finding in matched:
-                    action = await _create_action_from_finding(db, rule, finding)
+                    action = await _create_action_from_finding(db, rule, finding, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
                     if action:
                         triggered.append(action)
 
             elif rule["trigger"] == "root_cause_cluster":
                 clusters = await _find_root_cause_clusters(db, rule)
                 for cluster in clusters:
-                    action = await _create_action_from_cluster(db, rule, cluster)
+                    action = await _create_action_from_cluster(db, rule, cluster, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
                     if action:
                         triggered.append(action)
 
             elif rule["trigger"] == "threshold_breach":
                 breaches = await _find_threshold_breaches(db, rule)
                 for breach in breaches:
-                    action = await _create_action_from_breach(db, rule, breach)
+                    action = await _create_action_from_breach(db, rule, breach, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
                     if action:
                         triggered.append(action)
 
@@ -223,7 +259,7 @@ async def evaluate_rules(db: AsyncSession) -> list:
                 # AUTO-008: Find rejected claims with fixable CRS issues
                 hits = await _find_rejected_fixable_claims(db, rule)
                 for hit in hits:
-                    action = await _create_action_from_finding(db, rule, hit)
+                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
                     if action:
                         triggered.append(action)
 
@@ -231,7 +267,7 @@ async def evaluate_rules(db: AsyncSession) -> list:
                 # AUTO-009: Claims approaching payer filing deadline
                 hits = await _find_filing_deadline_claims(db, rule)
                 for hit in hits:
-                    action = await _create_action_from_finding(db, rule, hit)
+                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
                     if action:
                         triggered.append(action)
 
@@ -239,7 +275,7 @@ async def evaluate_rules(db: AsyncSession) -> list:
                 # AUTO-010: Claims with prior auth expiring soon
                 hits = await _find_auth_expiry_claims(db, rule)
                 for hit in hits:
-                    action = await _create_action_from_finding(db, rule, hit)
+                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
                     if action:
                         triggered.append(action)
 
@@ -247,7 +283,7 @@ async def evaluate_rules(db: AsyncSession) -> list:
                 # AUTO-011: Claims with stale eligibility checks
                 hits = await _find_stale_eligibility_claims(db, rule)
                 for hit in hits:
-                    action = await _create_action_from_finding(db, rule, hit)
+                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
                     if action:
                         triggered.append(action)
 
@@ -255,7 +291,7 @@ async def evaluate_rules(db: AsyncSession) -> list:
                 # AUTO-012: Duplicate claim detection
                 hits = await _find_duplicate_claims(db, rule)
                 for hit in hits:
-                    action = await _create_action_from_finding(db, rule, hit)
+                    action = await _create_action_from_finding(db, rule, hit, propensity_cache=propensity_cache, payer_anomaly_cache=payer_anomaly_cache)
                     if action:
                         triggered.append(action)
 
@@ -524,7 +560,7 @@ async def _find_duplicate_claims(db: AsyncSession, rule: dict) -> list:
         return []
 
 
-async def _create_action_from_finding(db: AsyncSession, rule: dict, finding: dict) -> Optional[dict]:
+async def _create_action_from_finding(db: AsyncSession, rule: dict, finding: dict, propensity_cache=None, payer_anomaly_cache=None) -> Optional[dict]:
     """Create an automation action from a diagnostic finding."""
     try:
         # Check for duplicate (same rule + same finding title already pending)
@@ -554,17 +590,36 @@ async def _create_action_from_finding(db: AsyncSession, rule: dict, finding: dic
         action_id = _gen_action_id()
         status = "PENDING" if rule["requires_approval"] else "EXECUTED"
 
+        trigger_data = {
+            "finding_id": finding.get("finding_id"),
+            "title": finding.get("title"),
+            "category": finding.get("category"),
+            "severity": finding.get("severity"),
+        }
+
+        # Enrich AUTO-004 with propensity data
+        if rule["rule_id"] == "AUTO-004" and propensity_cache:
+            high_tier = sum(1 for v in propensity_cache.values() if v.get("risk_tier") == "HIGH")
+            very_low_tier = sum(1 for v in propensity_cache.values() if v.get("risk_tier") == "VERY_LOW")
+            trigger_data["propensity_high_count"] = high_tier
+            trigger_data["propensity_very_low_count"] = very_low_tier
+            trigger_data["propensity_model_scored"] = len(propensity_cache)
+
+        # Enrich AUTO-007 with anomaly data
+        if rule["rule_id"] == "AUTO-007" and payer_anomaly_cache:
+            payer_id_in_finding = finding.get("metadata", {}).get("payer_id", "")
+            if payer_id_in_finding in payer_anomaly_cache:
+                anomaly_data = payer_anomaly_cache[payer_id_in_finding]
+                trigger_data["ml_anomaly_score"] = anomaly_data.get("anomaly_score", 0)
+                trigger_data["ml_anomaly_factors"] = anomaly_data.get("anomaly_factors", [])
+                trigger_data["ml_confirmed_anomaly"] = True
+
         action = AutomationAction(
             action_id=action_id,
             rule_id=rule["rule_id"],
             rule_name=rule["name"],
             trigger_type="diagnostic_finding",
-            trigger_data=json.dumps({
-                "finding_id": finding.get("finding_id"),
-                "title": finding.get("title"),
-                "category": finding.get("category"),
-                "severity": finding.get("severity"),
-            }),
+            trigger_data=json.dumps(trigger_data),
             suggested_action=action_text[:500],
             affected_claims=finding.get("affected_claims_count", 0),
             estimated_impact=round(finding.get("impact_amount", 0), 2),
@@ -592,7 +647,7 @@ async def _create_action_from_finding(db: AsyncSession, rule: dict, finding: dic
         return None
 
 
-async def _create_action_from_cluster(db: AsyncSession, rule: dict, cluster: dict) -> Optional[dict]:
+async def _create_action_from_cluster(db: AsyncSession, rule: dict, cluster: dict, propensity_cache=None, payer_anomaly_cache=None) -> Optional[dict]:
     """Create an automation action from a root cause cluster."""
     try:
         # Check for duplicate
@@ -656,7 +711,7 @@ async def _create_action_from_cluster(db: AsyncSession, rule: dict, cluster: dic
         return None
 
 
-async def _create_action_from_breach(db: AsyncSession, rule: dict, breach: dict) -> Optional[dict]:
+async def _create_action_from_breach(db: AsyncSession, rule: dict, breach: dict, propensity_cache=None, payer_anomaly_cache=None) -> Optional[dict]:
     """Create an automation action from a threshold breach."""
     return None  # Placeholder for future implementation
 
