@@ -32,6 +32,10 @@ async def _safe(coro, default=None):
         return default
 
 
+async def _none():
+    return None
+
+
 async def build_mirofish_context(
     db: AsyncSession,
     denial_id: str,
@@ -44,35 +48,18 @@ async def build_mirofish_context(
 ) -> tuple[dict, dict]:
     """Build enriched (claim_context, ml_intelligence) for MiroFish."""
 
-    denial_prob_result = None
-    if claim_id:
-        denial_prob_result = await _safe(_run_denial_probability(db, claim_id))
-
     appeal_result = appeal_prediction or {}
 
-    payment_delay_result = None
-    if claim_id:
-        payment_delay_result = await _safe(_run_payment_delay(db, claim_id))
-
-    payer_anomaly_result = None
-    if payer_id:
-        payer_anomaly_result = await _safe(_run_payer_anomaly(db, payer_id))
-
-    propensity_result = None
-    if claim_id:
-        propensity_result = await _safe(_run_propensity(db, claim_id))
-
-    write_off_result = None
-    if claim_id:
-        write_off_result = await _safe(_run_write_off(db, claim_id))
-
-    provider_risk_result = None
-    if provider_id:
-        provider_risk_result = await _safe(_run_provider_risk(db, provider_id))
-
-    carc_result = None
-    if claim_id:
-        carc_result = await _safe(_run_carc_prediction(db, claim_id))
+    (denial_prob_result, payment_delay_result, payer_anomaly_result, propensity_result,
+     write_off_result, provider_risk_result, carc_result) = await asyncio.gather(
+        _safe(_run_denial_probability(db, claim_id)) if claim_id else _none(),
+        _safe(_run_payment_delay(db, claim_id)) if claim_id else _none(),
+        _safe(_run_payer_anomaly(db, payer_id)) if payer_id else _none(),
+        _safe(_run_propensity(db, claim_id)) if claim_id else _none(),
+        _safe(_run_write_off(db, claim_id)) if claim_id else _none(),
+        _safe(_run_provider_risk(db, provider_id)) if provider_id else _none(),
+        _safe(_run_carc_prediction(db, claim_id)) if claim_id else _none(),
+    )
 
     composite_result = None
     if claim_id and denial_prob_result:

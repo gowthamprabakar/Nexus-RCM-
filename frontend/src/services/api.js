@@ -1303,6 +1303,24 @@ export const api = {
                 return await res.json();
             } catch (err) { console.error('Graph stats error:', err); return null; }
         },
+        runScenario: async (params) => {
+            try {
+                const res = await fetch(`${BASE_URL}/simulation/scenario`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(params),
+                });
+                if (!res.ok) throw new Error('simulation scenario failed');
+                return await res.json();
+            } catch (err) { console.error('Simulation scenario error:', err); return null; }
+        },
+        getScenarioResults: async (id) => {
+            try {
+                const res = await fetch(`${BASE_URL}/simulation/results/${id}`);
+                if (!res.ok) throw new Error(`scenario results failed for ${id}`);
+                return await res.json();
+            } catch (err) { console.error('Scenario results error:', err); return null; }
+        },
     },
 
     // ------------------------------------------------------------------------
@@ -1474,37 +1492,6 @@ export const api = {
                 if (!res.ok) throw new Error(`LIDA report ${type} failed`);
                 return await res.json();
             } catch (err) { console.error('LIDA report error:', err); return null; }
-        },
-    },
-
-    // ------------------------------------------------------------------------
-    // Simulation  (Sprint 19)
-    // ------------------------------------------------------------------------
-    simulation: {
-        runScenario: async (params) => {
-            try {
-                const res = await fetch(`${BASE_URL}/simulation/scenario`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(params),
-                });
-                if (!res.ok) throw new Error('simulation scenario failed');
-                return await res.json();
-            } catch (err) { console.error('Simulation scenario error:', err); return null; }
-        },
-        getScenarios: async () => {
-            try {
-                const res = await fetch(`${BASE_URL}/simulation/scenarios`);
-                if (!res.ok) throw new Error('get scenarios failed');
-                return await res.json();
-            } catch (err) { console.error('Get scenarios error:', err); return null; }
-        },
-        getScenarioResults: async (id) => {
-            try {
-                const res = await fetch(`${BASE_URL}/simulation/results/${id}`);
-                if (!res.ok) throw new Error(`scenario results failed for ${id}`);
-                return await res.json();
-            } catch (err) { console.error('Scenario results error:', err); return null; }
         },
     },
 

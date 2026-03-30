@@ -25,18 +25,27 @@ logger = logging.getLogger(__name__)
 
 MIROFISH_BASE_URL = "http://localhost:5001"
 
+import time as _time
+_mirofish_status_cache = {"result": False, "ts": 0.0}
+
 
 async def _is_mirofish_running() -> bool:
-    """Check if MiroFish backend is reachable."""
+    """Check if MiroFish backend is reachable (cached for 30s)."""
+    now = _time.monotonic()
+    if now - _mirofish_status_cache["ts"] < 30.0:
+        return _mirofish_status_cache["result"]
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(
                 f"{MIROFISH_BASE_URL}/",
                 timeout=3.0,
             )
-            return resp.status_code < 500
+            alive = resp.status_code < 500
     except Exception:
-        return False
+        alive = False
+    _mirofish_status_cache["result"] = alive
+    _mirofish_status_cache["ts"] = now
+    return alive
 
 
 async def export_rcm_state(db: AsyncSession) -> dict:
@@ -57,7 +66,7 @@ async def export_rcm_state(db: AsyncSession) -> dict:
         # Get claim volume and status distribution
         claim_summary = await db.execute(text("""
             SELECT c.status, COUNT(*) as cnt,
-                   SUM(c.amount) as total_amount
+                   SUM(c.total_charges) as total_amount
             FROM claims c
             GROUP BY c.status
         """))
@@ -66,7 +75,7 @@ async def export_rcm_state(db: AsyncSession) -> dict:
         # Get payer mix
         payer_mix = await db.execute(text("""
             SELECT pm.payer_name, COUNT(c.claim_id) as claim_count,
-                   SUM(c.amount) as total_amount
+                   SUM(c.total_charges) as total_amount
             FROM payer_master pm
             LEFT JOIN claims c ON pm.payer_id = c.payer_id
             GROUP BY pm.payer_name
@@ -218,32 +227,32 @@ async def run_what_if_analysis(
 
 
 async def _build_payer_agents(db: AsyncSession) -> list:
-    """Build payer agent profiles from real DB data."""
-    result = await db.execute(text("""
-        SELECT pm.payer_id, pm.payer_name, pm.denial_rate, pm.adtp_days,
-               count(d.denial_id) as denial_count,
-               sum(d.denial_amount) as total_denied
-        FROM payer_master pm
-        LEFT JOIN claims c ON pm.payer_id = c.payer_id
-        LEFT JOIN denials d ON c.claim_id = d.claim_id
-        GROUP BY pm.payer_id, pm.payer_name, pm.denial_rate, pm.adtp_days
-        ORDER BY count(d.denial_id) DESC
-        LIMIT 10
-    """))
+    """Build payer agent profiles from real DB data.
 
-    agents = []
-    for row in result.all():
-        agents.append({
-            "agent_id": row[0],
-            "name": row[1],
-            "personality": f"Healthcare payer with {row[2] or 0}% denial rate and {row[3] or 0} day ADTP",
-            "denial_rate": float(row[2] or 0),
-            "adtp_days": int(row[3] or 0),
-            "total_denials": int(row[4] or 0),
-            "total_denied_amount": float(row[5] or 0),
-        })
-
-    return agents
+    Delegates to the full payer_agents module; falls back to a
+    lightweight skeleton if that module is unavailable.
+    """
+    try:
+        from app.services.payer_agents import build_payer_agents
+        return await build_payer_agents(db)
+    except Exception as exc:
+        logger.warning("payer_agents.build_payer_agents failed, using skeleton: %s", exc)
+        result = await db.execute(text("""
+            SELECT pm.payer_id, pm.payer_name, pm.denial_rate, pm.adtp_days
+            FROM payer_master pm
+            ORDER BY pm.denial_rate DESC NULLS LAST
+            LIMIT 10
+        """))
+        return [
+            {
+                "agent_id": row[0],
+                "name": row[1],
+                "personality": f"Healthcare payer with {row[2] or 0}% denial rate and {row[3] or 0} day ADTP",
+                "denial_rate": float(row[2] or 0),
+                "adtp_days": int(row[3] or 0),
+            }
+            for row in result.all()
+        ]
 
 
 async def query_mirofish_for_rca(claim_context: dict, neo4j_evidence: dict) -> dict:
@@ -270,7 +279,12 @@ async def query_mirofish_for_rca(claim_context: dict, neo4j_evidence: dict) -> d
                 result = resp.json()
                 return {
                     "agent_agrees": result.get("verdict") == "approved",
-                    "confidence_adjustment": 15 if result.get("verdict") == "approved" else -10 if result.get("verdict") == "rejected" else 0,
+                    "confidence_adjustment": result.get(
+                        "confidence_adjustment",
+                        15 if result.get("verdict") == "approved"
+                        else -10 if result.get("verdict") == "rejected"
+                        else 0,
+                    ),
                     "agent_reasoning": result.get("reasoning", ""),
                     "alternative_cause": None,
                     "validation_details": result.get("agent_validations", []),

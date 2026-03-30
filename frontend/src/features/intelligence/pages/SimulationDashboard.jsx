@@ -241,19 +241,27 @@ export function SimulationDashboard() {
       </div>
 
       {/* ── Validation Layer ──────────────────────────────────────────── */}
-      <div className="rounded-xl border border-emerald-500/20 bg-gradient-to-r from-emerald-500/5 to-teal-500/5 p-4 flex items-center gap-4 mb-6">
-        <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-          <span className="material-symbols-outlined text-xl text-emerald-400">shield</span>
+      <div className={`rounded-xl border p-4 flex items-center gap-4 mb-6 ${
+        isActive
+          ? 'border-emerald-500/20 bg-gradient-to-r from-emerald-500/5 to-teal-500/5'
+          : 'border-amber-500/20 bg-gradient-to-r from-amber-500/5 to-orange-500/5'
+      }`}>
+        <div className={`size-10 rounded-xl flex items-center justify-center shrink-0 ${
+          isActive ? 'bg-emerald-500/10' : 'bg-amber-500/10'
+        }`}>
+          <span className={`material-symbols-outlined text-xl ${isActive ? 'text-emerald-400' : 'text-amber-400'}`}>shield</span>
         </div>
         <div>
-          <p className="text-sm font-bold text-th-heading">Validation Layer Active</p>
+          <p className="text-sm font-bold text-th-heading">{isActive ? 'Validation Layer Active' : 'Validation Layer Degraded'}</p>
           <p className="text-xs text-th-secondary">
-            All suggestions and recommendations are validated by the full agent swarm consensus before being surfaced to users. No unvalidated insights reach the dashboard.
+            {isActive
+              ? 'All suggestions and recommendations are validated by the full agent swarm consensus before being surfaced to users. No unvalidated insights reach the dashboard.'
+              : 'The validation layer is currently offline. Suggestions may not be fully validated by the agent swarm.'}
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Verified</span>
+          <span className={`size-2 rounded-full ${isActive ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+          <span className={`text-xs font-bold uppercase tracking-wider ${isActive ? 'text-emerald-400' : 'text-amber-400'}`}>{isActive ? 'Verified' : 'Offline'}</span>
         </div>
       </div>
 

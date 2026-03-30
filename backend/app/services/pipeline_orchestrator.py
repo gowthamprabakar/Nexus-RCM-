@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 CONFIDENCE_AUTO_EXECUTE_THRESHOLD = 85
 BATCH_MAX_DEFAULT = 50
-BATCH_TIMEOUT_SECONDS = 30
+BATCH_TIMEOUT_SECONDS = 120
 
 
 # ---------------------------------------------------------------------------

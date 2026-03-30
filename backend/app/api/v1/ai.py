@@ -891,7 +891,7 @@ async def _collect_simulation_stats(db: AsyncSession) -> dict:
     try:
         import json
         from pathlib import Path
-        scenarios_file = Path(__file__).resolve().parents[3] / "mirofish" / "rcm_seeds" / "simulation_scenarios.json"
+        scenarios_file = Path(__file__).resolve().parents[4] / "mirofish" / "rcm_seeds" / "simulation_scenarios.json"
         scenarios_available = 0
         last_sim_type = "N/A"
         last_sim_summary = "No simulations run yet"

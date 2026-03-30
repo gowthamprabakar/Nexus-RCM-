@@ -20,9 +20,10 @@ export function IntegrationHub() {
   async function load() {
    setLoading(true);
    try {
-    const [aiHealth, scenarios] = await Promise.allSettled([
+    const [aiHealth, scenarios, schedulerHealth] = await Promise.allSettled([
      api.ai.health(),
      api.simulation.getScenarios(),
+     api.simulation.getSchedulerStatus(),
     ]);
     if (cancelled) return;
     setOllamaStatus(aiHealth.status === 'fulfilled' ? aiHealth.value : { status: 'degraded', ollama: false });
@@ -42,7 +43,8 @@ export function IntegrationHub() {
      model: aiHealth.value?.model || null,
     });
 
-    const miroConnected = scenarios.status === 'fulfilled' && scenarios.value != null;
+    const schedulerOk = schedulerHealth.status === 'fulfilled' && schedulerHealth.value != null;
+    const miroConnected = schedulerOk || (scenarios.status === 'fulfilled' && scenarios.value != null);
     dynamicConnectors.push({
      code: 'MF',
      name: 'MiroFish Simulator',

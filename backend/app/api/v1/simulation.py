@@ -6,8 +6,10 @@ Includes scenario-based what-if projections with result caching.
 """
 
 import json
+import time
 import uuid
 import logging
+from collections import OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -30,7 +32,31 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # In-memory cache for simulation results (keyed by scenario_id)
-_simulation_cache: dict[str, dict] = {}
+# Each entry stores {"data": result, "ts": time.time()} with TTL eviction.
+_CACHE_TTL = 3600  # seconds
+_CACHE_MAX_SIZE = 200
+_simulation_cache: OrderedDict[str, dict] = OrderedDict()
+
+
+def _cache_get(key: str) -> dict | None:
+    """Return cached data if present and not expired, else None."""
+    entry = _simulation_cache.get(key)
+    if entry is None:
+        return None
+    if time.time() - entry["ts"] > _CACHE_TTL:
+        _simulation_cache.pop(key, None)
+        return None
+    # Move to end so LRU eviction works correctly
+    _simulation_cache.move_to_end(key)
+    return entry["data"]
+
+
+def _cache_put(key: str, data: dict) -> None:
+    """Store data in the cache, evicting oldest entries if over max size."""
+    _simulation_cache[key] = {"data": data, "ts": time.time()}
+    _simulation_cache.move_to_end(key)
+    while len(_simulation_cache) > _CACHE_MAX_SIZE:
+        _simulation_cache.popitem(last=False)
 
 # Path to pre-built scenario definitions
 SCENARIOS_FILE = Path(__file__).resolve().parents[4] / "mirofish" / "rcm_seeds" / "simulation_scenarios.json"
@@ -293,7 +319,7 @@ async def run_scenario(
         }
 
         # Cache result
-        _simulation_cache[scenario_id] = result
+        _cache_put(scenario_id, result)
 
         return result
 
@@ -306,9 +332,99 @@ async def run_scenario(
 @router.get("/results/{scenario_id}")
 async def get_cached_scenario_results(scenario_id: str):
     """Get cached results for a previously run scenario simulation."""
-    if scenario_id in _simulation_cache:
-        return _simulation_cache[scenario_id]
+    cached = _cache_get(scenario_id)
+    if cached is not None:
+        return cached
     raise HTTPException(status_code=404, detail=f"No cached results for scenario {scenario_id}")
+
+
+# ── POST /simulation/interview/{agent_id} ──────────────────────────────────
+@router.post("/interview/{agent_id}")
+async def interview_payer_agent(
+    agent_id: str,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+):
+    """Interview a payer agent.
+
+    Tries MiroFish proxy first (localhost:5001). Falls back to Qwen3
+    with the payer persona from build_payer_agents().
+    Returns {response, agent_name, source}.
+    """
+    import httpx
+
+    question = body.get("question", "")
+    if not question:
+        raise HTTPException(status_code=400, detail="question is required")
+
+    # ── 1. Try MiroFish proxy ────────────────────────────────────────────────
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                f"http://localhost:5001/api/simulation/interview/{agent_id}",
+                json={"question": question},
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return {
+                    "response": data.get("response", ""),
+                    "agent_name": data.get("agent_name", agent_id),
+                    "source": "mirofish",
+                }
+    except Exception as exc:
+        logger.debug("MiroFish interview proxy unavailable: %s", exc)
+
+    # ── 2. Fallback: Qwen3 via Ollama with payer persona ────────────────────
+    try:
+        from app.services.payer_agents import build_payer_agents
+
+        agents = await build_payer_agents(db)
+        agent = next((a for a in agents if a.get("agent_id") == agent_id), None)
+        if not agent:
+            raise HTTPException(status_code=404, detail=f"Agent {agent_id} not found")
+
+        persona = agent.get("personality", f"Healthcare payer agent {agent_id}")
+        agent_name = agent.get("name", agent_id)
+
+        system_prompt = (
+            f"You are {agent_name}, a healthcare payer agent. "
+            f"Persona: {persona}. "
+            "Answer the interviewer's question from this payer's perspective. "
+            "Be specific about denial patterns, payment timelines, and payer policies."
+        )
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                "http://localhost:11434/api/chat",
+                json={
+                    "model": "qwen3",
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": question},
+                    ],
+                    "stream": False,
+                },
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return {
+                    "response": data.get("message", {}).get("content", ""),
+                    "agent_name": agent_name,
+                    "source": "qwen3_fallback",
+                }
+            else:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Qwen3 returned status {resp.status_code}",
+                )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Interview fallback failed: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Both MiroFish and Qwen3 fallback failed: {exc}",
+        )
 
 
 # ── GET /simulation/{simulation_id}/status ───────────────────────────────────
