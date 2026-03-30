@@ -171,7 +171,7 @@ export function ReconciliationAdvanced() {
  <span className="ai-diagnostic">Diagnostic AI</span>
  </p>
  <p className="text-th-secondary text-base font-medium leading-normal">
- <span className="text-rose-500 font-bold">Alert:</span> {forecastData.aiInsights[0]?.message || 'No insights available'}
+ <span className="text-rose-500 font-bold">Alert:</span> {forecastData.aiInsights[0]?.body || forecastData.aiInsights[0]?.description || forecastData.aiInsights[0]?.message || 'No insights available'}
  </p>
  </div>
  </div>

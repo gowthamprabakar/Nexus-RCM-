@@ -956,6 +956,36 @@ async def _collect_forecast_stats(db: AsyncSession) -> dict:
                 "top_payer": "N/A", "top_payer_mape": 0}
 
 
+async def _collect_lida_stats(db: AsyncSession) -> dict:
+    """Pull LIDA analytics summary for prompt context."""
+    try:
+        from app.models.denial import Denial
+        total_denials = await db.scalar(select(func.count(Denial.denial_id))) or 0
+        denied_amount = await db.scalar(select(func.sum(Denial.denial_amount))) or 0
+        total_claims  = await db.scalar(select(func.count(Claim.claim_id))) or 0
+        total_posted  = await db.scalar(select(func.sum(EraPayment.payment_amount))) or 0
+        total_ar      = await db.scalar(
+            select(func.sum(Claim.total_charges))
+            .where(Claim.status.notin_(["PAID", "WRITTEN_OFF", "VOIDED"]))
+        ) or 0
+        return {
+            "total_claims": total_claims,
+            "total_denials": total_denials,
+            "denied_amount": float(denied_amount),
+            "total_ar": float(total_ar),
+            "total_posted": float(total_posted),
+            "datasets_available": 5,
+            "nl_query_ready": True,
+        }
+    except Exception as e:
+        logger.error(f"LIDA stats collection failed: {e}")
+        return {
+            "total_claims": 0, "total_denials": 0, "denied_amount": 0,
+            "total_ar": 0, "total_posted": 0,
+            "datasets_available": 5, "nl_query_ready": True,
+        }
+
+
 STAT_COLLECTORS = {
     "denials":          _collect_denials_stats,
     "collections":      _collect_collections_stats,
@@ -974,6 +1004,7 @@ STAT_COLLECTORS = {
     "payer-performance":_collect_payer_performance_stats,
     "simulation":       _collect_simulation_stats,
     "forecast":         _collect_forecast_stats,
+    "lida":             _collect_lida_stats,
 }
 
 

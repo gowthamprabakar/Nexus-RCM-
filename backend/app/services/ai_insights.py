@@ -67,6 +67,7 @@ BADGE_MAP = {
     "payer-performance":["Diagnostic", "Prescriptive"],
     "simulation":       ["Predictive", "Prescriptive"],
     "forecast":         ["Predictive", "Prescriptive"],
+    "lida":             ["Descriptive", "Diagnostic", "Predictive", "Prescriptive"],
 }
 
 
@@ -468,6 +469,26 @@ Output exactly 3 insights as a JSON array. Each insight must have:
 Respond ONLY with valid JSON. No preamble. No markdown."""
 
 
+def _lida_prompt(stats: dict) -> str:
+    return f"""You are an expert Revenue Cycle Management analyst.
+Based on the following RCM data summary, generate 3 concise insights about what analysis is most valuable right now.
+
+LIVE DATA (do not change these numbers):
+- Total claims in system: {stats.get('total_claims', 0):,}
+- Total denials: {stats.get('total_denials', 0):,} (${stats.get('denied_amount', 0):,.0f})
+- Total A/R outstanding: ${stats.get('total_ar', 0):,.0f}
+- Total ERA payments posted: ${stats.get('total_posted', 0):,.0f}
+- Datasets available for analysis: {stats.get('datasets_available', 5)}
+
+Output exactly 3 insights as a JSON array. Each insight must have:
+- "title": short headline (max 8 words)
+- "body": 1-2 sentence suggestion for what to query or analyze next using ONLY the numbers above
+- "badge": one of ["Descriptive", "Diagnostic", "Predictive", "Prescriptive"]
+- "severity": one of ["info", "warning", "critical"]
+
+Respond ONLY with valid JSON. No preamble. No markdown."""
+
+
 def _appeal_prompt(claim: dict) -> str:
     return f"""You are a medical billing appeals specialist writing a formal appeal letter.
 
@@ -616,6 +637,7 @@ async def get_insights(page: str, stats: dict, db: AsyncSession = None) -> list[
         "payer-performance":_payer_performance_prompt,
         "simulation":       _simulation_prompt,
         "forecast":         _forecast_prompt,
+        "lida":             _lida_prompt,
     }
 
     prompt_fn = prompt_map.get(page)
@@ -733,6 +755,7 @@ async def stream_insights(page: str, stats: dict) -> AsyncIterator[str]:
         "payer-performance":_payer_performance_prompt,
         "simulation":       _simulation_prompt,
         "forecast":         _forecast_prompt,
+        "lida":             _lida_prompt,
     }
     prompt_fn = prompt_map.get(page, _denials_prompt)
     async for token in _stream_ollama(prompt_fn(stats)):

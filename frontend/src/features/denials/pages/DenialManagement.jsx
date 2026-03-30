@@ -434,12 +434,13 @@ export function DenialManagement() {
      />
    ))
  ) : (
-   // Static fallback if Ollama is down
-   <>
-   <AIInsightCard title="CO-4 Appeal Pattern Match" description="91% of CO-4 denials from Aetna this month share the same prior auth template gap. Batch appeal template ready with 89% historical win rate." confidence={91} impact="high" category="Diagnostic" action="Launch batch appeal" value="$128K recovery" icon="gavel" />
-   <AIInsightCard title="Medical Necessity Denial Surge" description="CO-50 denials up 42% in Orthopedics vs last quarter. Pattern matches recent LCD update L34862. Clinical documentation addendum required." confidence={87} impact="high" category="Predictive" action="Alert clinical team" value="42% surge" icon="medical_services" />
-   <AIInsightCard title="Timely Filing Window Closing" description="34 Cigna denials from 11 months ago are re-appeal eligible but will expire in 18 days. Win rate for this category: 72%." confidence={99} impact="high" category="Prescriptive" action="File appeals immediately" value="$96K / 18 days left" icon="timer" />
-   </>
+   <div className="col-span-3 flex flex-col items-center justify-center py-10 px-6 rounded-xl border border-dashed border-th-border text-center gap-3">
+     <span className="material-symbols-outlined text-3xl text-th-muted">cloud_off</span>
+     <div>
+       <p className="text-sm font-semibold text-th-heading mb-1">AI insights unavailable</p>
+       <p className="text-xs text-th-secondary">Ollama is not responding. Start it with <code className="px-1.5 py-0.5 bg-th-surface-overlay rounded text-xs font-mono">ollama serve</code> to enable real-time intelligence.</p>
+     </div>
+   </div>
  )}
  </div>
  </div>

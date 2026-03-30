@@ -41,7 +41,7 @@ const STATIC_FALLBACK_PAYER_INSIGHTS = [
 ];
 
 export function PayerPerformance() {
- const [payerAiInsights, setPayerAiInsights] = useState(STATIC_FALLBACK_PAYER_INSIGHTS);
+ const [payerAiInsights, setPayerAiInsights] = useState([]);
  const [aiLoading, setAiLoading] = useState(false);
 
  useEffect(() => {

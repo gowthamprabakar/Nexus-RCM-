@@ -797,6 +797,34 @@ export function CommandCenter() {
   ))}
  </div>
 
+ {/* AI Insights — live from Ollama */}
+ {ccAiInsights.length > 0 && (
+  <div className="px-6 py-4 border-t border-th-border">
+    <div className="flex items-center gap-2 mb-3">
+      <span className="material-symbols-outlined text-sm text-amber-400">auto_awesome</span>
+      <h3 className="text-xs font-semibold uppercase tracking-widest text-th-muted">AI Intelligence</h3>
+      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        Live
+      </span>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {ccAiInsights.slice(0, 3).map((ins, i) => (
+        <AIInsightCard
+          key={i}
+          title={ins.title}
+          description={ins.body || ins.description}
+          confidence={ins.confidence || 80}
+          impact={ins.severity === 'critical' ? 'high' : 'medium'}
+          category={ins.badge}
+          action="Investigate"
+          icon={ins.badge === 'Prescriptive' ? 'gavel' : 'analytics'}
+        />
+      ))}
+    </div>
+  </div>
+ )}
+
  {/* Compact footer with team velocity + automation rate */}
  <div className="px-6 py-3 border-t border-th-border bg-th-surface-overlay/20 flex items-center justify-between">
   <div className="flex items-center gap-4">

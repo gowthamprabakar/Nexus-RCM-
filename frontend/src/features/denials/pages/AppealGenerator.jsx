@@ -76,10 +76,25 @@ export function AppealGenerator() {
        });
        if (newAppeal) {
          setAppealId(newAppeal.appeal_id);
-         const letter = await api.appeals.getLetter(newAppeal.appeal_id);
-         if (letter) {
-           setLetterData(letter);
-           setAppealText(letter.letter_text);
+         const aiLetter = await api.ai.draftAppeal({
+           claim_id: denial.claim_id,
+           denial_id: denial.denial_id,
+           denial_reason: denial.denial_category,
+           carc_code: denial.carc_code,
+           payer_name: denial.payer_name || '',
+           billed_amount: denial.total_charges || 0,
+           denied_amount: denial.denial_amount || 0,
+         }).catch(() => null);
+
+         if (aiLetter?.appeal_letter) {
+           setLetterData({ letter_text: aiLetter.appeal_letter, ai_generated: true });
+           setAppealText(aiLetter.appeal_letter);
+         } else {
+           const letter = await api.appeals.getLetter(newAppeal.appeal_id);
+           if (letter) {
+             setLetterData(letter);
+             setAppealText(letter.letter_text);
+           }
          }
        }
      }
@@ -320,6 +335,12 @@ export function AppealGenerator() {
  </div>
 
  {/* Editable Appeal Body */}
+ {letterData?.ai_generated && (
+   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 ml-2">
+     <span className="material-symbols-outlined" style={{fontSize:'10px'}}>smart_toy</span>
+     AI Generated
+   </span>
+ )}
  <textarea
  value={appealText}
  onChange={(e) => setAppealText(e.target.value)}

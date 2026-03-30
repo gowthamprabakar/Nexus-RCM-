@@ -1124,7 +1124,7 @@ export function ClaimRootCauseDetail() {
           <h3 className="text-sm font-bold text-th-heading uppercase tracking-wider">AI Insight</h3>
         </div>
         {aiInsight.title && <p className="text-base font-bold text-th-heading mb-2">{aiInsight.title}</p>}
-        <p className="text-sm text-th-secondary leading-relaxed">{aiInsight.summary || aiInsight.description || aiInsight.text || JSON.stringify(aiInsight)}</p>
+        <p className="text-sm text-th-secondary leading-relaxed">{aiInsight.body || aiInsight.summary || aiInsight.description || aiInsight.text || JSON.stringify(aiInsight)}</p>
         {aiInsight.recommendation && (
           <div className="mt-3 flex items-start gap-2">
             <span className="material-symbols-outlined text-emerald-400 text-base mt-0.5">lightbulb</span>
