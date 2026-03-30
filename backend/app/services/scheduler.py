@@ -10,6 +10,7 @@ with request-scoped sessions.
 """
 
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -199,10 +200,12 @@ async def _job_retrain_prophet():
     """Weekly Prophet model retrain — re-fits on latest ERA payment data."""
     logger.info("Scheduler: starting Prophet forecast retrain")
     try:
-        from app.services.prophet_forecast import _CACHE
-        # Clear in-memory cache so next API call gets fresh predictions
-        _CACHE.clear()
-        logger.info("Scheduler: Prophet cache cleared — model will retrain on next forecast request")
+        from app.services.prophet_forecast import _CACHE, _CACHE_TTL
+        now = time.time()
+        stale_keys = [k for k, (_, ts) in _CACHE.items() if now - ts >= _CACHE_TTL]
+        for k in stale_keys:
+            del _CACHE[k]
+        logger.info("Scheduler: Prophet cache — evicted %d stale entries (%d remain warm)", len(stale_keys), len(_CACHE))
     except Exception:
         logger.exception("Prophet retrain job failed")
 

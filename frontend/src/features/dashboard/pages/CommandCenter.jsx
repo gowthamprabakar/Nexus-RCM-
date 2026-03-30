@@ -485,13 +485,13 @@ export function CommandCenter() {
        <strong className="text-th-heading">4-Week Forecast:</strong>{' '}
        <span className="tabular-nums font-bold text-blue-400">
          {forecastData?.total_forecast != null
-           ? `$${(forecastData.total_forecast / 1e6).toFixed(1)}M`
+           ? `$${(forecastData.total_forecast.reduce((s, w) => s + (w.predicted || 0), 0) / 1e6).toFixed(1)}M`
            : '$106.1M'}
        </span>
        <span className="mx-1.5 text-th-muted">|</span>
-       Model: <strong className="text-th-heading">{forecastData?.model || 'Prophet'}</strong>
+       Model: <strong className="text-th-heading">{forecastData?.model_backend || forecastData?.model || 'Prophet'}</strong>
        <span className="mx-1.5 text-th-muted">|</span>
-       Accuracy: <strong className="text-emerald-400">{forecastData?.accuracy != null ? `${forecastData.accuracy}%` : '87%'}</strong>
+       Accuracy: <strong className="text-emerald-400">{forecastData?.overall_metrics?.mape != null ? `${(100 - forecastData.overall_metrics.mape).toFixed(1)}%` : forecastData?.accuracy != null ? `${forecastData.accuracy}%` : 'N/A'}</strong>
      </span>
      <span className="material-symbols-outlined text-xs text-th-muted opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
    </button>

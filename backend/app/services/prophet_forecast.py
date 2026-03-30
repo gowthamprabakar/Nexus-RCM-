@@ -68,6 +68,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 _CACHE: Dict[str, Tuple[Any, float]] = {}
 _CACHE_TTL = 3600  # 1 hour
+_CACHE_MAX = 50    # max entries
 
 
 def _cache_key(*parts) -> str:
@@ -83,7 +84,14 @@ def _get_cached(key: str):
 
 
 def _set_cached(key: str, obj):
-    _CACHE[key] = (obj, time.time())
+    now = time.time()
+    expired = [k for k, (_, ts) in _CACHE.items() if now - ts >= _CACHE_TTL]
+    for k in expired:
+        del _CACHE[k]
+    if len(_CACHE) >= _CACHE_MAX:
+        oldest = min(_CACHE, key=lambda k: _CACHE[k][1])
+        del _CACHE[oldest]
+    _CACHE[key] = (obj, now)
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +188,7 @@ async def _load_daily_training(
         for r in rows:
             records.append({
                 "ds": r.payment_date,
-                "y": float(r.payment_amount or r.actual_payments if hasattr(r, 'actual_payments') else r.payment_amount or 0),
+                "y": float(r.payment_amount or 0),
                 "payer_id": r.payer_id,
                 "payer_name": r.payer_name or "",
                 "day_of_week": int(r.day_of_week or 0),
@@ -846,13 +854,12 @@ def _aggregate_forecasts(
             if ds_str not in combined:
                 combined[ds_str] = {"predicted": 0, "lower": 0, "upper": 0}
 
-            combined[ds_str]["predicted"] += float(row.get("yhat", 0))
-            combined[ds_str]["lower"] += float(
-                row.get("yhat_lower") or row.get("yhat", 0) * 0.85
-            )
-            combined[ds_str]["upper"] += float(
-                row.get("yhat_upper") or row.get("yhat", 0) * 1.15
-            )
+            yhat = float(row.get("yhat") or 0)
+            yhat_lower = row.get("yhat_lower")
+            yhat_upper = row.get("yhat_upper")
+            combined[ds_str]["predicted"] += yhat
+            combined[ds_str]["lower"] += float(yhat_lower) if yhat_lower is not None else yhat * 0.85
+            combined[ds_str]["upper"] += float(yhat_upper) if yhat_upper is not None else yhat * 1.15
 
     result = []
     for ds_str in sorted(combined.keys()):
