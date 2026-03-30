@@ -117,11 +117,6 @@ function SuggestedActions({ actions, onNavigate }) {
       <div className="flex items-center gap-2 mb-2">
         <span className="material-symbols-outlined text-sm text-emerald-400">task_alt</span>
         <span className="text-xs font-bold text-th-heading uppercase tracking-wider">Suggested Actions</span>
-        {/* MiroFish Validation Badge */}
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-          <span className="material-symbols-outlined" style={{fontSize: '10px'}}>verified</span>
-          Agent Validated
-        </span>
       </div>
       <div className="space-y-1.5">
         {actions.slice(0, 5).map((a, i) => (
@@ -152,11 +147,6 @@ function FollowUpChips({ questions, onAsk }) {
       <div className="flex items-center gap-2 mb-2">
         <span className="material-symbols-outlined text-sm text-purple-400">forum</span>
         <span className="text-xs font-bold text-th-heading uppercase tracking-wider">Ask Next</span>
-        {/* MiroFish Validation Badge */}
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-          <span className="material-symbols-outlined" style={{fontSize: '10px'}}>verified</span>
-          Agent Validated
-        </span>
       </div>
       <div className="flex flex-wrap gap-2">
         {questions.map((q, i) => (
@@ -681,11 +671,6 @@ export function LidaChat() {
                 {msg.actions && (
                   <div className="flex items-center gap-2 flex-wrap">
                     <MsgActions actions={msg.actions} onAction={(label) => handleMsgAction(label, msg)} />
-                    {/* MiroFish Validation Badge */}
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mt-3">
-                      <span className="material-symbols-outlined text-xs" style={{fontSize: '12px'}}>verified</span>
-                      Agent Validated
-                    </span>
                   </div>
                 )}
               </div>

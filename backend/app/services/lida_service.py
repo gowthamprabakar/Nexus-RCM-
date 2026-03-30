@@ -45,7 +45,7 @@ def get_lida_manager():
         _lida_manager = Manager(
             text_gen=TextGenerationConfig(
                 n=1,
-                temperature=0.3,
+                temperature=0.1,
                 model=os.environ.get("OLLAMA_MODEL", "qwen3:4b"),
                 max_tokens=2000,
                 provider="openai",  # Ollama is OpenAI-compatible
@@ -55,9 +55,10 @@ def get_lida_manager():
     return _lida_manager
 
 
-# ── FIX 1: Response Cache (TTL=5 min) ────────────────────────────────────────
+# ── FIX 1: Response Cache (TTL=5 min, LRU-capped at 500 entries) ────────────
 _response_cache = {}
 _CACHE_TTL = 300  # 5 minutes
+_CACHE_MAX_SIZE = 500
 
 def _cache_key(question: str, dataset: str) -> str:
     return hashlib.md5(f"{question}:{dataset}".encode()).hexdigest()
@@ -66,13 +67,19 @@ def _get_cached(question: str, dataset: str):
     key = _cache_key(question, dataset)
     if key in _response_cache:
         entry = _response_cache[key]
-        if (datetime.now() - entry['ts']).seconds < _CACHE_TTL:
+        if (datetime.now() - entry['ts']).total_seconds() < _CACHE_TTL:
+            # LRU touch: move accessed entry to end
+            _response_cache[key] = _response_cache.pop(key)
             return entry['data']
         del _response_cache[key]
     return None
 
 def _set_cache(question: str, dataset: str, data: dict):
     key = _cache_key(question, dataset)
+    # Evict oldest entry when at capacity
+    if key not in _response_cache and len(_response_cache) >= _CACHE_MAX_SIZE:
+        oldest_key = next(iter(_response_cache))
+        del _response_cache[oldest_key]
     _response_cache[key] = {'data': data, 'ts': datetime.now()}
 
 
@@ -82,7 +89,7 @@ _STATS_TTL = 600  # 10 minutes
 
 async def _get_precomputed_stats(db) -> str:
     """Pre-computed stats snapshot — avoids re-querying for every question."""
-    if _stats_cache['data'] and _stats_cache['ts'] and (datetime.now() - _stats_cache['ts']).seconds < _STATS_TTL:
+    if _stats_cache['data'] and _stats_cache['ts'] and (datetime.now() - _stats_cache['ts']).total_seconds() < _STATS_TTL:
         return _stats_cache['data']
 
     # Compute once, cache for 10 min
@@ -139,10 +146,10 @@ def _classify_intent(question: str) -> str:
     """Classify question complexity: simple, moderate, complex."""
     q = question.lower()
     # Simple: direct stat lookup
-    if any(w in q for w in ['how many', 'total', 'count', 'what is the']):
+    if any(w in q for w in ['how many', 'total', 'count', 'what is the', 'show me', 'list', 'top', 'highest', 'lowest', 'average', 'sum']):
         return 'simple'
     # Complex: multi-dimensional analysis, reports, comparisons
-    if any(w in q for w in ['report', 'compare', 'analyze', 'detailed', 'comprehensive', 'reconciliation report']):
+    if any(w in q for w in ['report', 'compare', 'analyze', 'detailed', 'comprehensive', 'reconciliation report', 'trend over', 'break down', 'across all']):
         return 'complex'
     return 'moderate'
 
@@ -150,6 +157,12 @@ _INTENT_MAX_TOKENS = {
     'simple': 500,
     'moderate': 1000,
     'complex': 2000,
+}
+
+_INTENT_TEMPERATURE = {
+    'simple': 0.05,
+    'moderate': 0.15,
+    'complex': 0.25,
 }
 
 
@@ -213,7 +226,7 @@ async def get_rcm_dataframe(db: AsyncSession, dataset: str = "denials") -> pd.Da
     """
     # FIX 4: Check DataFrame cache first
     key = dataset
-    if key in _df_cache and (datetime.now() - _df_cache[key]['ts']).seconds < 300:
+    if key in _df_cache and (datetime.now() - _df_cache[key]['ts']).total_seconds() < 300:
         return _df_cache[key]['df']
 
     queries = {
@@ -587,11 +600,11 @@ async def answer_question(db: AsyncSession, question: str, dataset: str = "auto"
     # Step 1: Auto-detect dataset FIRST (needed for cache key)
     if dataset == "auto":
         q_lower = question.lower()
-        if any(w in q_lower for w in ['denial', 'denied', 'carc', 'root cause', 'appeal', 'deny']):
+        if any(w in q_lower for w in ['denial', 'denied', 'carc', 'root cause', 'appeal', 'deny', 'payer denial', 'payer denies']):
             dataset = "denials"
         elif any(w in q_lower for w in ['payment', 'era', 'paid', 'reimbursement', 'underpay', 'payer', 'insurer', 'top payer']):
             dataset = "payments"
-        elif any(w in q_lower for w in ['ar ', 'aging', 'outstanding', 'days in ar', 'a/r']):
+        elif any(w in q_lower for w in ['ar aging', ' ar ', 'aging', 'outstanding', 'days in ar', 'a/r']):
             dataset = "ar"
         elif any(w in q_lower for w in ['reconcil', 'bank', 'float', 'variance', 'era-bank']):
             dataset = "reconciliation"
@@ -677,34 +690,41 @@ async def answer_question(db: AsyncSession, question: str, dataset: str = "auto"
             logger.warning(f"Text-to-SQL failed: {e}")
     max_tokens = _INTENT_MAX_TOKENS[intent]
 
-    # FIX 2: Use pre-computed stats context instead of inline DB queries
-    ontology_context = await _get_precomputed_stats(db)
+    # FIX 2: Use ontology-aware context, fall back to pre-computed stats
+    try:
+        from app.services.ontology_context import build_chat_context
+        ontology_context = await build_chat_context(db, question)
+        if not ontology_context:
+            ontology_context = await _get_precomputed_stats(db)
+    except Exception as _oc_err:
+        logger.warning("Ontology context failed, using precomputed stats: %s", _oc_err)
+        ontology_context = await _get_precomputed_stats(db)
 
     # FIX 3: Adjust prompt based on complexity
     import httpx
     try:
         if intent == 'simple':
-            prompt = f"""Based on the following RCM data, answer the question directly with specific numbers.
+            prompt = f"""You are an RCM (Revenue Cycle Management) analytics assistant. Use ONLY the data context below to answer. Be concise and cite specific numbers.
 
-DATA:
+RCM DATA CONTEXT:
 {ontology_context}
 
 QUESTION: {question}
 
 DIRECT ANSWER:"""
         elif intent == 'complex':
-            prompt = f"""Based on the following RCM data, provide a detailed answer with specific numbers and bullet points.
+            prompt = f"""You are an RCM (Revenue Cycle Management) analytics assistant. Use ONLY the data context below. Provide a thorough answer with specific numbers, bullet points, and actionable insights.
 
-DATA:
+RCM DATA CONTEXT:
 {ontology_context}
 
 QUESTION: {question}
 
 DETAILED ANSWER:"""
         else:
-            prompt = f"""Based on the following RCM data, answer the question with specific numbers. Only use data provided below.
+            prompt = f"""You are an RCM (Revenue Cycle Management) analytics assistant. Use ONLY the data context below to answer. Include specific numbers where available.
 
-DATA:
+RCM DATA CONTEXT:
 {ontology_context}
 
 QUESTION: {question}
@@ -723,7 +743,7 @@ ANSWER:"""
                     "stream": False,
                     "think": False,
                     "options": {
-                        "temperature": 0.3,
+                        "temperature": _INTENT_TEMPERATURE[intent],
                         "num_predict": max_tokens,
                     }
                 })
@@ -736,7 +756,7 @@ ANSWER:"""
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.3,
+                        "temperature": _INTENT_TEMPERATURE[intent],
                         "num_predict": max_tokens,
                     }
                 })

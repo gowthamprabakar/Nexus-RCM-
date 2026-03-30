@@ -13,6 +13,8 @@ Flow:
 """
 
 import os
+import re
+import json
 import logging
 import httpx
 from typing import Optional
@@ -65,27 +67,47 @@ Respond ONLY with valid JSON."""
 
     try:
         # Call Ollama directly (faster than going through MiroFish)
+        model_name = os.environ.get("OLLAMA_MODEL", "qwen3:4b")
+        is_qwen3 = "qwen3" in model_name.lower()
+
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                "http://localhost:11434/api/generate",
-                json={
-                    "model": os.environ.get("OLLAMA_MODEL", "qwen3:4b"),
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"temperature": 0.3}
-                }
-            )
+            if is_qwen3:
+                response = await client.post(
+                    "http://localhost:11434/api/chat",
+                    json={
+                        "model": model_name,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "stream": False,
+                        "think": False,
+                        "options": {"temperature": 0.2, "num_predict": 800}
+                    }
+                )
+            else:
+                response = await client.post(
+                    "http://localhost:11434/api/generate",
+                    json={
+                        "model": model_name,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {"temperature": 0.2, "num_predict": 800}
+                    }
+                )
 
             if response.status_code == 200:
                 result = response.json()
-                text = result.get("response", "")
+                if is_qwen3:
+                    raw_text = result.get("message", {}).get("content", "")
+                else:
+                    raw_text = result.get("response", "")
+
+                # Strip <think> tags from response
+                raw_text = re.sub(r'<think>.*?</think>\s*', '', raw_text, flags=re.DOTALL)
 
                 # Parse JSON from response
-                import json
-                start = text.find("{")
-                end = text.rfind("}") + 1
+                start = raw_text.find("{")
+                end = raw_text.rfind("}") + 1
                 if start >= 0 and end > start:
-                    validation = json.loads(text[start:end])
+                    validation = json.loads(raw_text[start:end])
 
                     agrees = validation.get("agrees", True)
                     adjustment = int(validation.get("confidence_adjustment", 0))

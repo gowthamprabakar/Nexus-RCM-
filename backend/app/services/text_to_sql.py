@@ -183,7 +183,6 @@ SELECT"""
                 "model": os.environ.get("OLLAMA_MODEL", "qwen3:4b"),
                 "prompt": prompt,
                 "stream": False,
-                "raw": True,
                 "options": {"temperature": 0.1, "num_predict": 500}
             })
             raw_sql = resp.json().get("response", "").strip()

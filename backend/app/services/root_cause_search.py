@@ -154,15 +154,15 @@ def _build_actions(root_causes: list) -> list:
                 'impact': rc['impact'],
                 'link': f'/analytics/denials/root-cause?cause={cause}',
             })
-    # Always add investigation and prevention links
-    if actions:
+    # Only show generic links when no specific actions were found
+    if not actions:
         actions.append({
-            'action': 'Review modifier -59/-25 usage patterns',
+            'action': 'Investigate denial root causes in detail',
             'type': 'investigation',
             'link': '/analytics/denials/root-cause',
         })
         actions.append({
-            'action': 'Check prevention alerts for this entity',
+            'action': 'Review prevention alerts and recommended workflows',
             'type': 'prevention',
             'link': '/analytics/prevention',
         })

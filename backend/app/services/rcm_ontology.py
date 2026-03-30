@@ -16,10 +16,24 @@ Edge types:
 """
 
 import logging
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
+
+_ontology_cache: dict = {'data': None, 'ts': None}
+_ONTOLOGY_CACHE_TTL = 600
+
+def _get_cached_ontology():
+    if (_ontology_cache['data'] is not None and _ontology_cache['ts'] is not None
+        and (datetime.now() - _ontology_cache['ts']).total_seconds() < _ONTOLOGY_CACHE_TTL):
+        return _ontology_cache['data']
+    return None
+
+def _set_cached_ontology(data):
+    _ontology_cache['data'] = data
+    _ontology_cache['ts'] = datetime.now()
 
 ALL_NODE_TYPES = [
     "claim_status", "payer", "root_cause", "denial_category", "provider",
@@ -40,6 +54,10 @@ async def build_rcm_ontology(db: AsyncSession) -> dict:
     Returns nodes and edges representing the full RCM process flow
     across all AI layers.
     """
+    cached = _get_cached_ontology()
+    if cached is not None:
+        return cached
+
     nodes = []
     edges = []
 
@@ -96,7 +114,7 @@ async def build_rcm_ontology(db: AsyncSession) -> dict:
     edges.extend(await _build_edges(db))
     edges.extend(await _build_enriched_edges(db, root_cause_nodes, payer_nodes, adtp_nodes, diagnostic_nodes, automation_nodes, prevention_nodes, stage_nodes))
 
-    return {
+    result = {
         "ontology_version": "2.0",
         "node_count": len(nodes),
         "edge_count": len(edges),
@@ -105,6 +123,8 @@ async def build_rcm_ontology(db: AsyncSession) -> dict:
         "node_types": list(set(n["type"] for n in nodes)),
         "edge_types": list(set(e["type"] for e in edges)),
     }
+    _set_cached_ontology(result)
+    return result
 
 
 # ═══════════════════════════════════════════════════════════════════════════

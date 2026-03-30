@@ -64,7 +64,7 @@ export function LidaDashboard() {
   const [statsLoading, setStatsLoading] = useState(true);
 
   // Recent AI Insights
-  const [lidaAiInsights, setLidaAiInsights] = useState(STATIC_FALLBACK_LIDA_INSIGHTS);
+  const [lidaAiInsights, setLidaAiInsights] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
 
   // Filters
@@ -139,6 +139,15 @@ export function LidaDashboard() {
     if (key === 'payer') setFilterPayer('All');
     if (key === 'type') setFilterInsightType('All');
   };
+
+  const filteredInsights = lidaAiInsights.filter(ins => {
+    if (filterInsightType !== 'All' && ins.category !== filterInsightType && ins.badge !== filterInsightType) return false;
+    if (filterPayer !== 'All') {
+      const text = `${ins.title || ''} ${ins.body || ins.description || ''}`.toLowerCase();
+      if (!text.includes(filterPayer.toLowerCase())) return false;
+    }
+    return true;
+  });
 
   return (
   <div className="flex-1 overflow-y-auto h-full p-8 text-th-heading custom-scrollbar">
@@ -296,9 +305,30 @@ export function LidaDashboard() {
           </div>
         ))
       ) : goals.length === 0 ? (
-        <div className="col-span-full text-center py-8">
-          <span className="material-symbols-outlined text-3xl text-th-muted mb-2 block">psychology</span>
-          <p className="text-sm text-th-muted">No goals generated yet. Ensure LIDA + Ollama are running.</p>
+        <div className="col-span-full">
+          <p className="text-xs text-th-muted mb-3">LIDA goals unavailable. Try these common questions:</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {[
+              { icon: 'gpp_bad', q: 'What are the top denial reasons by volume and revenue impact?', label: 'Top Denial Reasons' },
+              { icon: 'business', q: 'Show me denial and payment trends by payer over the last 6 months', label: 'Payer Trends' },
+              { icon: 'troubleshoot', q: 'What are the root causes driving the highest denial rates?', label: 'Root Cause Analysis' },
+              { icon: 'schedule', q: 'How is our AR aging distributed and which buckets are growing?', label: 'AR Aging Breakdown' },
+              { icon: 'emoji_events', q: 'What is our appeal win rate by denial category and payer?', label: 'Appeal Win Rates' },
+              { icon: 'trending_down', q: 'Which payers have the longest payment delays and underpayment rates?', label: 'Payment Delays' },
+            ].map((g) => (
+              <button
+                key={g.label}
+                onClick={() => navigate(`/intelligence/lida/chat?q=${encodeURIComponent(g.q)}`)}
+                className="text-left bg-th-surface-raised border border-th-border rounded-xl p-4 hover:-translate-y-0.5 hover:shadow-lg hover:border-purple-500/50 transition-all duration-200 cursor-pointer group"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="material-symbols-outlined text-purple-400 text-base">{g.icon}</span>
+                  <span className="text-xs font-bold text-th-heading group-hover:text-purple-400 transition-colors">{g.label}</span>
+                </div>
+                <p className="text-[11px] text-th-secondary leading-snug ml-6">{g.q}</p>
+              </button>
+            ))}
+          </div>
         </div>
       ) : (
         goals.map((goal, idx) => (
@@ -415,7 +445,7 @@ export function LidaDashboard() {
           </div>
         ))
       ) : (
-        lidaAiInsights.map((insight) => (
+        filteredInsights.map((insight) => (
           <AIInsightCard key={insight.title} {...insight} />
         ))
       )}

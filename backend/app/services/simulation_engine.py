@@ -63,22 +63,43 @@ PAYER_PERSONAS = {
 
 async def _call_ollama(prompt: str, system: str = "") -> str:
     """Send a prompt to Ollama and return the response text."""
-    payload = {
-        "model": OLLAMA_MODEL,
-        "prompt": prompt,
-        "system": system,
-        "stream": False,
-        "options": {"temperature": 0.4, "num_predict": 1024},
-    }
+    is_qwen3 = "qwen3" in OLLAMA_MODEL.lower()
+
+    if is_qwen3:
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+        payload = {
+            "model": OLLAMA_MODEL,
+            "messages": messages,
+            "stream": False,
+            "think": False,
+            "options": {"temperature": 0.2, "num_predict": 1024},
+        }
+        endpoint = f"{OLLAMA_BASE_URL}/api/chat"
+    else:
+        payload = {
+            "model": OLLAMA_MODEL,
+            "prompt": prompt,
+            "system": system,
+            "stream": False,
+            "options": {"temperature": 0.2, "num_predict": 1024},
+        }
+        endpoint = f"{OLLAMA_BASE_URL}/api/generate"
+
     async with httpx.AsyncClient() as client:
         try:
             resp = await client.post(
-                f"{OLLAMA_BASE_URL}/api/generate",
+                endpoint,
                 json=payload,
                 timeout=TIMEOUT_SECONDS,
             )
             resp.raise_for_status()
-            return resp.json().get("response", "")
+            if is_qwen3:
+                return resp.json().get("message", {}).get("content", "")
+            else:
+                return resp.json().get("response", "")
         except Exception as e:
             logger.error(f"Ollama call failed: {e}")
             return ""
