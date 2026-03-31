@@ -223,8 +223,8 @@ async def run_feedback_cycle(db: AsyncSession) -> dict:
         payer_map: Dict[str, str] = {}
         if all_claim_ids:
             payer_result = await db.execute(
-                text("SELECT claim_id, payer_id FROM claims WHERE claim_id IN :ids"),
-                {"ids": tuple(all_claim_ids)},
+                text("SELECT claim_id, payer_id FROM claims WHERE claim_id = ANY(:ids)"),
+                {"ids": all_claim_ids},
             )
             payer_map = {r.claim_id: r.payer_id for r in payer_result.all() if r.payer_id}
 

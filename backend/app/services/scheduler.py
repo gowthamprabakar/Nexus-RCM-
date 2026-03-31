@@ -182,22 +182,30 @@ async def _job_run_predictions():
             failed.append(cls_name)
             logger.warning("run_predictions: failed to warm %s: %s", cls_name, exc)
 
-    # --- Additional ML modules ---
+    # --- Additional ML modules (correct class names + module paths) ---
     extra_modules = [
-        ("PaymentDelay", "app.ml.payment_delay"),
-        ("PropensityToPay", "app.ml.propensity_to_pay"),
-        ("WriteOff", "app.ml.write_off"),
-        ("CARCPrediction", "app.ml.carc_prediction"),
-        ("PayerAnomaly", "app.ml.payer_anomaly"),
+        ("PaymentDelayModel",       "app.ml.payment_delay"),
+        ("PropensityToPayModel",    "app.ml.propensity_to_pay"),
+        ("WriteOffModel",           "app.ml.write_off_model"),
+        ("CARCPredictionModel",     "app.ml.carc_prediction"),
+        ("PayerAnomalyModel",       "app.ml.payer_anomaly"),
     ]
     for cls_name, module_path in extra_modules:
         try:
             mod = importlib.import_module(module_path)
             _inst = getattr(mod, cls_name)()
-            warmed.append(cls_name)
+            # Load the trained artifact from disk
+            if hasattr(_inst, '_load'):
+                _inst._load()
+            elif hasattr(_inst, 'load'):
+                _inst.load()
+            if _inst.is_fitted:
+                warmed.append(cls_name)
+            else:
+                failed.append(f"{cls_name} (not trained)")
         except Exception as exc:
-            failed.append(cls_name)
-            logger.warning("run_predictions: failed to warm %s: %s", cls_name, exc)
+            failed.append(f"{cls_name} ({exc})")
+            logger.debug("run_predictions: failed to warm %s: %s", cls_name, exc)
 
     logger.info(
         "run_predictions: %d model(s) warmed, %d failed %s",
