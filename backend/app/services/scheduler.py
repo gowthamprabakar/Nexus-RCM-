@@ -108,10 +108,25 @@ async def _job_batch_rca():
 
 
 async def _job_refresh_diagnostics():
-    """Placeholder: refresh cached diagnostic summaries."""
-    logger.info(
-        "refresh_diagnostics: placeholder -- no-op for now."
-    )
+    """Refresh cached diagnostic summaries via the diagnostic engine."""
+    session = await _get_session()
+    try:
+        from app.services.diagnostic_service import generate_system_diagnostics
+
+        result = await generate_system_diagnostics(session)
+        await session.commit()
+        logger.info(
+            "refresh_diagnostics: total_findings=%d, critical=%d, warning=%d, impact=$%.2f",
+            result.get("total_findings", 0),
+            result.get("critical_count", 0),
+            result.get("warning_count", 0),
+            result.get("total_impact", 0),
+        )
+    except Exception:
+        await session.rollback()
+        logger.exception("refresh_diagnostics job failed")
+    finally:
+        await session.close()
 
 
 async def _job_prevention_scan():

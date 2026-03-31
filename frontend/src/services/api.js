@@ -853,6 +853,20 @@ export const api = {
                 return await res.json();
             } catch (err) { console.error('Claim diagnostic error:', err); return null; }
         },
+        refresh: async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/diagnostics/refresh`, { method: 'POST' });
+                if (!res.ok) throw new Error('diagnostics refresh failed');
+                return await res.json();
+            } catch (err) { console.error('Diagnostics refresh error:', err); return null; }
+        },
+        resolve: async (findingId) => {
+            try {
+                const res = await fetch(`${BASE_URL}/diagnostics/resolve/${findingId}`, { method: 'POST' });
+                if (!res.ok) throw new Error('diagnostics resolve failed');
+                return await res.json();
+            } catch (err) { console.error('Diagnostics resolve error:', err); return null; }
+        },
     },
 
     // ------------------------------------------------------------------------

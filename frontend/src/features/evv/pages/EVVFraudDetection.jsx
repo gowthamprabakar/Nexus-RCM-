@@ -39,7 +39,7 @@ export function EVVFraudDetection() {
    setError(null);
    try {
     const [findingsRes, diagSummary, crs, fraudRes] = await Promise.allSettled([
-     api.diagnostics.getFindings({ severity: 'high' }),
+     api.diagnostics.getFindings({ severity: 'critical' }),
      api.diagnostics.getSummary(),
      api.crs.getSummary(),
      api.evv.getFraudDetection(),

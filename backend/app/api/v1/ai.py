@@ -367,11 +367,76 @@ async def _collect_adtp_stats(db: AsyncSession) -> dict:
 
 
 async def _collect_diagnostics_stats(db: AsyncSession) -> dict:
-    """Pull live diagnostic engine findings for prompt context."""
+    """Pull diagnostic findings from DB for prompt context (no re-run)."""
     try:
-        from app.services.diagnostic_service import get_diagnostic_summary
-        summary = await get_diagnostic_summary(db)
-        return summary
+        from app.models.rcm_extended import DiagnosticFinding
+        from sqlalchemy import select, func, desc
+
+        total = await db.scalar(
+            select(func.count(DiagnosticFinding.finding_id))
+            .where(DiagnosticFinding.status != "RESOLVED")
+        ) or 0
+        critical = await db.scalar(
+            select(func.count(DiagnosticFinding.finding_id))
+            .where(DiagnosticFinding.severity == "CRITICAL")
+            .where(DiagnosticFinding.status != "RESOLVED")
+        ) or 0
+        warning = await db.scalar(
+            select(func.count(DiagnosticFinding.finding_id))
+            .where(DiagnosticFinding.severity == "WARNING")
+            .where(DiagnosticFinding.status != "RESOLVED")
+        ) or 0
+        info = await db.scalar(
+            select(func.count(DiagnosticFinding.finding_id))
+            .where(DiagnosticFinding.severity == "INFO")
+            .where(DiagnosticFinding.status != "RESOLVED")
+        ) or 0
+        total_impact = await db.scalar(
+            select(func.sum(DiagnosticFinding.financial_impact))
+            .where(DiagnosticFinding.status != "RESOLVED")
+        ) or 0
+
+        cat_rows = await db.execute(
+            select(
+                DiagnosticFinding.category,
+                func.count().label("count"),
+                func.sum(DiagnosticFinding.financial_impact).label("impact"),
+            )
+            .where(DiagnosticFinding.status != "RESOLVED")
+            .group_by(DiagnosticFinding.category)
+            .order_by(desc("impact"))
+        )
+        by_category = [
+            {"category": r[0], "count": r[1], "impact": round(float(r[2] or 0), 2)}
+            for r in cat_rows
+        ]
+
+        top_rows = await db.execute(
+            select(DiagnosticFinding)
+            .where(DiagnosticFinding.status != "RESOLVED")
+            .order_by(desc(DiagnosticFinding.financial_impact))
+            .limit(5)
+        )
+        top_findings = [
+            {
+                "finding_id": f.finding_id,
+                "title": f.title,
+                "severity": f.severity,
+                "category": f.category,
+                "impact_amount": float(f.financial_impact or 0),
+            }
+            for f in top_rows.scalars()
+        ]
+
+        return {
+            "total_findings": total,
+            "critical_count": critical,
+            "warning_count": warning,
+            "info_count": info,
+            "total_impact": round(float(total_impact), 2),
+            "by_category": by_category,
+            "top_findings": top_findings,
+        }
     except Exception as e:
         logger.error(f"Diagnostics stats collection failed: {e}")
         return {
@@ -381,18 +446,23 @@ async def _collect_diagnostics_stats(db: AsyncSession) -> dict:
 
 
 async def _enrich_with_diagnostics(db: AsyncSession, stats: dict, category_filter: str) -> dict:
-    """Enrich page stats with relevant diagnostic findings for richer LLM context."""
+    """Enrich page stats with relevant diagnostic findings from DB (no re-run)."""
     try:
-        from app.services.diagnostic_service import generate_system_diagnostics
-        diag = await generate_system_diagnostics(db)
-        relevant = [
-            f for f in diag.get("findings", [])
-            if f.get("category") == category_filter
-        ][:3]  # top 3 relevant findings
+        from app.models.rcm_extended import DiagnosticFinding
+        from sqlalchemy import select, desc
+
+        result = await db.execute(
+            select(DiagnosticFinding)
+            .where(DiagnosticFinding.category == category_filter)
+            .where(DiagnosticFinding.status != "RESOLVED")
+            .order_by(desc(DiagnosticFinding.financial_impact))
+            .limit(3)
+        )
+        relevant = list(result.scalars())
 
         if relevant:
             diagnostic_context = "; ".join(
-                f"[{f['severity'].upper()}] {f['title']} (${f.get('impact_amount', 0):,.0f})"
+                f"[{f.severity}] {f.title} (${float(f.financial_impact or 0):,.0f})"
                 for f in relevant
             )
             stats["diagnostic_findings"] = diagnostic_context

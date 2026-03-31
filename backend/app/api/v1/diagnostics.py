@@ -5,7 +5,7 @@ Surfaces ranked diagnostic findings from the persistent diagnostic_finding table
 
 GET   /diagnostics/summary                  -- system-wide diagnostic summary (from DB)
 GET   /diagnostics/findings                 -- list findings from DB, filterable
-GET   /diagnostics/refresh                  -- re-run all 5 detectors and persist results
+POST  /diagnostics/refresh                  -- re-run all 5 detectors and persist results
 POST  /diagnostics/acknowledge/{finding_id} -- mark a finding as acknowledged
 GET   /diagnostics/payer/{payer_id}         -- payer-specific diagnostic
 GET   /diagnostics/claim/{claim_id}         -- claim-specific diagnostic
@@ -13,7 +13,7 @@ GET   /diagnostics/claim/{claim_id}         -- claim-specific diagnostic
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, HTTPException
@@ -181,11 +181,12 @@ async def get_diagnostic_findings(
         return {"total": 0, "findings": []}
 
 
-@router.get("/refresh")
+@router.post("/refresh")
 async def refresh_diagnostics(db: AsyncSession = Depends(get_db)):
     """Re-run all 5 diagnostic detectors and persist results to the table."""
     try:
         result = await generate_system_diagnostics(db)
+        await db.commit()
         return {
             "status": "refreshed",
             "total_findings": result["total_findings"],
@@ -223,6 +224,20 @@ async def acknowledge_finding(finding_id: str, db: AsyncSession = Depends(get_db
     except Exception as e:
         logger.error(f"Acknowledge finding failed for {finding_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/resolve/{finding_id}")
+async def resolve_finding(finding_id: str, db: AsyncSession = Depends(get_db)):
+    finding = await db.get(DiagnosticFinding, finding_id)
+    if not finding:
+        raise HTTPException(status_code=404, detail=f"Finding {finding_id} not found")
+    if finding.status == "RESOLVED":
+        return {"finding_id": finding_id, "status": "RESOLVED", "message": "Already resolved"}
+    finding.status = "RESOLVED"
+    finding.resolved_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"finding_id": finding_id, "status": "RESOLVED", "title": finding.title,
+            "resolved_at": str(finding.resolved_at), "message": "Finding resolved successfully"}
 
 
 @router.get("/payer/{payer_id}")

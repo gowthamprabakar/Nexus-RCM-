@@ -15,7 +15,7 @@ import hashlib
 import json
 import logging
 from uuid import uuid4
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select, func, and_, desc, case, text
@@ -67,7 +67,7 @@ async def _persist_findings(db: AsyncSession, findings: list[dict]) -> None:
             root_cause=f.get("root_causes", [None])[0] if f.get("root_causes") else None,
             recommended_action=json.dumps(f.get("recommended_actions", [])),
             status="ACTIVE",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         ).on_conflict_do_update(
             index_elements=["finding_id"],
             set_={
@@ -79,10 +79,11 @@ async def _persist_findings(db: AsyncSession, findings: list[dict]) -> None:
                 "payer_name": f.get("metadata", {}).get("payer_name"),
                 "root_cause": f.get("root_causes", [None])[0] if f.get("root_causes") else None,
                 "recommended_action": json.dumps(f.get("recommended_actions", [])),
+                "status": "ACTIVE",
             },
         )
         await db.execute(stmt)
-    await db.commit()
+    await db.flush()
     logger.info(f"Persisted {len(findings)} diagnostic findings to DB")
 
 
@@ -318,53 +319,53 @@ async def _detect_payer_behavior(db: AsyncSession) -> list[dict]:
     )
     payers = payers_result.all()
 
+    ninety_days_ago = date.today() - timedelta(days=90)
+
+    # Bulk query 1: denial stats per payer (count + sum amount) in last 90 days
+    denial_stats_rows = await db.execute(
+        select(
+            Claim.payer_id,
+            func.count(Denial.denial_id).label("denial_count"),
+            func.coalesce(func.sum(Denial.denial_amount), 0).label("denial_amount"),
+        )
+        .select_from(Denial)
+        .join(Claim, Claim.claim_id == Denial.claim_id)
+        .where(Denial.denial_date >= ninety_days_ago)
+        .group_by(Claim.payer_id)
+    )
+    denial_stats: dict = {
+        row[0]: {"denial_count": row[1], "denial_amount": float(row[2])}
+        for row in denial_stats_rows
+    }
+
+    # Bulk query 2: total claims per payer in last 90 days
+    claim_stats_rows = await db.execute(
+        select(
+            Claim.payer_id,
+            func.count(Claim.claim_id).label("total_claims"),
+        )
+        .where(Claim.submission_date >= ninety_days_ago)
+        .group_by(Claim.payer_id)
+    )
+    claim_stats: dict = {row[0]: row[1] for row in claim_stats_rows}
+
     for payer_id, payer_name, historical_denial_rate in payers:
         if not historical_denial_rate or historical_denial_rate <= 0:
             continue
 
-        # Current denial count for this payer (last 90 days)
-        ninety_days_ago = date.today() - timedelta(days=90)
-        denial_count = await db.scalar(
-            select(func.count(Denial.denial_id))
-            .join(Claim, Claim.claim_id == Denial.claim_id)
-            .where(
-                and_(
-                    Claim.payer_id == payer_id,
-                    Denial.denial_date >= ninety_days_ago,
-                )
-            )
-        ) or 0
-
-        total_claims = await db.scalar(
-            select(func.count(Claim.claim_id))
-            .where(
-                and_(
-                    Claim.payer_id == payer_id,
-                    Claim.submission_date >= ninety_days_ago,
-                )
-            )
-        ) or 0
-
+        total_claims = claim_stats.get(payer_id, 0)
         if total_claims < 10:
             continue
+
+        payer_denial = denial_stats.get(payer_id, {"denial_count": 0, "denial_amount": 0})
+        denial_count = payer_denial["denial_count"]
+        denial_amount = payer_denial["denial_amount"]
 
         current_rate = denial_count / total_claims
         rate_ratio = current_rate / historical_denial_rate
 
         if rate_ratio <= 1.5:
             continue
-
-        # Calculate financial impact
-        denial_amount = await db.scalar(
-            select(func.sum(Denial.denial_amount))
-            .join(Claim, Claim.claim_id == Denial.claim_id)
-            .where(
-                and_(
-                    Claim.payer_id == payer_id,
-                    Denial.denial_date >= ninety_days_ago,
-                )
-            )
-        ) or 0
 
         severity = "critical" if rate_ratio > 2.0 else "warning"
 
