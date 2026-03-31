@@ -228,16 +228,33 @@ async def acknowledge_finding(finding_id: str, db: AsyncSession = Depends(get_db
 
 @router.post("/resolve/{finding_id}")
 async def resolve_finding(finding_id: str, db: AsyncSession = Depends(get_db)):
-    finding = await db.get(DiagnosticFinding, finding_id)
-    if not finding:
-        raise HTTPException(status_code=404, detail=f"Finding {finding_id} not found")
-    if finding.status == "RESOLVED":
-        return {"finding_id": finding_id, "status": "RESOLVED", "message": "Already resolved"}
-    finding.status = "RESOLVED"
-    finding.resolved_at = datetime.now(timezone.utc)
-    await db.commit()
-    return {"finding_id": finding_id, "status": "RESOLVED", "title": finding.title,
-            "resolved_at": str(finding.resolved_at), "message": "Finding resolved successfully"}
+    """Mark a diagnostic finding as resolved."""
+    try:
+        finding = await db.get(DiagnosticFinding, finding_id)
+        if not finding:
+            raise HTTPException(status_code=404, detail=f"Finding {finding_id} not found")
+        if finding.status == "RESOLVED":
+            return {
+                "finding_id": finding_id,
+                "status": "RESOLVED",
+                "message": "Already resolved",
+                "resolved_at": str(finding.resolved_at) if finding.resolved_at else None,
+            }
+        finding.status = "RESOLVED"
+        finding.resolved_at = datetime.now(timezone.utc)
+        await db.commit()
+        return {
+            "finding_id": finding_id,
+            "status": "RESOLVED",
+            "title": finding.title,
+            "resolved_at": str(finding.resolved_at),
+            "message": "Finding resolved successfully",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Resolve finding failed for {finding_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/payer/{payer_id}")
