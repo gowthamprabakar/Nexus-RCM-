@@ -37,6 +37,29 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Rule state load failed (non-fatal, using defaults): %s", exc)
 
+    try:
+        from pathlib import Path
+        ml_base = Path(__file__).resolve().parent / "ml"
+        (ml_base / "saved_models").mkdir(parents=True, exist_ok=True)
+        (ml_base / "artifacts").mkdir(parents=True, exist_ok=True)
+        _artifacts = {
+            "denial_probability": ml_base / "saved_models" / "denial_probability.joblib",
+            "payment_delay": ml_base / "saved_models" / "payment_delay.joblib",
+            "payer_anomaly": ml_base / "saved_models" / "payer_anomaly.joblib",
+            "propensity_to_pay": ml_base / "saved_models" / "propensity_to_pay.joblib",
+            "write_off": ml_base / "saved_models" / "write_off.joblib",
+            "carc_prediction": ml_base / "saved_models" / "carc_prediction.joblib",
+            "appeal_success": ml_base / "artifacts" / "appeal_success_model.joblib",
+        }
+        ready = [n for n, p in _artifacts.items() if p.exists()]
+        missing = [n for n, p in _artifacts.items() if not p.exists()]
+        if missing:
+            logger.warning("ML readiness: %d/%d trained. MISSING: %s", len(ready), len(_artifacts), ", ".join(missing))
+        else:
+            logger.info("ML readiness: all %d models present.", len(ready))
+    except Exception as exc:
+        logger.warning("ML startup check failed (non-fatal): %s", exc)
+
     yield
 
     # ── Shutdown ─────────────────────────────────────────────────────

@@ -173,10 +173,10 @@ class PropensityToPayModel:
                 CASE WHEN denied_count > 0 THEN 1 ELSE 0 END,
                 payer_denial_rate,
                 avg_pr_amount,
-                CASE WHEN SUM(total_pr_collected) / GREATEST(SUM(total_charges) * 0.1, 1) > 0.5 THEN 1 ELSE 0 END AS label
+                CASE WHEN total_pr_collected / GREATEST(total_charges * 0.1, 1) > 0.5 THEN 1 ELSE 0 END AS label
             FROM patient_stats
             GROUP BY total_charges, max_aging, payer_group, paid_count, num_claims,
-                     avg_charges, denied_count, payer_denial_rate, avg_pr_amount, total_pr_collected
+                     avg_charges, denied_count, payer_denial_rate, avg_pr_amount
             LIMIT 10000
         """)
         try:

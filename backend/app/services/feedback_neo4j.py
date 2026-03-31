@@ -14,10 +14,11 @@ import logging
 from datetime import date, timedelta
 from typing import List, Dict
 
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+from app.models.claim import Claim
 from app.models.denial import Appeal, Denial
 from app.services.neo4j_client import Neo4jClient, get_neo4j
 
@@ -217,16 +218,21 @@ async def run_feedback_cycle(db: AsyncSession) -> dict:
             }
 
         # --- 2. Build outcome dicts ---
-        # We need payer_id.  It's not on the Appeal/Denial tables directly,
-        # so we derive it from denial_category or use claim_id prefix as
-        # a fallback identifier for graph matching.
+        # Bulk-fetch payer_id for every claim referenced in the results.
+        all_claim_ids = list({row.claim_id for row in rows if row.claim_id})
+        payer_map: Dict[str, str] = {}
+        if all_claim_ids:
+            payer_result = await db.execute(
+                text("SELECT claim_id, payer_id FROM claims WHERE claim_id IN :ids"),
+                {"ids": tuple(all_claim_ids)},
+            )
+            payer_map = {r.claim_id: r.payer_id for r in payer_result.all() if r.payer_id}
+
         outcomes: List[Dict] = []
         payer_claims: Dict[str, Dict] = {}  # payer_id -> aggregated stats
 
         for row in rows:
-            # Use first segment of claim_id as payer proxy when payer_id
-            # is not stored on the denial record.
-            payer_id = row.claim_id.split("-")[0] if row.claim_id else "UNKNOWN"
+            payer_id = payer_map.get(row.claim_id, "UNKNOWN")
 
             outcomes.append({
                 "denial_id": row.denial_id,

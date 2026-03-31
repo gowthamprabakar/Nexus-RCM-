@@ -52,17 +52,12 @@ class ProviderRiskModel:
         peer_stats = await self._get_peer_stats(db, specialty=specialty)
         score, factors = self._compute_score(stats, peer_stats)
 
-        peer_scores = []
-        all_provs = await self._get_all_provider_ids(db)
-        for pid in all_provs[:50]:
-            ps = await self._get_provider_stats(db, pid)
-            if ps:
-                s, _ = self._compute_score(ps, peer_stats)
-                peer_scores.append(s)
-        if peer_scores:
-            percentile = sum(1 for s in peer_scores if s <= score) / len(peer_scores) * 100
+        all_scores = await self.score_all_providers(db)
+        all_score_vals = [s["risk_score"] for s in all_scores]
+        if all_score_vals:
+            percentile = sum(1 for s in all_score_vals if s <= score) / len(all_score_vals) * 100
         else:
-            percentile = 50
+            percentile = 50.0
 
         return {
             "provider_id": provider_id,
@@ -204,8 +199,8 @@ class ProviderRiskModel:
             ,modifier_stats AS (
                 SELECT
                     COALESCE(
-                        COUNT(CASE WHEN cl.modifiers IS NOT NULL AND cl.modifiers != '' THEN 1 END)::float
-                        / GREATEST(COUNT(cl.claim_line_id), 1),
+                        COUNT(CASE WHEN cl.modifier_1 IS NOT NULL OR cl.modifier_2 IS NOT NULL THEN 1 END)::float
+                        / GREATEST(COUNT(cl.line_id), 1),
                         0
                     ) AS modifier_usage_rate
                 FROM claim_lines cl

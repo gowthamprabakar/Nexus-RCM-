@@ -163,9 +163,47 @@ async def _job_refresh_neo4j():
 
 
 async def _job_run_predictions():
-    """Placeholder: run ML model predictions (ADTP, denial probability, etc.)."""
+    """Warm-up / validate ML model singletons so first real request is fast."""
+    import importlib
+
+    warmed: list[str] = []
+    failed: list[str] = []
+
+    # --- Core singletons exposed by predictions.py ---
+    for cls_name, module_path in [
+        ("DenialProbabilityModel", "app.ml.denial_probability"),
+        ("AppealSuccessModel", "app.ml.appeal_success"),
+    ]:
+        try:
+            mod = importlib.import_module(module_path)
+            _inst = getattr(mod, cls_name)()          # singleton / cached __init__
+            warmed.append(cls_name)
+        except Exception as exc:
+            failed.append(cls_name)
+            logger.warning("run_predictions: failed to warm %s: %s", cls_name, exc)
+
+    # --- Additional ML modules ---
+    extra_modules = [
+        ("PaymentDelay", "app.ml.payment_delay"),
+        ("PropensityToPay", "app.ml.propensity_to_pay"),
+        ("WriteOff", "app.ml.write_off"),
+        ("CARCPrediction", "app.ml.carc_prediction"),
+        ("PayerAnomaly", "app.ml.payer_anomaly"),
+    ]
+    for cls_name, module_path in extra_modules:
+        try:
+            mod = importlib.import_module(module_path)
+            _inst = getattr(mod, cls_name)()
+            warmed.append(cls_name)
+        except Exception as exc:
+            failed.append(cls_name)
+            logger.warning("run_predictions: failed to warm %s: %s", cls_name, exc)
+
     logger.info(
-        "run_predictions: placeholder -- no-op for now."
+        "run_predictions: %d model(s) warmed, %d failed %s",
+        len(warmed),
+        len(failed),
+        failed if failed else "",
     )
 
 
