@@ -60,6 +60,16 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("ML startup check failed (non-fatal): %s", exc)
 
+    try:
+        from app.db.session import AsyncSessionLocal
+        from app.services.governance_store import ensure_table
+        async with AsyncSessionLocal() as db:
+            await ensure_table(db)
+            await db.commit()
+        logger.info("Governance store: ml_prediction_log table ready.")
+    except Exception as exc:
+        logger.warning("Governance store setup failed (non-fatal): %s", exc)
+
     yield
 
     # ── Shutdown ─────────────────────────────────────────────────────

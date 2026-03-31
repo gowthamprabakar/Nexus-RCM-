@@ -18,6 +18,9 @@ router = APIRouter()
 _denial_model = None
 _appeal_model = None
 
+from app.ml.model_governance import ModelGovernance as _GovernanceCls
+_governance = _GovernanceCls()
+
 
 def _get_denial_model():
     global _denial_model
@@ -48,6 +51,14 @@ async def predict_denial_probability(
         return {"error": "Model not trained. POST /predictions/train/denial-probability first."}
     try:
         result = await model.predict_claim(db, claim_id)
+        prob = result.get("probability")
+        if prob is not None:
+            _governance.log_prediction("denial_probability", {}, float(prob))
+            try:
+                from app.services.governance_store import log_prediction_to_db
+                await log_prediction_to_db(db, "denial_probability", float(prob))
+            except Exception:
+                pass
         return {"claim_id": claim_id, **result}
     except Exception as e:
         return {"error": str(e), "claim_id": claim_id}
@@ -64,6 +75,14 @@ async def predict_appeal_success(
         return {"error": "Model not trained. POST /predictions/train/appeal-success first."}
     try:
         result = await model.predict_denial(db, denial_id)
+        prob = result.get("probability")
+        if prob is not None:
+            _governance.log_prediction("appeal_success", {}, float(prob))
+            try:
+                from app.services.governance_store import log_prediction_to_db
+                await log_prediction_to_db(db, "appeal_success", float(prob))
+            except Exception:
+                pass
         return {"denial_id": denial_id, **result}
     except Exception as e:
         return {"error": str(e), "denial_id": denial_id}
@@ -214,6 +233,14 @@ async def predict_payment_delay(
         from app.ml.payment_delay import PaymentDelayModel
         model = PaymentDelayModel()
         result = await model.predict_claim(db, claim_id)
+        val = result.get("predicted_days")
+        if val is not None:
+            _governance.log_prediction("payment_delay", {}, float(val))
+            try:
+                from app.services.governance_store import log_prediction_to_db
+                await log_prediction_to_db(db, "payment_delay", float(val))
+            except Exception:
+                pass
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -247,6 +274,14 @@ async def predict_propensity(
         from app.ml.propensity_to_pay import PropensityToPayModel
         model = PropensityToPayModel()
         result = await model.predict_patient(db, patient_id)
+        val = result.get("probability")
+        if val is not None:
+            _governance.log_prediction("propensity_to_pay", {}, float(val))
+            try:
+                from app.services.governance_store import log_prediction_to_db
+                await log_prediction_to_db(db, "propensity_to_pay", float(val))
+            except Exception:
+                pass
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -262,6 +297,14 @@ async def predict_write_off(
         from app.ml.write_off_model import WriteOffModel
         model = WriteOffModel()
         result = await model.predict_claim(db, claim_id)
+        val = result.get("write_off_probability")
+        if val is not None:
+            _governance.log_prediction("write_off", {}, float(val))
+            try:
+                from app.services.governance_store import log_prediction_to_db
+                await log_prediction_to_db(db, "write_off", float(val))
+            except Exception:
+                pass
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -277,6 +320,14 @@ async def predict_provider_risk(
         from app.ml.provider_risk import ProviderRiskModel
         model = ProviderRiskModel()
         result = await model.score_provider(db, provider_id)
+        val = result.get("risk_score")
+        if val is not None and val != "No data":
+            _governance.log_prediction("provider_risk", {}, float(val))
+            try:
+                from app.services.governance_store import log_prediction_to_db
+                await log_prediction_to_db(db, "provider_risk", float(val))
+            except Exception:
+                pass
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -306,6 +357,16 @@ async def predict_carc(
         from app.ml.carc_prediction import CARCPredictionModel
         model = CARCPredictionModel()
         result = await model.predict_claim(db, claim_id)
+        top3 = result.get("top_3_carc", [])
+        if top3:
+            val = top3[0].get("probability")
+            if val is not None:
+                _governance.log_prediction("carc_prediction", {}, float(val))
+                try:
+                    from app.services.governance_store import log_prediction_to_db
+                    await log_prediction_to_db(db, "carc_prediction", float(val))
+                except Exception:
+                    pass
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -474,8 +535,6 @@ async def get_org_health(
 async def get_model_governance_status() -> Any:
     """Get governance status for all registered ML models."""
     try:
-        from app.ml.model_governance import ModelGovernance
-        gov = ModelGovernance()
-        return {"models": gov.get_status()}
+        return {"models": _governance.get_status()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
