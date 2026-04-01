@@ -462,23 +462,31 @@ function ScenarioResultCard({ result, isRunning, onRunNow }) {
           </div>
 
           {/* Expected outcomes for pending scenarios */}
-          {status === 'pending' && expectedOutcomes && (
+          {status === 'pending' && expectedOutcomes && (expectedOutcomes.revenue_recovery_low != null || expectedOutcomes.denial_rate_change != null) && (
             <div className="mt-2 px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/15">
               <p className="text-[10px] font-bold uppercase tracking-wider text-blue-400 mb-1">Projected Outcomes</p>
               <div className="flex items-center gap-4 flex-wrap">
-                {(expectedOutcomes.projected_recovery_range || expectedOutcomes.recovery_range) && (
+                {expectedOutcomes.revenue_recovery_low != null && expectedOutcomes.revenue_recovery_high != null && (
                   <div className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-xs text-blue-400">attach_money</span>
-                    <span className="text-[11px] text-blue-300 font-semibold tabular-nums">
-                      Recovery: {expectedOutcomes.projected_recovery_range || expectedOutcomes.recovery_range}
+                    <span className="material-symbols-outlined text-xs text-emerald-400">trending_up</span>
+                    <span className="text-[11px] text-emerald-300 font-semibold tabular-nums">
+                      ${(expectedOutcomes.revenue_recovery_low / 1e6).toFixed(1)}M–${(expectedOutcomes.revenue_recovery_high / 1e6).toFixed(1)}M recovery
                     </span>
                   </div>
                 )}
-                {(expectedOutcomes.denial_rate_change != null || expectedOutcomes.projected_denial_change != null) && (
+                {expectedOutcomes.denial_rate_change != null && (
                   <div className="flex items-center gap-1">
-                    <span className="material-symbols-outlined text-xs text-blue-400">trending_down</span>
+                    <span className="material-symbols-outlined text-xs text-blue-400">percent</span>
                     <span className="text-[11px] text-blue-300 font-semibold tabular-nums">
-                      Denial Rate: {expectedOutcomes.denial_rate_change ?? expectedOutcomes.projected_denial_change}%
+                      {expectedOutcomes.denial_rate_change > 0 ? '+' : ''}{expectedOutcomes.denial_rate_change}% denial rate
+                    </span>
+                  </div>
+                )}
+                {expectedOutcomes.ar_days_change != null && (
+                  <div className="flex items-center gap-1">
+                    <span className="material-symbols-outlined text-xs text-blue-400">schedule</span>
+                    <span className="text-[11px] text-blue-300 font-semibold tabular-nums">
+                      {expectedOutcomes.ar_days_change > 0 ? '+' : ''}{expectedOutcomes.ar_days_change} AR days
                     </span>
                   </div>
                 )}
@@ -533,6 +541,28 @@ function ScenarioResultCard({ result, isRunning, onRunNow }) {
                   ))}
                 </tbody>
               </table>
+              {/* Round evolution — show decision changes between rounds */}
+              {rounds.length >= 2 && (
+                <div className="px-3 py-2 bg-th-surface-overlay/30 border-t border-th-border/30">
+                  <p className="text-[9px] text-th-muted font-semibold uppercase tracking-wider mb-1">Round Evolution</p>
+                  <div className="flex flex-wrap gap-2">
+                    {payerBreakdown.map((p, i) => {
+                      const r1 = rounds[0]?.decisions?.find(d => d.payer === p.payer);
+                      const r2 = rounds[1]?.decisions?.find(d => d.payer === p.payer);
+                      if (!r1 || !r2 || r1.decision === r2.decision) return null;
+                      return (
+                        <span key={i} className="text-[9px] text-th-secondary">
+                          {p.payer}: <span className="text-th-muted">{r1.decision}</span>
+                          {' → '}
+                          <span className={r2.decision === 'approve' ? 'text-emerald-400 font-semibold' : r2.decision === 'deny' ? 'text-red-400 font-semibold' : 'text-amber-400 font-semibold'}>
+                            {r2.decision}
+                          </span>
+                        </span>
+                      );
+                    }).filter(Boolean)}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

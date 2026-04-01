@@ -213,7 +213,7 @@ export function RootCauseGraph({
 
       {/* MiroFish Agent Swarm verdict */}
       {miroStep && miroStep.finding_status !== 'INCONCLUSIVE' && miroStep.finding && !miroStep.finding.startsWith('MiroFish unavailable') && !miroStep.finding.startsWith('MiroFish agent validation timed out') && (() => {
-        const isConfirmed = miroStep.finding_status === 'PASS';
+        const isConfirmed = miroStep.finding_status === 'CONFIRMED';
         const cleanedFinding = (miroStep.finding || '').replace(/^MiroFish(?:\s+Agent)?\s*(?:Swarm)?\s*:\s*/i, '');
         const weight = miroStep.contribution_weight != null ? Math.round(miroStep.contribution_weight * 100) : null;
         return (
