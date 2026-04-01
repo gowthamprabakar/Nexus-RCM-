@@ -32,6 +32,11 @@ class RootCauseAnalysis(Base):
     # AI-generated explanation
     evidence_summary = Column(Text, nullable=True)
 
+    # ML model predictions
+    ml_denial_probability = Column(Float, nullable=True)
+    ml_write_off_probability = Column(Float, nullable=True)
+    ml_predicted_carc = Column(String(100), nullable=True)
+
     # Classification group
     root_cause_group = Column(String(30), nullable=False, index=True)
     # PREVENTABLE | PROCESS | PAYER | CLINICAL

@@ -249,7 +249,7 @@ export function RootCauseIntelligence() {
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${GROUP_COLORS[row.group] || 'bg-th-surface-overlay text-th-muted border-th-border'}`}>{row.group}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <Link to={`/analytics/root-cause/claim/${row.claim_id}`} className="text-xs font-bold text-primary hover:underline">View</Link>
+                      <Link to={`/analytics/denials/root-cause/claims?cause=${row.root_cause}`} className="text-xs font-bold text-primary hover:underline">Claims &rarr;</Link>
                     </td>
                   </tr>
                 ))}

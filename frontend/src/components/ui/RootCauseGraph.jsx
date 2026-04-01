@@ -72,7 +72,8 @@ export function RootCauseGraph({
   // Filter out SYNTHESIS step (last step) and separate CARC_DECODE (first step)
   const filteredSteps = steps.filter(s => s.step_name !== 'SYNTHESIS' && s.step_name !== 'ROOT_CAUSE_SYNTHESIS');
   const decodeStep = filteredSteps.find(s => s.step_name === 'CARC_RARC_DECODE');
-  const evidenceSteps = filteredSteps.filter(s => s.step_name !== 'CARC_RARC_DECODE');
+  const miroStep = filteredSteps.find(s => s.step_name === 'MIROFISH_AGENT_VALIDATION');
+  const evidenceSteps = filteredSteps.filter(s => s.step_name !== 'CARC_RARC_DECODE' && s.step_name !== 'MIROFISH_AGENT_VALIDATION');
 
   // Lay out evidence nodes in rows of 3
   const rows = [];
@@ -209,6 +210,29 @@ export function RootCauseGraph({
           )}
         </div>
       ))}
+
+      {/* MiroFish Agent Swarm verdict */}
+      {miroStep && miroStep.finding_status !== 'INCONCLUSIVE' && miroStep.finding && !miroStep.finding.startsWith('MiroFish unavailable') && !miroStep.finding.startsWith('MiroFish agent validation timed out') && (() => {
+        const isConfirmed = miroStep.finding_status === 'PASS';
+        const cleanedFinding = (miroStep.finding || '').replace(/^MiroFish(?:\s+Agent)?\s*(?:Swarm)?\s*:\s*/i, '');
+        const weight = miroStep.contribution_weight != null ? Math.round(miroStep.contribution_weight * 100) : null;
+        return (
+          <div className={`rounded-lg border p-3 mt-1 ${isConfirmed ? 'border-violet-500/30 bg-violet-500/10' : 'border-amber-500/30 bg-amber-500/10'}`}>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="material-symbols-outlined text-sm" style={{ color: isConfirmed ? '#8b5cf6' : '#f59e0b' }}>
+                {isConfirmed ? 'verified' : 'warning'}
+              </span>
+              <span className={`text-[10px] font-black uppercase tracking-wider ${isConfirmed ? 'text-violet-400' : 'text-amber-400'}`}>
+                MiroFish Swarm: {isConfirmed ? 'CONFIRMED' : 'DISPUTED'}
+              </span>
+              {weight != null && weight > 0 && (
+                <span className="text-[10px] text-th-muted tabular-nums ml-auto">{weight} pts</span>
+              )}
+            </div>
+            <p className="text-[10px] text-th-secondary leading-relaxed">{cleanedFinding}</p>
+          </div>
+        );
+      })()}
 
       {/* Verdict bar */}
       <div className="rounded-lg border border-th-border bg-th-surface-overlay/50 p-3 mt-2">

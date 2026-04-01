@@ -3,6 +3,8 @@ import { cn } from '../../../lib/utils';
 import { api } from '../../../services/api';
 import { AIInsightCard } from '../../../components/ui';
 
+function parseTriggerData(str) { if (!str) return {}; try { return JSON.parse(str); } catch { return {}; } }
+
 const statusConfig = {
   active: { label: 'Active', className: 'bg-emerald-500/15 text-emerald-400' },
   paused: { label: 'Paused', className: 'bg-amber-500/15 text-amber-400' },
@@ -321,6 +323,25 @@ export function AutomationDashboard() {
                   {item.estimated_impact > 0 && (
                     <p className="text-xs text-th-secondary mt-0.5">Impact: {fmt(item.estimated_impact)} -- {item.affected_claims || 0} claims</p>
                   )}
+                  {(() => {
+                    const td = parseTriggerData(item.trigger_data);
+                    const vn = td.validation_notes;
+                    const rf = td.risk_flags || [];
+                    if (!vn || vn === 'unavailable' || vn === 'timed out') return null;
+                    return (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-500/10 text-violet-400 border border-violet-500/20 max-w-[320px] truncate">
+                          <span className="material-symbols-outlined" style={{fontSize:'11px'}}>science</span>
+                          {vn.length > 90 ? vn.slice(0, 90) + '...' : vn}
+                        </span>
+                        {rf.slice(0, 3).map((flag, fi) => (
+                          <span key={fi} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            {flag}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <div className="w-16 h-1.5 bg-th-surface-overlay rounded-full overflow-hidden">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ConfidenceBar } from '../../../components/ui';
-import RootCauseTree from '../components/RootCauseTree';
+import { RootCauseTree } from '../../../components/ui/RootCauseTree';
 
 export function ClaimsAnalytics() {
  return (

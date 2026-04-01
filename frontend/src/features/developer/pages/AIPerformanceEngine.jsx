@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import RootCauseTree from '../../analytics/components/RootCauseTree';
+import { RootCauseTree } from '../../../components/ui/RootCauseTree';
 
 // ─── Badge Components ───────────────────────────────────────────────────────
 

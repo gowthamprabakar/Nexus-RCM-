@@ -344,6 +344,7 @@ function SwarmStatusBar({ isActive, agentCount, modelName, neo4jNodes, lastSimTi
 
 /* ── Scenario Result Card ────────────────────────────────────────────── */
 function ScenarioResultCard({ result, isRunning, onRunNow }) {
+  const [expanded, setExpanded] = React.useState(false);
   const scenarioId = result.scenario_id || result.id || '';
   const meta = SCENARIO_META[scenarioId] || { icon: 'science', color: 'from-gray-500 to-gray-600', accent: 'gray' };
   const label = SCENARIO_LABELS[scenarioId] || scenarioId.toUpperCase().slice(0, 7);
@@ -354,6 +355,11 @@ function ScenarioResultCard({ result, isRunning, onRunNow }) {
   const confidence = result.confidence ?? result.confidence_score;
   const summary = result.executive_summary || result.summary || result.description || '';
   const elapsed = result.elapsed_time || result.duration || result.elapsed;
+
+  const simResults = result.results || {};
+  const payerBreakdown = simResults.payer_breakdown || result.payer_breakdown || [];
+  const rounds = result.rounds || [];
+  const engine = result.engine || '';
 
   return (
     <div className="rounded-xl border border-th-border bg-th-surface-raised p-4 hover:border-th-primary/30 transition-all duration-200">
@@ -407,6 +413,51 @@ function ScenarioResultCard({ result, isRunning, onRunNow }) {
           {/* Executive summary */}
           {summary && (
             <p className="text-[11px] text-th-secondary mt-2 line-clamp-2 leading-relaxed">{summary}</p>
+          )}
+
+          {/* Engine badge */}
+          {engine === 'lightweight_ollama' && (
+            <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <span className="material-symbols-outlined text-[10px]">bolt</span>
+              Lightweight Ollama
+            </span>
+          )}
+
+          {/* Expand toggle for payer breakdown */}
+          {payerBreakdown.length > 0 && (
+            <button
+              onClick={() => setExpanded((prev) => !prev)}
+              className="flex items-center gap-1 mt-2 text-[11px] font-semibold text-th-primary hover:text-th-primary/80 transition-colors"
+            >
+              <span className="material-symbols-outlined text-sm">{expanded ? 'expand_less' : 'expand_more'}</span>
+              {expanded ? 'Hide' : 'Show'} Payer Breakdown ({payerBreakdown.length})
+            </button>
+          )}
+
+          {/* Payer breakdown table */}
+          {expanded && payerBreakdown.length > 0 && (
+            <div className="mt-3 rounded-lg border border-th-border overflow-hidden">
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr className="bg-th-surface-overlay">
+                    <th className="text-left px-3 py-1.5 font-bold text-th-heading">Payer</th>
+                    <th className="text-left px-3 py-1.5 font-bold text-th-heading">Decision</th>
+                    <th className="text-right px-3 py-1.5 font-bold text-th-heading">Impact %</th>
+                    <th className="text-right px-3 py-1.5 font-bold text-th-heading">Confidence</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payerBreakdown.map((row, idx) => (
+                    <tr key={idx} className="border-t border-th-border hover:bg-th-surface-overlay/50">
+                      <td className="px-3 py-1.5 text-th-heading font-medium">{row.payer || row.payer_name || '--'}</td>
+                      <td className="px-3 py-1.5 text-th-secondary">{row.decision || row.action || '--'}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-th-secondary">{row.impact_pct != null ? `${row.impact_pct}%` : '--'}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-th-secondary">{row.confidence != null ? `${row.confidence}%` : '--'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 

@@ -631,6 +631,12 @@ async def analyze_denial_root_cause(db: AsyncSession, denial_id: str) -> dict:
             financial_impact=float(denial.denial_amount or 0),
             resolution_path=resolution_paths.get(primary_root_cause, "Manual review recommended."),
         )
+        try:
+            rca.ml_denial_probability = _denial_prob if _denial_prob else None
+            rca.ml_write_off_probability = _write_off_prob if _write_off_prob else None
+            rca.ml_predicted_carc = ",".join(_carc_top[:3]) if _carc_top else None
+        except NameError:
+            pass
         db.add(rca)
 
         # Create step records
@@ -759,6 +765,9 @@ async def get_claim_root_cause(db: AsyncSession, claim_id: str) -> dict:
                 "financial_impact": rca.financial_impact,
                 "resolution_path": rca.resolution_path,
                 "evidence_summary": rca.evidence_summary,
+                "ml_denial_probability": getattr(rca, 'ml_denial_probability', None),
+                "ml_write_off_probability": getattr(rca, 'ml_write_off_probability', None),
+                "ml_predicted_carc": getattr(rca, 'ml_predicted_carc', None),
                 "created_at": str(rca.created_at) if rca.created_at else None,
                 "steps": [
                     {
