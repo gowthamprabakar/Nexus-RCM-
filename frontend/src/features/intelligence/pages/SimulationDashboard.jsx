@@ -124,6 +124,37 @@ export function SimulationDashboard() {
     async function init() {
       setLoading(true);
       await Promise.all([fetchSchedulerStatus(), fetchPayerAgents()]);
+
+      // Fallback: load scenarios from NEXUS API if no results were populated
+      if (!cancelled) {
+        setScenarioResults((prev) => {
+          if (prev.length > 0) return prev; // already have results, skip
+          // Attempt to load from NEXUS getScenarios
+          (async () => {
+            try {
+              const data = await api.simulation.getScenarios();
+              const scenarios = Array.isArray(data) ? data : data?.scenarios || [];
+              if (scenarios.length > 0) {
+                const placeholders = scenarios.map((s) => ({
+                  scenario_id: s.scenario_id || s.id,
+                  scenario_name: s.scenario_name || s.name || s.title,
+                  status: s.status || 'pending',
+                  revenue_impact: s.revenue_impact ?? null,
+                  risk_level: s.risk_level || null,
+                  confidence: s.confidence ?? null,
+                  executive_summary: s.executive_summary || s.description || 'Awaiting simulation results...',
+                  expected_outcomes: s.expected_outcomes || null,
+                }));
+                setScenarioResults(placeholders);
+              }
+            } catch (err) {
+              console.warn('NEXUS getScenarios fallback failed:', err);
+            }
+          })();
+          return prev;
+        });
+      }
+
       if (!cancelled) setLoading(false);
     }
     init();
@@ -139,13 +170,31 @@ export function SimulationDashboard() {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [fetchSchedulerStatus, fetchPayerAgents]);
 
-  /* ── Run Now ────────────────────────────────────────────────────────── */
+  /* ── Run Now (NEXUS fallback) ────────────────────────────────────────── */
   const handleRunNow = useCallback(async (scenarioId) => {
     setRunningScenarios((prev) => new Set(prev).add(scenarioId));
     try {
-      const result = await api.simulation.runScenarioNow(scenarioId);
+      let result;
+      try {
+        result = await api.simulation.runScenarioNow(scenarioId);
+      } catch (primaryErr) {
+        console.warn(`runScenarioNow failed for ${scenarioId}, falling back to runScenario:`, primaryErr);
+        result = await api.simulation.runScenario({ scenario_id: scenarioId });
+      }
       if (!result) throw new Error('Run now returned no data');
-      // Refresh status after a short delay to pick up new results
+
+      // Inject result immediately so the UI updates without waiting for poll
+      setScenarioResults((prev) => {
+        const idx = prev.findIndex((r) => (r.scenario_id || r.id) === scenarioId);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = { ...updated[idx], ...result };
+          return updated;
+        }
+        return [...prev, result];
+      });
+
+      // Also refresh in background after a short delay
       setTimeout(() => {
         fetchSchedulerStatus();
         setRunningScenarios((prev) => {
@@ -193,18 +242,6 @@ export function SimulationDashboard() {
         </p>
       </div>
 
-      {/* ── Swarm Status Bar ────────────────────────────────────────────── */}
-      <SwarmStatusBar
-        isActive={isActive}
-        agentCount={agentCount}
-        modelName={modelName}
-        neo4jNodes={neo4jNodes}
-        lastSimTime={lastSimTime}
-        nextRunTime={nextRunTime}
-        lastGraphUpdate={lastGraphUpdate}
-        loading={loading}
-      />
-
       {/* ── Scenario Results ────────────────────────────────────────────── */}
       <SectionTitle icon="science" label="Scenario Results" subtitle="Pre-loaded from latest simulation runs" />
       <div className="space-y-3 mb-10">
@@ -221,6 +258,18 @@ export function SimulationDashboard() {
           <EmptyScenarioPlaceholder loading={loading} />
         )}
       </div>
+
+      {/* ── Swarm Status Bar ────────────────────────────────────────────── */}
+      <SwarmStatusBar
+        isActive={isActive}
+        agentCount={agentCount}
+        modelName={modelName}
+        neo4jNodes={neo4jNodes}
+        lastSimTime={lastSimTime}
+        nextRunTime={nextRunTime}
+        lastGraphUpdate={lastGraphUpdate}
+        loading={loading}
+      />
 
       {/* ── Payer Digital Twins ─────────────────────────────────────────── */}
       <SectionTitle icon="groups" label="Payer Digital Twins" subtitle={`${agentCount} MiroFish agents modeling real payer behavior`} />
@@ -356,6 +405,8 @@ function ScenarioResultCard({ result, isRunning, onRunNow }) {
   const summary = result.executive_summary || result.summary || result.description || '';
   const elapsed = result.elapsed_time || result.duration || result.elapsed;
 
+  const expectedOutcomes = result.expected_outcomes || null;
+
   const simResults = result.results || {};
   const payerBreakdown = simResults.payer_breakdown || result.payer_breakdown || [];
   const rounds = result.rounds || [];
@@ -409,6 +460,31 @@ function ScenarioResultCard({ result, isRunning, onRunNow }) {
               </div>
             )}
           </div>
+
+          {/* Expected outcomes for pending scenarios */}
+          {status === 'pending' && expectedOutcomes && (
+            <div className="mt-2 px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/15">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-blue-400 mb-1">Projected Outcomes</p>
+              <div className="flex items-center gap-4 flex-wrap">
+                {(expectedOutcomes.projected_recovery_range || expectedOutcomes.recovery_range) && (
+                  <div className="flex items-center gap-1">
+                    <span className="material-symbols-outlined text-xs text-blue-400">attach_money</span>
+                    <span className="text-[11px] text-blue-300 font-semibold tabular-nums">
+                      Recovery: {expectedOutcomes.projected_recovery_range || expectedOutcomes.recovery_range}
+                    </span>
+                  </div>
+                )}
+                {(expectedOutcomes.denial_rate_change != null || expectedOutcomes.projected_denial_change != null) && (
+                  <div className="flex items-center gap-1">
+                    <span className="material-symbols-outlined text-xs text-blue-400">trending_down</span>
+                    <span className="text-[11px] text-blue-300 font-semibold tabular-nums">
+                      Denial Rate: {expectedOutcomes.denial_rate_change ?? expectedOutcomes.projected_denial_change}%
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Executive summary */}
           {summary && (
@@ -522,6 +598,7 @@ function EmptyScenarioPlaceholder({ loading }) {
 
 /* ── Payer Agent Card ─────────────────────────────────────────────────── */
 function PayerAgentCard({ agent, onInterview }) {
+  const [showCauses, setShowCauses] = React.useState(false);
   const name = agent.name || agent.agent_name || 'Unknown';
   const denialRate = agent.denial_rate ?? agent.denialRate;
   const adtp = agent.adtp ?? agent.avg_days_to_pay;
@@ -575,6 +652,29 @@ function PayerAgentCard({ agent, onInterview }) {
           </div>
         )}
       </div>
+
+      {/* Root cause distribution */}
+      {agent.root_cause_distribution && agent.root_cause_distribution.length > 0 && (
+        <>
+          <button
+            onClick={() => setShowCauses((prev) => !prev)}
+            className="mt-2 flex items-center gap-1 w-full text-[10px] font-semibold text-th-primary hover:text-th-primary/80 transition-colors"
+          >
+            <span className="material-symbols-outlined text-sm">{showCauses ? 'expand_less' : 'expand_more'}</span>
+            {showCauses ? 'Hide' : 'Top'} Root Causes
+          </button>
+          {showCauses && (
+            <div className="mt-1 space-y-1">
+              {agent.root_cause_distribution.slice(0, 3).map((cause, idx) => (
+                <div key={idx} className="flex items-center justify-between px-2 py-1 rounded-md bg-th-surface-overlay/50">
+                  <span className="text-[10px] text-th-secondary truncate mr-2">{cause.cause || cause.reason || cause.label || `Cause ${idx + 1}`}</span>
+                  <span className="text-[10px] font-bold tabular-nums text-th-heading shrink-0">{cause.percentage ?? cause.pct ?? cause.count}%</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
 
       {/* Interview button */}
       <button

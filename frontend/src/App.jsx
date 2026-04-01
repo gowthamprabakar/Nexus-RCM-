@@ -51,6 +51,7 @@ import AppealPipelineTracker from './features/denials/pages/AppealPipelineTracke
 import { HighRiskClaims } from './features/denials/pages/HighRiskClaims';
 import { AppealGenerator } from './features/denials/pages/AppealGenerator';
 import { DenialWorkflowLog } from './features/denials/pages/DenialWorkflowLog';
+import DenialIntelligence from './features/denials/pages/DenialIntelligence';
 import { CollectionsQueue } from './features/collections/pages/CollectionsQueue';
 import { AlertsQueue } from './features/collections/pages/AlertsQueue';
 import { PaymentPortal } from './features/collections/pages/PaymentPortal';
@@ -244,6 +245,7 @@ function App() {
                     <Route path="high-risk" element={<HighRiskClaims />} />
                     <Route path="appeals" element={<AppealGenerator />} />
                     <Route path="workflow-log" element={<DenialWorkflowLog />} />
+                    <Route path="claim/:id" element={<DenialIntelligence />} />
                 </Route>
 
                 {/* Appeal Pipeline */}
