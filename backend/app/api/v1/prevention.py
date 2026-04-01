@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
 from app.core.deps import get_db
-from app.services.prevention_service import scan_claims_for_prevention, get_prevention_summary
+from app.services.prevention_service import scan_claims_for_prevention, get_prevention_summary, _bust_prevention_cache
 
 router = APIRouter()
 
@@ -51,7 +51,7 @@ async def prevention_summary(db: AsyncSession = Depends(get_db)):
 # ---------------------------------------------------------------------------
 @router.get("/alerts")
 async def prevention_alerts(
-    prevention_type: Optional[str] = Query(None, description="Filter by type: ELIGIBILITY, AUTH_EXPIRY, TIMELY_FILING, DUPLICATE, PAYER_CPT_RISK"),
+    prevention_type: Optional[str] = Query(None, description="Filter by type: ELIGIBILITY_RISK, AUTH_EXPIRY, TIMELY_FILING_RISK, DUPLICATE_CLAIM, HIGH_RISK_PAYER_CPT"),
     severity: Optional[str] = Query(None, description="Filter by severity: CRITICAL, WARNING, INFO"),
     payer: Optional[str] = Query(None, description="Filter by payer name (partial match)"),
     page: int = Query(1, ge=1),
@@ -96,6 +96,7 @@ async def prevention_alerts(
 async def dismiss_alert(alert_id: str):
     """Mark a prevention alert as reviewed/dismissed."""
     _dismissed.add(alert_id)
+    _bust_prevention_cache()
     return {
         "status": "dismissed",
         "alert_id": alert_id,

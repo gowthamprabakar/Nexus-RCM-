@@ -488,7 +488,7 @@ async def _build_prevention_alert_nodes(db: AsyncSession) -> list:
                     "severity": alert.get("severity", "warning"),
                 }
             alert_groups[atype]["count"] += 1
-            alert_groups[atype]["total_risk"] += float(alert.get("risk_amount", 0))
+            alert_groups[atype]["total_risk"] += float(alert.get("revenue_at_risk", 0))
             if len(alert_groups[atype]["claim_ids"]) < 5:
                 alert_groups[atype]["claim_ids"].append(alert.get("claim_id", ""))
 

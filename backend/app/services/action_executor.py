@@ -12,7 +12,12 @@ Supported rule_id dispatch:
   AUTO-001  Root cause classification  (updates denial.root_cause_status)
   AUTO-002  Appeal generation          (creates record in appeals table)
   AUTO-003  Payment posting            (updates claim status, creates ERA payment)
+  AUTO-006  High-risk hold             (sets claims to HOLD_HIGH_RISK)
   AUTO-008  Claim resubmission         (updates claim status to SUBMITTED)
+  AUTO-009  Timely filing escalation   (sets claims to HOLD_TIMELY_FILING)
+  AUTO-010  Auth renewal               (sets claims to HOLD_AUTH_RENEWAL)
+  AUTO-011  Eligibility re-verification(sets claims to HOLD_ELIG_REVERIF)
+  AUTO-012  Duplicate claim hold       (holds duplicates as HOLD_DUPLICATE)
   AUTO-014  Underpayment dispute       (logs dispute -- placeholder)
 """
 
@@ -22,13 +27,13 @@ from datetime import date, datetime, timezone
 from typing import Any, Dict, Optional
 from uuid import uuid4
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.automation import AutomationAction
 from app.models.claim import Claim, ClaimStatus
 from app.models.denial import Denial, Appeal
-from app.models.rcm_extended import EraPayment
+from app.models.rcm_extended import EraPayment, PriorAuth, Eligibility271
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +89,12 @@ async def execute_real_action(
         "AUTO-001": _handle_root_cause_classification,
         "AUTO-002": _handle_appeal_generation,
         "AUTO-003": _handle_payment_posting,
+        "AUTO-006": _handle_high_risk_hold,
         "AUTO-008": _handle_claim_resubmission,
+        "AUTO-009": _handle_timely_filing_escalation,
+        "AUTO-010": _handle_auth_renewal,
+        "AUTO-011": _handle_eligibility_reverification,
+        "AUTO-012": _handle_duplicate_hold,
         "AUTO-014": _handle_underpayment_dispute,
     }
 
@@ -455,5 +465,331 @@ async def _handle_underpayment_dispute(
             "disputed_amount": impact,
             "claim_id": claim_id,
             "note": "Dispute logged for manual review -- no disputes table yet",
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# AUTO-006: High-risk claim hold
+# ---------------------------------------------------------------------------
+
+async def _handle_high_risk_hold(
+    db: AsyncSession, action: AutomationAction
+) -> Dict[str, Any]:
+    """Place claims with low CRS scores on HOLD_HIGH_RISK status."""
+    trigger = _parse_trigger_data(action)
+    claim_ids = trigger.get("claim_ids", [])
+
+    if not claim_ids:
+        return {
+            "success": False,
+            "action": "high_risk_hold",
+            "details": {"error": "No claim_ids in trigger_data"},
+        }
+
+    updated = []
+    for cid in claim_ids:
+        claim = await db.get(Claim, cid)
+        if claim and claim.status not in (
+            ClaimStatus.PAID, ClaimStatus.WRITTEN_OFF, ClaimStatus.VOIDED
+        ):
+            claim.status = "HOLD_HIGH_RISK"
+            updated.append(cid)
+
+    logger.info(
+        "AUTO-006 high-risk hold: %d/%d claims set to HOLD_HIGH_RISK  [action=%s]",
+        len(updated),
+        len(claim_ids),
+        action.action_id,
+    )
+
+    return {
+        "success": True,
+        "action": "high_risk_hold",
+        "details": {
+            "claims_held": len(updated),
+            "claim_ids": updated[:50],
+            "new_status": "HOLD_HIGH_RISK",
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# AUTO-009: Timely filing escalation
+# ---------------------------------------------------------------------------
+
+async def _handle_timely_filing_escalation(
+    db: AsyncSession, action: AutomationAction
+) -> Dict[str, Any]:
+    """Escalate claims approaching their filing deadline to HOLD_TIMELY_FILING."""
+    from datetime import timedelta
+
+    trigger = _parse_trigger_data(action)
+    days_threshold = trigger.get("days_threshold", 75)
+    remaining_days = trigger.get("remaining_days", 15)
+
+    now = datetime.now(timezone.utc)
+    cutoff_start = now - timedelta(days=days_threshold)
+    cutoff_end = now - timedelta(days=days_threshold - remaining_days)
+
+    stmt = (
+        select(Denial.claim_id)
+        .join(Claim, Claim.claim_id == Denial.claim_id)
+        .where(
+            and_(
+                Claim.date_of_service.isnot(None),
+                Claim.date_of_service >= cutoff_start,
+                Claim.date_of_service <= cutoff_end,
+                Claim.status.not_in([
+                    ClaimStatus.PAID, ClaimStatus.WRITTEN_OFF, ClaimStatus.VOIDED,
+                ]),
+            )
+        )
+    )
+    rows = await db.execute(stmt)
+    claim_ids = list({r[0] for r in rows.all()})
+
+    updated = []
+    for cid in claim_ids:
+        claim = await db.get(Claim, cid)
+        if claim:
+            claim.status = "HOLD_TIMELY_FILING"
+            updated.append(cid)
+
+    logger.info(
+        "AUTO-009 timely filing escalation: %d claims set to HOLD_TIMELY_FILING  [action=%s]",
+        len(updated),
+        action.action_id,
+    )
+
+    return {
+        "success": True,
+        "action": "timely_filing_escalation",
+        "details": {
+            "claims_escalated": len(updated),
+            "claim_ids": updated[:50],
+            "new_status": "HOLD_TIMELY_FILING",
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# AUTO-010: Auth renewal
+# ---------------------------------------------------------------------------
+
+async def _handle_auth_renewal(
+    db: AsyncSession, action: AutomationAction
+) -> Dict[str, Any]:
+    """Place claims with expiring prior auth on HOLD_AUTH_RENEWAL status."""
+    trigger = _parse_trigger_data(action)
+    claim_ids = trigger.get("claim_ids", [])
+
+    if not claim_ids:
+        # Fallback: query directly from prior_auth
+        from datetime import timedelta
+
+        window = trigger.get("window_days", 14)
+        now_date = date.today()
+        cutoff = now_date + timedelta(days=window)
+
+        stmt = (
+            select(PriorAuth.claim_id)
+            .join(Claim, Claim.claim_id == PriorAuth.claim_id)
+            .where(
+                and_(
+                    PriorAuth.status == "APPROVED",
+                    PriorAuth.expiry_date.isnot(None),
+                    PriorAuth.expiry_date >= now_date,
+                    PriorAuth.expiry_date <= cutoff,
+                    Claim.status.not_in([
+                        ClaimStatus.PAID, ClaimStatus.WRITTEN_OFF, ClaimStatus.VOIDED,
+                    ]),
+                )
+            )
+        )
+        rows = await db.execute(stmt)
+        claim_ids = list({r[0] for r in rows.all()})
+
+    updated = []
+    for cid in claim_ids:
+        claim = await db.get(Claim, cid)
+        if claim and claim.status not in (
+            ClaimStatus.PAID, ClaimStatus.WRITTEN_OFF, ClaimStatus.VOIDED
+        ):
+            claim.status = "HOLD_AUTH_RENEWAL"
+            updated.append(cid)
+
+    logger.info(
+        "AUTO-010 auth renewal: %d claims set to HOLD_AUTH_RENEWAL  [action=%s]",
+        len(updated),
+        action.action_id,
+    )
+
+    return {
+        "success": True,
+        "action": "auth_renewal",
+        "details": {
+            "claims_held": len(updated),
+            "claim_ids": updated[:50],
+            "new_status": "HOLD_AUTH_RENEWAL",
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# AUTO-011: Eligibility re-verification
+# ---------------------------------------------------------------------------
+
+async def _handle_eligibility_reverification(
+    db: AsyncSession, action: AutomationAction
+) -> Dict[str, Any]:
+    """Place claims with inactive/terminated eligibility on HOLD_ELIG_REVERIF."""
+    trigger = _parse_trigger_data(action)
+    claim_ids = trigger.get("claim_ids", [])
+
+    if not claim_ids:
+        # Fallback: query directly
+        latest_elig = (
+            select(
+                Eligibility271.patient_id,
+                Eligibility271.payer_id,
+                func.max(Eligibility271.inquiry_date).label("last_check"),
+            )
+            .group_by(Eligibility271.patient_id, Eligibility271.payer_id)
+            .subquery()
+        )
+
+        stmt = (
+            select(Claim.claim_id)
+            .join(
+                latest_elig,
+                and_(
+                    Claim.patient_id == latest_elig.c.patient_id,
+                    Claim.payer_id == latest_elig.c.payer_id,
+                ),
+            )
+            .join(
+                Eligibility271,
+                and_(
+                    Eligibility271.patient_id == latest_elig.c.patient_id,
+                    Eligibility271.payer_id == latest_elig.c.payer_id,
+                    Eligibility271.inquiry_date == latest_elig.c.last_check,
+                ),
+            )
+            .where(
+                and_(
+                    Eligibility271.subscriber_status.in_(["INACTIVE", "TERMINATED"]),
+                    Claim.status.not_in([
+                        ClaimStatus.PAID, ClaimStatus.WRITTEN_OFF, ClaimStatus.VOIDED,
+                    ]),
+                )
+            )
+        )
+        rows = await db.execute(stmt)
+        claim_ids = list({r[0] for r in rows.all()})
+
+    updated = []
+    for cid in claim_ids:
+        claim = await db.get(Claim, cid)
+        if claim and claim.status not in (
+            ClaimStatus.PAID, ClaimStatus.WRITTEN_OFF, ClaimStatus.VOIDED
+        ):
+            claim.status = "HOLD_ELIG_REVERIF"
+            updated.append(cid)
+
+    logger.info(
+        "AUTO-011 eligibility re-verification: %d claims set to HOLD_ELIG_REVERIF  [action=%s]",
+        len(updated),
+        action.action_id,
+    )
+
+    return {
+        "success": True,
+        "action": "eligibility_reverification",
+        "details": {
+            "claims_held": len(updated),
+            "claim_ids": updated[:50],
+            "new_status": "HOLD_ELIG_REVERIF",
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# AUTO-012: Duplicate claim hold
+# ---------------------------------------------------------------------------
+
+async def _handle_duplicate_hold(
+    db: AsyncSession, action: AutomationAction
+) -> Dict[str, Any]:
+    """Find duplicate claims and hold all but the first per group as HOLD_DUPLICATE."""
+    # Identify duplicate groups: same patient + DOS + payer + charge_amount
+    stmt = (
+        select(
+            Claim.patient_id,
+            Claim.date_of_service,
+            Claim.payer_id,
+            Claim.charge_amount,
+        )
+        .where(
+            and_(
+                Claim.patient_id.isnot(None),
+                Claim.date_of_service.isnot(None),
+                Claim.status.not_in([
+                    ClaimStatus.PAID, ClaimStatus.WRITTEN_OFF, ClaimStatus.VOIDED,
+                ]),
+            )
+        )
+        .group_by(
+            Claim.patient_id,
+            Claim.date_of_service,
+            Claim.payer_id,
+            Claim.charge_amount,
+        )
+        .having(func.count(Claim.claim_id) > 1)
+    )
+    rows = await db.execute(stmt)
+    groups = rows.all()
+
+    held_ids = []
+    for grp in groups:
+        # Fetch all claims in this duplicate group, ordered by claim_id (keep first)
+        detail_stmt = (
+            select(Claim)
+            .where(
+                and_(
+                    Claim.patient_id == grp.patient_id,
+                    Claim.date_of_service == grp.date_of_service,
+                    Claim.payer_id == grp.payer_id,
+                    Claim.charge_amount == grp.charge_amount,
+                    Claim.status.not_in([
+                        ClaimStatus.PAID, ClaimStatus.WRITTEN_OFF, ClaimStatus.VOIDED,
+                    ]),
+                )
+            )
+            .order_by(Claim.claim_id)
+        )
+        detail_rows = await db.execute(detail_stmt)
+        claims_in_group = detail_rows.scalars().all()
+
+        # Keep the first claim, hold the rest
+        for claim in claims_in_group[1:]:
+            claim.status = "HOLD_DUPLICATE"
+            held_ids.append(claim.claim_id)
+
+    logger.info(
+        "AUTO-012 duplicate hold: %d duplicate claims set to HOLD_DUPLICATE across %d groups  [action=%s]",
+        len(held_ids),
+        len(groups),
+        action.action_id,
+    )
+
+    return {
+        "success": True,
+        "action": "duplicate_hold",
+        "details": {
+            "claims_held": len(held_ids),
+            "claim_ids": held_ids[:50],
+            "duplicate_groups": len(groups),
+            "new_status": "HOLD_DUPLICATE",
         },
     }

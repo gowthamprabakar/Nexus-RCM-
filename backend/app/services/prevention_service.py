@@ -6,6 +6,7 @@ Scans claims BEFORE submission to identify and prevent denials.
 """
 
 import logging
+import time as _time
 from datetime import date, timedelta
 from typing import Optional
 from sqlalchemy import select, func, and_, text, Float
@@ -18,6 +19,17 @@ from app.models.payer import Payer
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# 5-minute TTL cache for prevention scan results
+# ---------------------------------------------------------------------------
+_PREVENTION_CACHE: dict = {}
+_PREVENTION_CACHE_TTL = 300  # seconds
+
+
+def _bust_prevention_cache() -> None:
+    """Invalidate the prevention scan cache (e.g. after dismissing an alert)."""
+    _PREVENTION_CACHE.clear()
+
 
 # ---------------------------------------------------------------------------
 # Public entry point
@@ -27,6 +39,11 @@ async def scan_claims_for_prevention(db: AsyncSession, limit: int = 100) -> dict
     Scan submitted but not-yet-adjudicated claims for preventable issues.
     Returns alerts grouped by prevention type.
     """
+    cache_key = f"scan_{limit}"
+    cached = _PREVENTION_CACHE.get(cache_key)
+    if cached and (_time.time() - cached["ts"]) < _PREVENTION_CACHE_TTL:
+        return cached["data"]
+
     alerts = []
 
     # Rule 1: ELIGIBILITY — Check if patient eligibility is INACTIVE/TERMINATED
@@ -51,8 +68,11 @@ async def scan_claims_for_prevention(db: AsyncSession, limit: int = 100) -> dict
 
     # Summary
     summary = _build_summary(alerts)
+    summary["total_scanned"] = len(alerts)
 
-    return {"alerts": alerts[:limit], "summary": summary}
+    result = {"alerts": alerts[:limit], "summary": summary}
+    _PREVENTION_CACHE[cache_key] = {"ts": _time.time(), "data": result}
+    return result
 
 
 async def get_prevention_summary(db: AsyncSession) -> dict:
@@ -62,11 +82,15 @@ async def get_prevention_summary(db: AsyncSession) -> dict:
 
 
 def _build_summary(alerts: list) -> dict:
+    critical_alerts = [a for a in alerts if a.get("severity") == "CRITICAL"]
     summary = {
         "total_alerts": len(alerts),
         "by_type": {},
         "total_revenue_at_risk": sum(a.get("revenue_at_risk", 0) for a in alerts),
         "preventable_count": len([a for a in alerts if a.get("preventable", True)]),
+        "at_risk_count": len([a for a in alerts if a.get("severity") in ("CRITICAL", "WARNING")]),
+        "critical_count": len(critical_alerts),
+        "critical_revenue_at_risk": sum(a.get("revenue_at_risk", 0) for a in critical_alerts),
     }
     for a in alerts:
         t = a["prevention_type"]
@@ -165,7 +189,7 @@ async def _check_eligibility_risks(db: AsyncSession, limit: int) -> list:
                 claim_id=r.claim_id,
                 patient_id=r.patient_id,
                 payer_name=r.payer_name,
-                prevention_type="ELIGIBILITY",
+                prevention_type="ELIGIBILITY_RISK",
                 severity="CRITICAL",
                 description=(
                     f"Patient eligibility is {r.subscriber_status}. "
@@ -288,7 +312,7 @@ async def _check_timely_filing_risks(db: AsyncSession, limit: int) -> list:
                 claim_id=r.claim_id,
                 patient_id=r.patient_id,
                 payer_name=r.payer_name,
-                prevention_type="TIMELY_FILING",
+                prevention_type="TIMELY_FILING_RISK",
                 severity=severity,
                 description=(
                     f"Claim {r.claim_id} is {days_old} days from DOS "
@@ -366,7 +390,7 @@ async def _check_duplicate_claims(db: AsyncSession, limit: int) -> list:
                 claim_id=r.claim_id,
                 patient_id=r.patient_id,
                 payer_name=r.payer_name,
-                prevention_type="DUPLICATE",
+                prevention_type="DUPLICATE_CLAIM",
                 severity="WARNING",
                 description=(
                     f"Potential duplicate: claim {r.claim_id} matches another "
@@ -453,7 +477,7 @@ async def _check_payer_cpt_risk(db: AsyncSession, limit: int) -> list:
                 claim_id=r.claim_id,
                 patient_id=r.patient_id,
                 payer_name=r.payer_name,
-                prevention_type="PAYER_CPT_RISK",
+                prevention_type="HIGH_RISK_PAYER_CPT",
                 severity="WARNING" if denial_pct < 50 else "CRITICAL",
                 description=(
                     f"CPT {r.cpt_code} has a {denial_pct}% denial rate with "

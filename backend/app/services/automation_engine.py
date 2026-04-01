@@ -84,7 +84,7 @@ AUTOMATION_RULES = [
         "trigger": "threshold_breach",
         "condition": {"metric": "crs_score", "threshold": 60, "direction": "below"},
         "action_template": "Hold {count} high-risk claims (CRS < 60) for review",
-        "enabled": False,
+        "enabled": True,
         "requires_approval": True,
     },
     {
@@ -121,7 +121,7 @@ AUTOMATION_RULES = [
         "trigger": "auth_expiry",
         "condition": {"expiry_window_days": 14},
         "action_template": "Generate auth renewal request for {count} claims with prior auth expiring within 14 days",
-        "enabled": False,  # DISABLED: _find_auth_expiry_claims() returns [] — table not modelled
+        "enabled": True,
         "requires_approval": True,
     },
     {
@@ -130,7 +130,7 @@ AUTOMATION_RULES = [
         "trigger": "eligibility_stale",
         "condition": {"stale_hours": 48},
         "action_template": "Trigger 270/271 eligibility re-verification for {count} claims (last check > 48h before DOS)",
-        "enabled": False,  # DISABLED: _find_stale_eligibility_claims() returns [] — table not modelled
+        "enabled": True,
         "requires_approval": False,
     },
     {
@@ -406,9 +406,57 @@ async def _find_root_cause_clusters(db: AsyncSession, rule: dict) -> list:
 
 
 async def _find_threshold_breaches(db: AsyncSession, rule: dict) -> list:
-    """Find threshold breaches (e.g., CRS < 60)."""
-    # For now, return empty since threshold breaches require specific metric checks
-    return []
+    """Find threshold breaches (e.g., CRS score below a configured threshold).
+
+    Queries claims whose ``crs_score`` falls below the rule's threshold and
+    whose status is still actionable (SUBMITTED, ACKNOWLEDGED, DRAFT).
+    """
+    condition = rule["condition"]
+    threshold = condition.get("threshold", 60)
+
+    try:
+        stmt = (
+            select(
+                Claim.claim_id,
+                Claim.patient_id,
+                Claim.payer_id,
+                Claim.crs_score,
+                Claim.charge_amount,
+            )
+            .where(
+                and_(
+                    Claim.crs_score.isnot(None),
+                    Claim.crs_score < threshold,
+                    Claim.status.in_(["SUBMITTED", "ACKNOWLEDGED", "DRAFT"]),
+                )
+            )
+        )
+        rows = await db.execute(stmt)
+        results = rows.all()
+        if not results:
+            return []
+
+        total_impact = sum(float(r.charge_amount or 0) for r in results)
+        claim_ids = [r.claim_id for r in results]
+
+        return [{
+            "finding_id": f"auto006-crs-breach-{threshold}",
+            "title": f"{len(results)} claims with CRS score below {threshold}",
+            "category": "THRESHOLD_BREACH",
+            "severity": "HIGH",
+            "confidence_score": 90,
+            "affected_claims_count": len(results),
+            "impact_amount": total_impact,
+            "root_causes": [f"CRS score < {threshold}"],
+            "metadata": {
+                "metric": "crs_score",
+                "threshold": threshold,
+                "claim_ids": claim_ids[:100],  # cap for payload size
+            },
+        }]
+    except Exception as e:
+        logger.error(f"_find_threshold_breaches failed: {e}")
+        return []
 
 
 async def _find_rejected_fixable_claims(db: AsyncSession, rule: dict) -> list:
@@ -515,19 +563,141 @@ async def _find_filing_deadline_claims(db: AsyncSession, rule: dict) -> list:
 
 
 async def _find_auth_expiry_claims(db: AsyncSession, rule: dict) -> list:
-    """AUTO-010: Find claims with prior auth expiring within N days."""
-    # Returns empty list -- requires auth data table not yet modeled;
-    # structure is in place for when auth tracking is added.
-    logger.debug("AUTO-010 auth_expiry trigger: no auth tracking table yet; returning []")
-    return []
+    """AUTO-010: Find claims with prior auth expiring within N days.
+
+    Joins ``prior_auth`` on ``claim_id`` to locate approved authorisations
+    whose ``expiry_date`` falls within the configured window.
+    """
+    from datetime import timedelta
+    from app.models.rcm_extended import PriorAuth
+
+    condition = rule["condition"]
+    window_days = condition.get("expiry_window_days", 14)
+
+    try:
+        now_date = datetime.now(timezone.utc).date()
+        cutoff = now_date + timedelta(days=window_days)
+
+        stmt = (
+            select(
+                PriorAuth.auth_id,
+                PriorAuth.claim_id,
+                PriorAuth.patient_id,
+                PriorAuth.payer_id,
+                PriorAuth.expiry_date,
+                Claim.charge_amount,
+            )
+            .join(Claim, Claim.claim_id == PriorAuth.claim_id)
+            .where(
+                and_(
+                    PriorAuth.status == "APPROVED",
+                    PriorAuth.expiry_date.isnot(None),
+                    PriorAuth.expiry_date >= now_date,
+                    PriorAuth.expiry_date <= cutoff,
+                    Claim.status.not_in(["PAID", "WRITTEN_OFF", "VOIDED"]),
+                )
+            )
+        )
+        rows = await db.execute(stmt)
+        results = rows.all()
+        if not results:
+            return []
+
+        total_impact = sum(float(r.charge_amount or 0) for r in results)
+        return [{
+            "finding_id": "auto010-auth-expiry",
+            "title": f"{len(results)} claims with prior auth expiring within {window_days} days",
+            "category": "AUTH_EXPIRY",
+            "severity": "HIGH",
+            "confidence_score": 95,
+            "affected_claims_count": len(results),
+            "impact_amount": total_impact,
+            "root_causes": ["Prior auth expiring"],
+            "metadata": {
+                "window_days": window_days,
+                "claim_ids": [r.claim_id for r in results][:100],
+            },
+        }]
+    except Exception as e:
+        logger.error(f"_find_auth_expiry_claims failed: {e}")
+        return []
 
 
 async def _find_stale_eligibility_claims(db: AsyncSession, rule: dict) -> list:
-    """AUTO-011: Find claims where last eligibility check is stale (>48h before DOS)."""
-    # Returns empty list -- requires eligibility_check table not yet modeled;
-    # structure is in place for when 270/271 tracking is added.
-    logger.debug("AUTO-011 eligibility_stale trigger: no eligibility table yet; returning []")
-    return []
+    """AUTO-011: Find claims whose most recent eligibility check shows
+    INACTIVE or TERMINATED subscriber status.
+
+    Joins ``eligibility_271`` on ``patient_id + payer_id`` and looks for
+    non-active subscriber statuses linked to open claims.
+    """
+    from app.models.rcm_extended import Eligibility271
+
+    try:
+        # Sub-query: latest eligibility row per (patient, payer)
+        latest_elig = (
+            select(
+                Eligibility271.patient_id,
+                Eligibility271.payer_id,
+                func.max(Eligibility271.inquiry_date).label("last_check"),
+            )
+            .group_by(Eligibility271.patient_id, Eligibility271.payer_id)
+            .subquery()
+        )
+
+        stmt = (
+            select(
+                Claim.claim_id,
+                Claim.patient_id,
+                Claim.payer_id,
+                Claim.charge_amount,
+                Eligibility271.subscriber_status,
+                Eligibility271.inquiry_date,
+            )
+            .join(
+                latest_elig,
+                and_(
+                    Claim.patient_id == latest_elig.c.patient_id,
+                    Claim.payer_id == latest_elig.c.payer_id,
+                ),
+            )
+            .join(
+                Eligibility271,
+                and_(
+                    Eligibility271.patient_id == latest_elig.c.patient_id,
+                    Eligibility271.payer_id == latest_elig.c.payer_id,
+                    Eligibility271.inquiry_date == latest_elig.c.last_check,
+                ),
+            )
+            .where(
+                and_(
+                    Eligibility271.subscriber_status.in_(["INACTIVE", "TERMINATED"]),
+                    Claim.status.not_in(["PAID", "WRITTEN_OFF", "VOIDED"]),
+                )
+            )
+        )
+
+        rows = await db.execute(stmt)
+        results = rows.all()
+        if not results:
+            return []
+
+        total_impact = sum(float(r.charge_amount or 0) for r in results)
+        return [{
+            "finding_id": "auto011-stale-elig",
+            "title": f"{len(results)} claims with INACTIVE/TERMINATED eligibility",
+            "category": "ELIGIBILITY_STALE",
+            "severity": "HIGH",
+            "confidence_score": 92,
+            "affected_claims_count": len(results),
+            "impact_amount": total_impact,
+            "root_causes": ["Eligibility inactive or terminated"],
+            "metadata": {
+                "claim_ids": [r.claim_id for r in results][:100],
+            },
+        }]
+    except Exception as e:
+        logger.error(f"_find_stale_eligibility_claims failed: {e}")
+        return []
 
 
 async def _find_duplicate_claims(db: AsyncSession, rule: dict) -> list:
@@ -772,7 +942,87 @@ async def _create_action_from_cluster(db: AsyncSession, rule: dict, cluster: dic
 
 async def _create_action_from_breach(db: AsyncSession, rule: dict, breach: dict, propensity_cache=None, payer_anomaly_cache=None, hitl_maturity_cache=None) -> Optional[dict]:
     """Create an automation action from a threshold breach."""
-    return None  # Placeholder for future implementation
+    try:
+        # Check for duplicate
+        existing = await db.execute(
+            select(AutomationAction)
+            .where(
+                and_(
+                    AutomationAction.rule_id == rule["rule_id"],
+                    AutomationAction.status.in_(["PENDING", "EXECUTED"]),
+                    AutomationAction.suggested_action.contains(breach.get("title", "")[:50]),
+                )
+            )
+            .limit(1)
+        )
+        if existing.scalars().first():
+            return None
+
+        metadata = breach.get("metadata", {})
+        action_text = rule["action_template"].format(
+            count=breach.get("affected_claims_count", 0),
+            root_cause=", ".join(breach.get("root_causes", ["Unknown"])),
+            payer=metadata.get("payer_name", "Unknown"),
+            impact=breach.get("impact_amount", 0),
+            detail=breach.get("title", ""),
+        )
+
+        action_id = _gen_action_id()
+        status = "PENDING" if rule["requires_approval"] else "EXECUTED"
+
+        trigger_data = {
+            "finding_id": breach.get("finding_id"),
+            "title": breach.get("title"),
+            "category": breach.get("category"),
+            "severity": breach.get("severity"),
+            "claim_ids": metadata.get("claim_ids", []),
+        }
+
+        action = AutomationAction(
+            action_id=action_id,
+            rule_id=rule["rule_id"],
+            rule_name=rule["name"],
+            trigger_type="threshold_breach",
+            trigger_data=json.dumps(trigger_data),
+            suggested_action=action_text[:500],
+            affected_claims=breach.get("affected_claims_count", 0),
+            estimated_impact=round(breach.get("impact_amount", 0), 2),
+            confidence=breach.get("confidence_score", 0),
+            status=status,
+            executed_at=datetime.now(timezone.utc) if status == "EXECUTED" else None,
+            outcome="Auto-executed" if status == "EXECUTED" else None,
+        )
+
+        db.add(action)
+
+        if status == "EXECUTED":
+            try:
+                await db.flush()
+                from app.services.action_executor import execute_real_action
+                exec_result = await execute_real_action(db, action)
+                action.outcome = json.dumps(exec_result.get("details", {}))[:200]
+                if not exec_result.get("success", True):
+                    action.status = "FAILED"
+                    action.outcome = f"Handler error: {exec_result.get('details', {}).get('error', 'unknown')}"[:200]
+            except Exception as exc:
+                logger.error("Auto-execution dispatch failed for action %s (rule %s): %s", action_id, rule["rule_id"], exc)
+                action.status = "FAILED"
+                action.outcome = f"Dispatch error: {str(exc)[:170]}"
+
+        return {
+            "action_id": action_id,
+            "rule_id": rule["rule_id"],
+            "rule_name": rule["name"],
+            "suggested_action": action_text[:500],
+            "status": action.status,
+            "affected_claims": breach.get("affected_claims_count", 0),
+            "estimated_impact": round(breach.get("impact_amount", 0), 2),
+            "confidence": breach.get("confidence_score", 0),
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to create action from breach: {e}")
+        return None
 
 
 # ---------------------------------------------------------------------------

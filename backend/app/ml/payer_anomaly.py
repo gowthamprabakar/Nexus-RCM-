@@ -187,7 +187,14 @@ class PayerAnomalyModel:
                 pw.denial_count,
                 COALESCE(p.payment_count, 0) AS payment_count,
                 COALESCE(p.avg_payment, 0) AS avg_payment_amount,
-                0 AS adtp_deviation,
+                COALESCE((
+                    SELECT at.actual_days - at.expected_days
+                    FROM adtp_trend at
+                    WHERE at.payer_id = pw.payer_id
+                      AND at.period_start <= pw.week
+                    ORDER BY at.period_start DESC
+                    LIMIT 1
+                ), 0) AS adtp_deviation,
                 COALESCE(cw.claim_volume, 0) AS claim_volume
             FROM payer_weekly pw
             LEFT JOIN payments p ON p.payer_id = pw.payer_id AND p.week = pw.week
@@ -235,7 +242,13 @@ class PayerAnomalyModel:
                 COALESCE(rd.denial_count, 0),
                 COALESCE(rp.payment_count, 0),
                 COALESCE(rp.avg_payment, 0),
-                0,
+                COALESCE((
+                    SELECT at.actual_days - at.expected_days
+                    FROM adtp_trend at
+                    WHERE at.payer_id = pm.payer_id
+                    ORDER BY at.period_start DESC
+                    LIMIT 1
+                ), 0) AS adtp_deviation,
                 COALESCE(rc.claim_volume, 0)
             FROM payer_master pm
             LEFT JOIN recent_denials rd ON rd.payer_id = pm.payer_id
