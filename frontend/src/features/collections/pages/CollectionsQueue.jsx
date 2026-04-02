@@ -9,34 +9,6 @@ import {
 } from '../../../components/ui';
 import { PropensityBadge } from '../../../components/predictions';
 
-/* ── Queue task data with propensity scores ─────────────────────── */
-const queueTasks = [
- {
-  id: 'ACC-90284', patient: 'John Doe', mrn: 'MRN-882',
-  payer: 'UnitedHealth', balance: 4200.00, daysAR: 45,
-  propensity: 85, priority: 'HIGH', nextAction: 'Call Payer',
-  taskType: 'Phone Call', collector: 'Sarah M.', active: true,
- },
- {
-  id: 'ACC-88122', patient: 'Sarah Smith', mrn: 'MRN-104',
-  payer: 'Aetna', balance: 1850.50, daysAR: 62,
-  propensity: 72, priority: 'HIGH', nextAction: 'Submit Claim',
-  taskType: 'Letter', collector: 'James K.', active: false,
- },
- {
-  id: 'ACC-92310', patient: 'Michael Brown', mrn: 'MRN-923',
-  payer: 'Cigna', balance: 9100.00, daysAR: 31,
-  propensity: 60, priority: 'MED', nextAction: 'Review Denial',
-  taskType: 'Phone Call', collector: 'Lisa R.', active: false,
- },
- {
-  id: 'ACC-77211', patient: 'David Wilson', mrn: 'MRN-211',
-  payer: 'Medicare', balance: 12400.00, daysAR: 15,
-  propensity: 30, priority: 'LOW', nextAction: 'Validate COB',
-  taskType: 'Payment Plan', collector: 'Sarah M.', active: false,
- },
-];
-
 const PROPENSITY_BUCKET = (score) => {
  if (score > 80) return '>80% (Hot)';
  if (score >= 60) return '60-80% (Warm)';
@@ -146,7 +118,7 @@ export function CollectionsQueue() {
  };
 
  /* ── Filtered tasks ─────────────────────────────────── */
- const tasks = liveQueue.length > 0 ? liveQueue : queueTasks;
+ const tasks = liveQueue;
  const filteredTasks = tasks.filter((t) => {
   if (filterPayer !== 'All' && t.payer !== filterPayer) return false;
   if (filterCollector !== 'All' && t.collector !== filterCollector) return false;
@@ -384,6 +356,14 @@ export function CollectionsQueue() {
         </tr>
        </thead>
        <tbody className="divide-y divide-th-border">
+        {filteredTasks.length === 0 && !loading && (
+          <tr>
+            <td colSpan={10} className="text-center py-12 text-sm text-th-muted">
+              <span className="material-symbols-outlined text-3xl mb-2 block">inbox</span>
+              No tasks in queue matching current filters
+            </td>
+          </tr>
+        )}
         {filteredTasks.map((task) => (
          <tr
           key={task.id}
@@ -440,13 +420,6 @@ export function CollectionsQueue() {
           </td>
          </tr>
         ))}
-        {filteredTasks.length === 0 && (
-         <tr>
-          <td colSpan={8} className="px-6 py-12 text-center text-th-muted">
-           No tasks match the selected filters.
-          </td>
-         </tr>
-        )}
        </tbody>
       </table>
      </div>

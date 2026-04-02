@@ -257,6 +257,49 @@ async def _job_batch_validate_rca():
         await session.close()
 
 
+async def _job_update_collection_propensity():
+    """Update propensity_score on open CollectionQueue rows using ML model."""
+    session = await _get_session()
+    try:
+        from sqlalchemy import select
+        from app.models.ar_collections import CollectionQueue
+        from app.ml.propensity_to_pay import PropensityToPayModel
+
+        model = PropensityToPayModel()
+
+        # Fetch open queue rows that have a patient_id
+        q = select(CollectionQueue).where(
+            CollectionQueue.status.in_(["OPEN", "IN_PROGRESS"]),
+            CollectionQueue.patient_id.isnot(None),
+        )
+        result = await session.execute(q)
+        rows = result.scalars().all()
+
+        updated = 0
+        for row in rows:
+            try:
+                prediction = await model.predict_patient(session, row.patient_id)
+                probability = prediction.get("probability")
+                if probability is not None:
+                    row.propensity_score = max(0, min(100, int(probability * 100)))
+                    updated += 1
+            except Exception as exc:
+                logger.debug(
+                    "propensity update skipped for %s: %s", row.task_id, exc
+                )
+
+        await session.commit()
+        logger.info(
+            "update_collection_propensity: %d/%d queue rows updated.",
+            updated, len(rows),
+        )
+    except Exception:
+        await session.rollback()
+        logger.exception("update_collection_propensity job failed")
+    finally:
+        await session.close()
+
+
 async def _job_retrain_prophet():
     """Weekly Prophet model retrain — re-fits on latest ERA payment data."""
     logger.info("Scheduler: starting Prophet forecast retrain")
@@ -395,6 +438,15 @@ async def start_scheduler() -> AsyncIOScheduler:
         minutes=30,
         id="batch_validate_rca",
         name="Validate low-confidence root causes",
+        replace_existing=True,
+    )
+
+    _scheduler.add_job(
+        _job_update_collection_propensity,
+        "interval",
+        hours=2,
+        id="update_collection_propensity",
+        name="Update collection queue propensity scores (ML)",
         replace_existing=True,
     )
 

@@ -578,9 +578,53 @@ export function CollectionsHub() {
    ))
  ) : (
    <>
-   <AIInsightCard title="High-Value A/R: 90+ Days" description="42 accounts with balances >$5K have exceeded 90 days with no contact. AI propensity scoring shows 68% collection probability if contacted this week." confidence={89} impact="high" category="Predictive" action="Assign to senior collectors" value="$840K recoverable" icon="account_balance" />
-   <AIInsightCard title="Payment Plan Conversion Opportunity" description="Analysis of 284 accounts shows $1.2M in balances where payment plan offers historically achieve 82% resolution vs 41% for standard collection." confidence={84} impact="high" category="Prescriptive" action="Trigger payment plan outreach" value="$1.2M / 82% resolution" icon="credit_card" />
-   <AIInsightCard title="Optimal Contact Time Identified" description="Patient contact between 5–7pm on weekdays shows 2.4× higher payment rate. 127 high-propensity accounts scheduled for evening outreach." confidence={92} impact="medium" category="Prescriptive" action="Schedule evening campaigns" value="2.4× payment rate" icon="access_time" />
+   {(() => {
+     const fmtAmt = (n) => {
+       if (n == null) return '--';
+       if (n >= 1000000) return '$' + (n / 1000000).toFixed(1) + 'M';
+       if (n >= 1000) return '$' + (n / 1000).toFixed(0) + 'K';
+       return '$' + n.toLocaleString();
+     };
+     const aged90 = (arSummary?.buckets || []).filter(b => ['91-120', '120+', '121-180', '180+'].includes(b.bucket));
+     const aged90Count = aged90.reduce((s, b) => s + (b.count || 0), 0);
+     const aged90Balance = aged90.reduce((s, b) => s + (b.balance || 0), 0);
+     const critCount = collSummary?.critical_count || 0;
+     const queueDepth = collSummary?.queue_depth || collSummary?.total_tasks || 0;
+     return (
+       <>
+         <AIInsightCard
+           title="High-Value A/R: 90+ Days"
+           description={`${aged90Count || '--'} accounts with balances exceeding 90 days. AI propensity scoring shows 68% collection probability if contacted this week.`}
+           confidence={89}
+           impact="high"
+           category="Predictive"
+           action="Assign to senior collectors"
+           value={aged90Balance ? `${fmtAmt(aged90Balance)} recoverable` : '--'}
+           icon="account_balance"
+         />
+         <AIInsightCard
+           title="Critical Priority Accounts"
+           description={`${critCount} accounts flagged as critical priority across a queue depth of ${queueDepth.toLocaleString()} tasks. Recommend immediate supervisor-led outreach.`}
+           confidence={84}
+           impact="high"
+           category="Prescriptive"
+           action="Escalate critical accounts"
+           value={`${critCount} critical / ${queueDepth.toLocaleString()} queued`}
+           icon="credit_card"
+         />
+         <AIInsightCard
+           title="Optimal Contact Time Identified"
+           description="Patient contact between 5-7pm on weekdays shows higher payment rates. High-propensity accounts should be scheduled for evening outreach."
+           confidence={92}
+           impact="medium"
+           category="Prescriptive"
+           action="Schedule evening campaigns"
+           value="Evening outreach recommended"
+           icon="access_time"
+         />
+       </>
+     );
+   })()}
    </>
  )}
  </div>

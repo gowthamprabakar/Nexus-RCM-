@@ -10,8 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, case, and_, text
 from datetime import date, timedelta
 from typing import Any, Optional
-import random
-import hashlib
 
 from app.db.session import get_db
 from app.models.claim import Claim
@@ -30,7 +28,7 @@ def _bucket_case():
     """SQLAlchemy CASE for aging bucket from days_outstanding."""
     today = date.today()
     days_col = func.cast(
-        func.current_date() - Claim.submission_date,
+        func.current_date() - func.coalesce(Claim.submission_date, Claim.date_of_service),
         type_=func.Integer()
     )
     return case(
@@ -141,10 +139,18 @@ async def get_ar_aging(
     today = date.today()
 
     q = (
-        select(Claim, Patient.first_name, Patient.last_name, Payer.payer_name)
+        select(
+            Claim,
+            Patient.first_name,
+            Patient.last_name,
+            Payer.payer_name,
+            func.coalesce(func.sum(EraPayment.payment_amount), 0.0).label("total_paid"),
+        )
         .join(Patient, Patient.patient_id == Claim.patient_id, isouter=True)
         .join(Payer,   Payer.payer_id   == Claim.payer_id,   isouter=True)
+        .outerjoin(EraPayment, EraPayment.claim_id == Claim.claim_id)
         .where(Claim.status.notin_(["PAID", "WRITTEN_OFF", "VOIDED"]))
+        .group_by(Claim.claim_id, Patient.first_name, Patient.last_name, Payer.payer_name)
     )
     if payer_id and payer_id != "all":
         q = q.where(Claim.payer_id == payer_id)
@@ -179,9 +185,9 @@ async def get_ar_aging(
             payer_name=row.payer_name,
             bucket=bkt,
             days_outstanding=days,
-            balance=round(c.total_charges or 0.0, 2),
+            balance=round((c.total_charges or 0.0) - float(row.total_paid or 0.0), 2),
             billed_amount=round(c.total_charges or 0.0, 2),
-            paid_amount=0.0,
+            paid_amount=round(float(row.total_paid or 0.0), 2),
             claim_date=c.date_of_service,
             status=c.status or "OPEN",
         ))
@@ -196,8 +202,33 @@ async def get_ar_trend(
 ) -> Any:
     """12-month AR trend: monthly claim counts and total outstanding charges."""
     today = date.today()
+    twelve_months_ago = today.replace(day=1) - timedelta(days=365)
 
-    # Get current total AR as baseline
+    month_names = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ]
+
+    month_col = func.date_trunc("month", Claim.date_of_service).label("month")
+
+    q = (
+        select(
+            month_col,
+            func.count(Claim.claim_id).label("claim_count"),
+            func.sum(Claim.total_charges).label("total_ar"),
+        )
+        .where(
+            Claim.status.notin_(["PAID", "WRITTEN_OFF", "VOIDED"]),
+            Claim.date_of_service >= twelve_months_ago,
+        )
+        .group_by(month_col)
+        .order_by(month_col)
+    )
+
+    result = await db.execute(q)
+    rows = result.all()
+
+    # Current totals
     total_ar = await db.scalar(
         select(func.sum(Claim.total_charges)).where(
             Claim.status.notin_(["PAID", "WRITTEN_OFF", "VOIDED"])
@@ -211,46 +242,18 @@ async def get_ar_trend(
         )
     ) or 0
 
-    # Generate 12-month trend with realistic variance
     months = []
-    month_names = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-    ]
-
-    for i in range(11, -1, -1):
-        month_date = today.replace(day=1) - timedelta(days=i * 30)
-        month_key = f"{month_date.year}-{month_date.month:02d}"
-        seed = int(hashlib.md5(month_key.encode()).hexdigest()[:8], 16)
-        rng = random.Random(seed)
-
-        # Variance: older months had slightly different AR
-        variance_pct = rng.uniform(-0.15, 0.15)
-        # Trend: AR generally grows slightly over time (older = lower)
-        growth_factor = 0.85 + (11 - i) * 0.015
-        month_ar = total_ar * growth_factor * (1 + variance_pct)
-        month_claims = int(total_claims * growth_factor * (1 + rng.uniform(-0.10, 0.10)))
-
-        # Aging breakdown for each month
-        pct_0_30 = rng.uniform(0.25, 0.40)
-        pct_31_60 = rng.uniform(0.18, 0.28)
-        pct_61_90 = rng.uniform(0.12, 0.20)
-        pct_91_120 = rng.uniform(0.08, 0.15)
-        pct_120_plus = 1 - pct_0_30 - pct_31_60 - pct_61_90 - pct_91_120
-
+    for row in rows:
+        m = row.month
+        if m is None:
+            continue
+        period = f"{m.year}-{m.month:02d}"
         months.append({
-            "month": month_names[month_date.month - 1],
-            "year": month_date.year,
-            "period": month_key,
-            "total_ar": round(month_ar, 2),
-            "claim_count": month_claims,
-            "buckets": {
-                "0-30": round(month_ar * pct_0_30, 2),
-                "31-60": round(month_ar * pct_31_60, 2),
-                "61-90": round(month_ar * pct_61_90, 2),
-                "91-120": round(month_ar * pct_91_120, 2),
-                "120+": round(month_ar * max(pct_120_plus, 0.05), 2),
-            },
+            "month": month_names[m.month - 1],
+            "year": m.year,
+            "period": period,
+            "total_ar": round(float(row.total_ar or 0), 2),
+            "claim_count": row.claim_count or 0,
         })
 
     return {
@@ -273,7 +276,7 @@ async def get_ar_aging_root_cause(db: AsyncSession = Depends(get_db)) -> Any:
             Claim.status,
             func.count(Claim.claim_id).label("cnt"),
             func.avg(
-                func.current_date() - Claim.submission_date
+                func.current_date() - func.coalesce(Claim.submission_date, Claim.date_of_service)
             ).label("avg_age"),
             func.sum(Claim.total_charges).label("total"),
         )
@@ -322,7 +325,7 @@ async def get_ar_aging_root_cause(db: AsyncSession = Depends(get_db)) -> Any:
             Payer.payer_name,
             func.count(Claim.claim_id).label("cnt"),
             func.avg(
-                func.current_date() - Claim.submission_date
+                func.current_date() - func.coalesce(Claim.submission_date, Claim.date_of_service)
             ).label("avg_age"),
             func.sum(Claim.total_charges).label("total"),
         )

@@ -136,15 +136,28 @@ async def get_era_list(
         oa = float(oa or 0)
         adj_total = co + pr + oa
 
-        # Derive paid vs denied vs adjusted line counts heuristically
-        # paid = lines with payment_amount > 0 (most), denied = oa-heavy, adjusted = co-heavy
-        paid_lines = max(1, int(lc * 0.75))
-        denied_lines = int(lc * 0.10)
-        adjusted_lines = lc - paid_lines - denied_lines
+        # Real line-count calculations based on ERA payment vs allowed amounts
+        allowed = float(allowed or 0)
+        if allowed > 0:
+            # Lines where payment covers most of allowed are "paid"
+            payment_ratio = amt / allowed if allowed else 0
+            oa_ratio = oa / allowed if allowed else 0
+            # Denied lines estimated from OA (Other Adjustment) proportion
+            denied_lines = max(0, int(round(lc * oa_ratio)))
+            # Paid lines: proportion of payment vs allowed
+            paid_lines = max(1, int(round(lc * min(payment_ratio, 1.0))))
+            # Adjusted lines are the remainder (CO/PR adjustments)
+            adjusted_lines = max(0, lc - paid_lines - denied_lines)
+        else:
+            paid_lines = max(1, lc)
+            denied_lines = 0
+            adjusted_lines = 0
 
-        # Auto-match rate: higher for larger batches (realistic heuristic)
-        seed = hash(f"{pid}{pdate}") % 100
-        auto_match = min(99.0, max(65.0, 85.0 + (seed - 50) * 0.3))
+        # Auto-match rate: payment-to-allowed ratio (higher ratio = easier auto-match)
+        if allowed > 0:
+            auto_match = min(99.0, max(50.0, (amt / allowed) * 100))
+        else:
+            auto_match = 50.0
 
         # Status based on auto-match rate
         if auto_match >= 95:

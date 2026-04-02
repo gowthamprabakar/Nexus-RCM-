@@ -574,6 +574,41 @@ async def get_propensity_score(
     if not patient:
         raise HTTPException(status_code=404, detail="Account not found")
 
+    # Try ML model first — use heuristic as fallback
+    try:
+        from app.ml.propensity_to_pay import PropensityToPayModel
+        model = PropensityToPayModel()
+        ml_result = await model.predict_patient(db, account_id)
+        ml_prob = ml_result.get("probability")
+        if ml_prob is not None and ml_result.get("risk_tier") != "UNKNOWN":
+            ml_score = max(0, min(100, int(ml_prob * 100)))
+            tier = ml_result.get("risk_tier", "MEDIUM")
+            if ml_score >= 75:
+                action = "STANDARD_FOLLOW_UP"
+            elif ml_score >= 50:
+                action = "PAYMENT_PLAN"
+            elif ml_score >= 25:
+                action = "ESCALATION"
+            else:
+                action = "WRITE_OFF_REVIEW"
+            features = ml_result.get("features", {})
+            return {
+                "account_id": account_id,
+                "overall_score": ml_score,
+                "confidence": "ML_MODEL",
+                "risk_tier": tier,
+                "factors": [
+                    {"name": "ML Propensity Model", "score": ml_score, "weight": 1.0,
+                     "detail": f"Model probability {ml_prob:.2%}, tier {tier}"},
+                ],
+                "recommended_action": action,
+                "total_claims": features.get("num_claims", 0),
+                "outstanding_balance": round(features.get("patient_resp_balance", 0), 2),
+                "source": "ml_model",
+            }
+    except Exception:
+        pass  # Fall through to heuristic calculation below
+
     # All claims for this patient
     claims_q = await db.execute(
         select(Claim).where(Claim.patient_id == account_id)
