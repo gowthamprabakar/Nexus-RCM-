@@ -421,7 +421,7 @@ async def _find_threshold_breaches(db: AsyncSession, rule: dict) -> list:
                 Claim.patient_id,
                 Claim.payer_id,
                 Claim.crs_score,
-                Claim.charge_amount,
+                Claim.total_charges,
             )
             .where(
                 and_(
@@ -436,7 +436,7 @@ async def _find_threshold_breaches(db: AsyncSession, rule: dict) -> list:
         if not results:
             return []
 
-        total_impact = sum(float(r.charge_amount or 0) for r in results)
+        total_impact = sum(float(r.total_charges or 0) for r in results)
         claim_ids = [r.claim_id for r in results]
 
         return [{
@@ -585,7 +585,7 @@ async def _find_auth_expiry_claims(db: AsyncSession, rule: dict) -> list:
                 PriorAuth.patient_id,
                 PriorAuth.payer_id,
                 PriorAuth.expiry_date,
-                Claim.charge_amount,
+                Claim.total_charges,
             )
             .join(Claim, Claim.claim_id == PriorAuth.claim_id)
             .where(
@@ -603,7 +603,7 @@ async def _find_auth_expiry_claims(db: AsyncSession, rule: dict) -> list:
         if not results:
             return []
 
-        total_impact = sum(float(r.charge_amount or 0) for r in results)
+        total_impact = sum(float(r.total_charges or 0) for r in results)
         return [{
             "finding_id": "auto010-auth-expiry",
             "title": f"{len(results)} claims with prior auth expiring within {window_days} days",
@@ -649,7 +649,7 @@ async def _find_stale_eligibility_claims(db: AsyncSession, rule: dict) -> list:
                 Claim.claim_id,
                 Claim.patient_id,
                 Claim.payer_id,
-                Claim.charge_amount,
+                Claim.total_charges,
                 Eligibility271.subscriber_status,
                 Eligibility271.inquiry_date,
             )
@@ -681,7 +681,7 @@ async def _find_stale_eligibility_claims(db: AsyncSession, rule: dict) -> list:
         if not results:
             return []
 
-        total_impact = sum(float(r.charge_amount or 0) for r in results)
+        total_impact = sum(float(r.total_charges or 0) for r in results)
         return [{
             "finding_id": "auto011-stale-elig",
             "title": f"{len(results)} claims with INACTIVE/TERMINATED eligibility",
