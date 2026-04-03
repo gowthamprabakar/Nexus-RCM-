@@ -12,8 +12,8 @@ const SidebarLink = ({ to, icon, label, badge, isNew }) => {
             className={({ isActive }) => cn(
                 "flex items-center justify-between px-4 py-1.5 transition-colors text-[13px] group border-l-2",
                 isActive
-                    ? "border-th-primary text-th-primary bg-th-surface-highlight/50 font-semibold"
-                    : "border-transparent text-th-secondary hover:text-th-heading hover:bg-th-surface-overlay/50"
+                    ? "bg-[rgb(var(--color-primary-bg))] text-[rgb(var(--color-primary))] font-medium border-l-2 border-[rgb(var(--color-primary))] pl-3 pr-3"
+                    : "border-transparent text-th-secondary hover:text-th-heading hover:bg-th-surface-overlay"
             )}
         >
             <div className="flex items-center gap-2.5">
@@ -27,7 +27,7 @@ const SidebarLink = ({ to, icon, label, badge, isNew }) => {
                     <span className="text-[9px] px-1.5 py-0.5 rounded bg-th-primary/10 text-th-primary font-bold uppercase">New</span>
                 )}
                 {badge && (
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-th-danger/10 text-th-danger">{badge}</span>
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))]">{badge}</span>
                 )}
             </div>
         </NavLink>
@@ -36,16 +36,16 @@ const SidebarLink = ({ to, icon, label, badge, isNew }) => {
 
 // Section Divider
 const SectionHeader = ({ label }) => (
-    <p className="text-[10px] font-bold uppercase tracking-wider text-th-muted px-4 pt-5 pb-1">{label}</p>
+    <p className="text-[11px] font-medium uppercase tracking-wide text-th-muted px-3 pt-5 pb-1.5">{label}</p>
 );
 
 export function Sidebar() {
     return (
-        <aside className="w-60 bg-th-surface-sidebar border-r border-th-border flex flex-col h-screen shrink-0 font-sans z-20 transition-colors duration-200">
+        <aside className="w-[240px] bg-th-surface-sidebar border-r border-th-border flex flex-col h-screen shrink-0 font-sans z-20 transition-colors duration-200">
             {/* Brand Header */}
-            <div className="h-14 flex items-center px-4 border-b border-th-border">
+            <div className="h-[52px] flex items-center px-4 border-b border-th-border">
                 <div className="flex items-center gap-3">
-                    <div className="size-8 rounded-lg bg-th-primary flex items-center justify-center text-white text-xs font-bold">
+                    <div className="size-8 rounded-lg bg-[rgb(var(--color-primary))] flex items-center justify-center text-white text-xs font-bold">
                         NX
                     </div>
                     <div>
@@ -116,10 +116,10 @@ export function Sidebar() {
             <div className="px-4 py-3 border-t border-th-border bg-th-surface-base/50">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <span className="size-2 rounded-full bg-th-success"></span>
+                        <span className="size-1.5 rounded-full bg-[rgb(var(--color-success))]"></span>
                         <span className="text-[10px] font-medium text-th-muted">System Operational</span>
                     </div>
-                    <span className="text-[10px] text-th-muted">v5.0.0</span>
+                    <span className="text-[10px] text-th-muted">v5.0</span>
                 </div>
             </div>
         </aside>

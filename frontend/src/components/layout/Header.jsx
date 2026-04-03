@@ -93,6 +93,22 @@ const ROUTE_META = {
     '/admin/dashboard': { title: 'Admin Dashboard', section: 'Settings' },
     '/admin/api-manager': { title: 'API Management', section: 'Settings' },
     '/admin/scheduler': { title: 'Scheduler', section: 'Settings' },
+
+    '/intelligence/lida':           { title: 'LIDA AI', section: 'Intelligence' },
+    '/intelligence/lida/chat':      { title: 'LIDA Chat', section: 'Intelligence' },
+    '/intelligence/lida/reports':   { title: 'Report Builder', section: 'Intelligence' },
+    '/intelligence/forecast':       { title: 'Revenue Forecast', section: 'Intelligence' },
+    '/intelligence/simulation':     { title: 'Payer Simulation', section: 'Intelligence' },
+    '/analytics/prevention':        { title: 'Prevention Intelligence', section: 'Analytics' },
+    '/analytics/graph-explorer':    { title: 'Graph Explorer', section: 'Analytics' },
+    '/analytics/payer-health':      { title: 'Payer Health Scorecard', section: 'Analytics' },
+    '/analytics/compliance':        { title: 'Compliance Risk', section: 'Analytics' },
+    '/analytics/outcomes':          { title: 'ML Model Governance', section: 'Analytics' },
+    '/work/denials/queue':          { title: 'Denial Work Queue', section: 'Work Centers' },
+    '/work/denials/appeals':        { title: 'Appeal Generator', section: 'Work Centers' },
+    '/work/denials/high-risk':      { title: 'High Risk Claims', section: 'Work Centers' },
+    '/work/collections/queue':      { title: 'Collections Queue', section: 'Work Centers' },
+    '/work/automation':             { title: 'Automation Dashboard', section: 'Work Centers' },
 };
 
 function formatCurrentDate() {
