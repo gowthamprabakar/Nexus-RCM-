@@ -8,70 +8,78 @@
 
 /* ── Light Theme ── */
 :root {
-  --color-surface-base: 248 250 252;
-  --color-surface-raised: 255 255 255;
-  --color-surface-overlay: 241 245 249;
-  --color-surface-highlight: 219 234 254;
-  --color-surface-sidebar: 255 255 255;
-  --color-surface-header: 255 255 255;
+  --color-surface-base:     247 248 249;
+  --color-surface-raised:   255 255 255;
+  --color-surface-overlay:  244 245 246;
+  --color-surface-highlight: 231 242 255;
+  --color-surface-sidebar:  250 251 252;
+  --color-surface-header:   255 255 255;
 
-  --color-text-heading: 15 23 42;
-  --color-text-primary: 30 41 59;
-  --color-text-secondary: 100 116 139;
-  --color-text-muted: 148 163 184;
-  --color-text-inverted: 255 255 255;
+  --color-text-heading:     23  43  77;
+  --color-text-primary:     68  84 111;
+  --color-text-secondary:   98 111 134;
+  --color-text-muted:      153 161 176;
+  --color-text-inverted:   255 255 255;
 
-  --color-border-default: 226 232 240;
-  --color-border-subtle: 241 245 249;
-  --color-border-strong: 203 213 225;
+  --color-border-default:  223 225 230;
+  --color-border-subtle:   235 236 240;
+  --color-border-strong:   193 199 208;
 
-  --color-primary: 37 99 235;
-  --color-primary-hover: 29 78 216;
-  --color-primary-light: 59 130 246;
-  --color-primary-bg: 239 246 255;
+  --color-primary:          12 102 228;
+  --color-primary-hover:     0  82 204;
+  --color-primary-light:    32 122 234;
+  --color-primary-bg:      231 242 255;
 
-  --color-success: 16 185 129;
-  --color-warning: 245 158 11;
-  --color-danger: 239 68 68;
-  --color-info: 59 130 246;
+  --color-success:          31 132  90;
+  --color-success-bg:      220 253 231;
+  --color-warning:         207 134   0;
+  --color-warning-bg:      255 247 214;
+  --color-danger:          202  53  33;
+  --color-danger-bg:       255 235 230;
+  --color-info:             12 102 228;
+  --color-info-bg:         231 242 255;
 
-  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
-  --shadow-card-hover: 0 4px 12px -2px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.06);
-  --shadow-header: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+  --shadow-card:     0 1px 2px 0 rgb(9 30 66 / 0.08);
+  --shadow-card-hover: 0 3px 8px 0 rgb(9 30 66 / 0.12), 0 1px 2px 0 rgb(9 30 66 / 0.06);
+  --shadow-header:   0 1px 0 0 rgb(9 30 66 / 0.08);
 
   color-scheme: light;
 }
 
 /* ── Dark Theme ── */
 .dark {
-  --color-surface-base: 11 17 32;
-  --color-surface-raised: 17 24 39;
-  --color-surface-overlay: 30 41 59;
-  --color-surface-highlight: 30 58 95;
-  --color-surface-sidebar: 7 12 24;
-  --color-surface-header: 7 12 24;
+  --color-surface-base:      13  20  36;
+  --color-surface-raised:    22  31  50;
+  --color-surface-overlay:   30  42  66;
+  --color-surface-highlight: 18  52 100;
+  --color-surface-sidebar:    9  14  26;
+  --color-surface-header:     9  14  26;
 
-  --color-text-heading: 255 255 255;
-  --color-text-primary: 226 232 240;
-  --color-text-secondary: 148 163 184;
-  --color-text-muted: 100 116 139;
-  --color-text-inverted: 15 23 42;
+  --color-text-heading:   255 255 255;
+  --color-text-primary:   179 192 214;
+  --color-text-secondary: 130 146 172;
+  --color-text-muted:      85 102 128;
+  --color-text-inverted:   23  43  77;
 
-  --color-border-default: 30 41 59;
-  --color-border-subtle: 30 41 59;
-  --color-border-strong: 51 65 85;
+  --color-border-default:  40  58  94;
+  --color-border-subtle:   33  47  76;
+  --color-border-strong:   57  80 122;
 
-  --color-primary: 37 99 235;
-  --color-primary-hover: 29 78 216;
-  --color-primary-light: 59 130 246;
-  --color-primary-bg: 30 58 95;
+  --color-primary:          66 143 255;
+  --color-primary-hover:    82 156 255;
+  --color-primary-light:    66 143 255;
+  --color-primary-bg:       18  52 100;
 
-  --color-success: 16 185 129;
-  --color-warning: 245 158 11;
-  --color-danger: 239 68 68;
-  --color-info: 59 130 246;
+  --color-success:          52 199 128;
+  --color-success-bg:        8  55  31;
+  --color-warning:          255 183  40;
+  --color-warning-bg:        61  44   0;
+  --color-danger:           255 102  79;
+  --color-danger-bg:         74  20  11;
+  --color-info:              66 143 255;
+  --color-info-bg:           18  52 100;
 
-  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.2), 0 1px 2px -1px rgb(0 0 0 / 0.15);
+  --shadow-card:     0 1px 3px 0 rgb(0 0 0 / 0.2), 0 1px 2px -1px rgb(0 0 0 / 0.15);
   --shadow-card-hover: 0 4px 12px -2px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.15);
   --shadow-header: none;
 

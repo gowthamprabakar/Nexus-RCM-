@@ -36,12 +36,16 @@ export default {
           "warning": "rgb(var(--color-warning) / <alpha-value>)",
           "danger":  "rgb(var(--color-danger) / <alpha-value>)",
           "info":    "rgb(var(--color-info) / <alpha-value>)",
+          "success-bg": "rgb(var(--color-success-bg) / <alpha-value>)",
+          "warning-bg": "rgb(var(--color-warning-bg) / <alpha-value>)",
+          "danger-bg":  "rgb(var(--color-danger-bg) / <alpha-value>)",
+          "info-bg":    "rgb(var(--color-info-bg) / <alpha-value>)",
         },
 
         // ── Static colors (don't change with theme) ──
-        "primary": "#2563eb",
-        "primary-hover": "#1d4ed8",
-        "primary-light": "#3b82f6",
+        "primary": "#0C66E4",
+        "primary-hover": "#0052CC",
+        "primary-light": "#207AEA",
 
         "surface": {
           "base": "#0B1120",
