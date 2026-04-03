@@ -3,17 +3,17 @@ import { NavLink, useLocation } from 'react-router-dom';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
-// Reusable Link Item
+// Reusable Link Item — left-border accent style (Atlassian pattern)
 const SidebarLink = ({ to, icon, label, badge, isNew }) => {
     return (
         <NavLink
             to={to}
             end={to === '/'}
             className={({ isActive }) => cn(
-                "flex items-center justify-between px-4 py-2 rounded-lg transition-colors text-[13px] group",
+                "flex items-center justify-between px-4 py-1.5 transition-colors text-[13px] group border-l-2",
                 isActive
-                    ? "bg-th-primary/10 text-th-primary-light font-semibold"
-                    : "text-th-secondary hover:text-th-heading hover:bg-th-surface-overlay/30"
+                    ? "border-th-primary text-th-primary bg-th-surface-highlight/50 font-semibold"
+                    : "border-transparent text-th-secondary hover:text-th-heading hover:bg-th-surface-overlay/50"
             )}
         >
             <div className="flex items-center gap-2.5">
@@ -24,10 +24,10 @@ const SidebarLink = ({ to, icon, label, badge, isNew }) => {
             </div>
             <div className="flex items-center gap-1.5">
                 {isNew && (
-                    <span className="px-1 py-px text-[8px] font-bold rounded bg-emerald-500/20 text-emerald-400 uppercase">New</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-th-primary/10 text-th-primary font-bold uppercase">New</span>
                 )}
                 {badge && (
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-red-500/20 text-red-400">{badge}</span>
+                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-th-danger/10 text-th-danger">{badge}</span>
                 )}
             </div>
         </NavLink>
@@ -36,17 +36,17 @@ const SidebarLink = ({ to, icon, label, badge, isNew }) => {
 
 // Section Divider
 const SectionHeader = ({ label }) => (
-    <p className="text-[10px] font-black uppercase tracking-widest text-th-muted px-5 pt-6 pb-2">{label}</p>
+    <p className="text-[10px] font-bold uppercase tracking-wider text-th-muted px-4 pt-5 pb-1">{label}</p>
 );
 
 export function Sidebar() {
     return (
-        <aside className="w-[260px] bg-th-surface-sidebar border-r border-th-border flex flex-col h-screen shrink-0 font-sans z-20 transition-colors duration-200">
+        <aside className="w-60 bg-th-surface-sidebar border-r border-th-border flex flex-col h-screen shrink-0 font-sans z-20 transition-colors duration-200">
             {/* Brand Header */}
-            <div className="h-14 flex items-center px-5 border-b border-th-border">
+            <div className="h-14 flex items-center px-4 border-b border-th-border">
                 <div className="flex items-center gap-3">
-                    <div className="size-8 rounded-lg bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white shadow-lg shadow-primary/20">
-                        <span className="material-symbols-outlined text-lg">hub</span>
+                    <div className="size-8 rounded-lg bg-th-primary flex items-center justify-center text-white text-xs font-bold">
+                        NX
                     </div>
                     <div>
                         <h1 className="text-sm font-bold text-th-heading tracking-tight">NEXUS RCM</h1>
@@ -56,14 +56,14 @@ export function Sidebar() {
             </div>
 
             {/* Scrollable Nav */}
-            <div className="flex-1 overflow-y-auto py-3 px-3 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto py-3 custom-scrollbar">
 
                 {/* Command Center */}
                 <div className="mb-1">
                     <SidebarLink to="/" icon="hub" label="Command Center" />
                 </div>
 
-                {/* ── ANALYTICS ── */}
+                {/* -- ANALYTICS -- */}
                 <SectionHeader label="Analytics" />
                 <div className="space-y-0.5">
                     <SidebarLink to="/analytics/revenue" icon="monitoring" label="Revenue Analytics" />
@@ -78,7 +78,7 @@ export function Sidebar() {
                     <SidebarLink to="/payments/contract-variance" icon="difference" label="Contract Variance" isNew />
                 </div>
 
-                {/* ── WORK ── */}
+                {/* -- WORK -- */}
                 <SectionHeader label="Work" />
                 <div className="space-y-0.5">
                     <SidebarLink to="/work/claims" icon="edit_note" label="Claims Work Center" />
@@ -88,7 +88,7 @@ export function Sidebar() {
                     <SidebarLink to="/work/automation" icon="smart_toy" label="Automation Dashboard" isNew />
                 </div>
 
-                {/* ── INTELLIGENCE ── */}
+                {/* -- INTELLIGENCE -- */}
                 <SectionHeader label="Intelligence" />
                 <div className="space-y-0.5">
                     <SidebarLink to="/intelligence/lida" icon="auto_awesome" label="LIDA AI" />
@@ -96,7 +96,7 @@ export function Sidebar() {
                     <SidebarLink to="/intelligence/simulation" icon="science" label="Simulation Engine" isNew />
                 </div>
 
-                {/* ── SPECIALTY ── */}
+                {/* -- SPECIALTY -- */}
                 <SectionHeader label="Specialty" />
                 <div className="space-y-0.5">
                     <SidebarLink to="/specialty/patient-access" icon="person_check" label="Patient Access" />
@@ -104,7 +104,7 @@ export function Sidebar() {
                     <SidebarLink to="/specialty/evv" icon="home_health" label="EVV Home Health" />
                 </div>
 
-                {/* ── SETTINGS ── */}
+                {/* -- SETTINGS -- */}
                 <SectionHeader label="Settings" />
                 <div className="space-y-0.5">
                     <SidebarLink to="/settings" icon="settings" label="Settings" />
@@ -116,10 +116,10 @@ export function Sidebar() {
             <div className="px-4 py-3 border-t border-th-border bg-th-surface-base/50">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span className="size-2 rounded-full bg-th-success"></span>
                         <span className="text-[10px] font-medium text-th-muted">System Operational</span>
                     </div>
-                    <span className="text-[10px] text-th-muted">v3.0.0</span>
+                    <span className="text-[10px] text-th-muted">v5.0.0</span>
                 </div>
             </div>
         </aside>

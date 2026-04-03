@@ -91,6 +91,7 @@ export default {
       boxShadow: {
         "card": "var(--shadow-card)",
         "card-hover": "var(--shadow-card-hover)",
+        "header": "var(--shadow-header)",
         "enterprise": "0 0 0 1px rgb(0 0 0 / 0.03), 0 1px 2px 0 rgb(0 0 0 / 0.06)",
         "glow-primary": "0 0 20px -5px rgb(37 99 235 / 0.15)",
       },

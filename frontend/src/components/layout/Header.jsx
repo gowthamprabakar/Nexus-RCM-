@@ -95,12 +95,10 @@ const ROUTE_META = {
     '/admin/scheduler': { title: 'Scheduler', section: 'Settings' },
 };
 
-function getCurrentDateRange() {
+function formatCurrentDate() {
     const now = new Date();
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const month = monthNames[now.getMonth()];
-    const year = now.getFullYear();
-    return `${month} 1 - ${month} ${new Date(year, now.getMonth() + 1, 0).getDate()}, ${year}`;
+    const options = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+    return now.toLocaleDateString('en-US', options);
 }
 
 export function Header() {
@@ -130,7 +128,7 @@ export function Header() {
     };
 
     return (
-        <header className="h-12 border-b border-th-border bg-th-surface-header px-6 flex items-center justify-between sticky top-0 z-10 font-sans transition-colors duration-200" style={{ boxShadow: 'var(--shadow-header)' }}>
+        <header className="h-[52px] border-b border-th-border bg-th-surface-header px-6 flex items-center justify-between sticky top-0 z-10 font-sans transition-colors duration-200 shadow-header">
             {/* Left: Breadcrumb + Title */}
             <div className="flex items-center gap-3 min-w-0">
                 <nav className="flex items-center gap-1.5 text-xs">
@@ -148,32 +146,15 @@ export function Header() {
 
             {/* Right: Actions */}
             <div className="flex items-center gap-2">
-                {/* Date range */}
-                <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-th-secondary hover:text-th-heading hover:bg-th-surface-overlay/30 rounded-md transition-colors">
-                    <span className="material-symbols-outlined text-sm">calendar_today</span>
-                    <span>{getCurrentDateRange()}</span>
-                </button>
-
-                <div className="h-4 w-px bg-th-border"></div>
-
-                {/* Theme Toggle */}
-                <button
-                    onClick={toggleTheme}
-                    className="p-1.5 text-th-secondary hover:text-th-heading hover:bg-th-surface-overlay/30 rounded-md transition-colors"
-                    aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-                    title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-                >
-                    <span className="material-symbols-outlined text-[20px]">
-                        {isDark ? 'light_mode' : 'dark_mode'}
-                    </span>
-                </button>
+                {/* Date */}
+                <span className="text-[11px] text-th-secondary">{formatCurrentDate()}</span>
 
                 <div className="h-4 w-px bg-th-border"></div>
 
                 {/* Search */}
                 <form onSubmit={handleSearch} className="relative">
                     <input
-                        className="w-52 h-8 bg-th-surface-raised border border-th-border rounded-md text-xs pl-8 pr-3 focus:ring-1 focus:ring-th-primary focus:border-th-primary text-th-heading placeholder:text-th-muted transition-all focus:w-72"
+                        className="w-48 bg-th-surface-overlay rounded-md px-3 py-1.5 text-sm pl-8 focus:ring-1 focus:ring-th-primary focus:border-th-primary text-th-heading placeholder:text-th-muted transition-all focus:w-64"
                         placeholder="Search claims, patients..."
                         type="text"
                         value={searchQuery}
@@ -183,18 +164,32 @@ export function Header() {
                     <span className="material-symbols-outlined absolute left-2 top-1.5 text-th-muted text-base">search</span>
                 </form>
 
+                <div className="h-4 w-px bg-th-border"></div>
+
+                {/* Theme Toggle */}
+                <button
+                    onClick={toggleTheme}
+                    className="p-1.5 text-th-secondary hover:text-th-heading hover:bg-th-surface-overlay/50 rounded-md transition-colors"
+                    aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+                    title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+                >
+                    <span className="material-symbols-outlined text-[20px]">
+                        {isDark ? 'light_mode' : 'dark_mode'}
+                    </span>
+                </button>
+
                 {/* Notifications */}
                 <button
-                    className="p-1.5 text-th-secondary hover:text-th-heading hover:bg-th-surface-overlay/30 rounded-md relative transition-colors"
+                    className="p-1.5 text-th-secondary hover:text-th-heading hover:bg-th-surface-overlay/50 rounded-md relative transition-colors"
                     aria-label="Notifications"
                 >
                     <span className="material-symbols-outlined text-[20px]">notifications</span>
-                    <span className="absolute top-1 right-1 size-2 bg-red-500 rounded-full ring-2 ring-th-surface-header"></span>
+                    <span className="absolute top-1 right-1 size-2 bg-th-danger rounded-full ring-2 ring-th-surface-header"></span>
                 </button>
 
                 {/* User avatar */}
-                <button className="flex items-center gap-2 pl-2" aria-label="User menu">
-                    <div className="size-7 rounded-md bg-gradient-to-br from-primary to-primary-light flex items-center justify-center text-white text-xs font-bold">
+                <button className="flex items-center gap-2 pl-1" aria-label="User menu">
+                    <div className="size-8 rounded-full bg-th-primary flex items-center justify-center text-white text-xs font-bold">
                         AS
                     </div>
                 </button>
