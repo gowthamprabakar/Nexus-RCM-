@@ -3,37 +3,37 @@ import { cn } from '../../lib/utils';
 
 const PRIORITY_STYLES = {
     critical: {
-        dot: 'bg-red-500',
-        label: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400',
-        ring: 'ring-red-200 dark:ring-red-800',
+        dot: 'bg-[rgb(var(--color-danger))]',
+        label: 'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))]',
+        ring: 'ring-[rgb(var(--color-danger)/0.3)]',
     },
     high: {
-        dot: 'bg-amber-500',
-        label: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400',
-        ring: 'ring-amber-200 dark:ring-amber-800',
+        dot: 'bg-[rgb(var(--color-warning))]',
+        label: 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))]',
+        ring: 'ring-[rgb(var(--color-warning)/0.3)]',
     },
     medium: {
-        dot: 'bg-blue-500',
-        label: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400',
-        ring: 'ring-blue-200 dark:ring-blue-800',
+        dot: 'bg-[rgb(var(--color-primary))]',
+        label: 'bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))]',
+        ring: 'ring-[rgb(var(--color-primary)/0.3)]',
     },
     low: {
-        dot: 'bg-slate-400',
-        label: 'bg-slate-100 dark:bg-th-surface-overlay text-th-muted',
-        ring: 'ring-slate-200 dark:ring-slate-700',
+        dot: 'bg-th-muted',
+        label: 'bg-th-surface-overlay text-th-muted',
+        ring: 'ring-th-border',
     },
 };
 
 const EFFORT_STYLES = {
-    immediate: 'bg-red-50 dark:bg-red-900/15 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800',
-    'short-term': 'bg-amber-50 dark:bg-amber-900/15 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+    immediate: 'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger)/0.3)]',
+    'short-term': 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]',
     'long-term': 'bg-slate-100 dark:bg-th-surface-overlay text-th-secondary border-th-border',
 };
 
 const ICON_BG_CYCLE = [
     'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
-    'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
-    'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400',
+    'bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))]',
+    'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))]',
     'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400',
 ];
 
@@ -69,12 +69,12 @@ function ActionItem({ action, index }) {
             {/* Content */}
             <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-th-heading leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-150">
+                    <p className="text-sm font-semibold text-th-heading leading-snug group-hover:text-[rgb(var(--color-primary))] transition-colors duration-150">
                         {action.title}
                     </p>
                     {/* Impact value */}
                     {action.impact && (
-                        <span className="shrink-0 text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums whitespace-nowrap">
+                        <span className="shrink-0 text-sm font-bold text-[rgb(var(--color-success))] tabular-nums whitespace-nowrap">
                             {action.impact}
                         </span>
                     )}
@@ -180,7 +180,7 @@ export function PrescriptiveAction({
                     <button
                         type="button"
                         onClick={() => setShowAll(true)}
-                        className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors duration-150 flex items-center gap-1"
+                        className="text-xs font-semibold text-[rgb(var(--color-primary))] hover:opacity-80 transition-colors duration-150 flex items-center gap-1"
                     >
                         View all {actions.length} actions
                         <span className="material-symbols-outlined text-sm">expand_more</span>

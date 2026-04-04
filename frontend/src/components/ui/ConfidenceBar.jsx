@@ -23,15 +23,15 @@ const SIZE_VARIANTS = {
 };
 
 function getBarColor(score) {
-    if (score > 80) return 'bg-emerald-500';
-    if (score >= 60) return 'bg-amber-500';
-    return 'bg-red-500';
+    if (score > 80) return 'bg-[rgb(var(--color-success))]';
+    if (score >= 60) return 'bg-[rgb(var(--color-warning))]';
+    return 'bg-[rgb(var(--color-danger))]';
 }
 
 function getScoreColor(score) {
-    if (score > 80) return 'text-emerald-600 dark:text-emerald-400';
-    if (score >= 60) return 'text-amber-600 dark:text-amber-400';
-    return 'text-red-600 dark:text-red-400';
+    if (score > 80) return 'text-[rgb(var(--color-success))]';
+    if (score >= 60) return 'text-[rgb(var(--color-warning))]';
+    return 'text-[rgb(var(--color-danger))]';
 }
 
 export function ConfidenceBar({
@@ -93,7 +93,7 @@ export function ConfidenceBar({
                     <ul className="space-y-1">
                         {factors.slice(0, 5).map((factor, i) => (
                             <li key={i} className="flex items-start gap-1.5">
-                                <span className="mt-1 size-1.5 rounded-full bg-blue-500 shrink-0" />
+                                <span className="mt-1 size-1.5 rounded-full bg-[rgb(var(--color-primary))] shrink-0" />
                                 <span className="text-xs text-th-secondary leading-tight">{factor}</span>
                             </li>
                         ))}

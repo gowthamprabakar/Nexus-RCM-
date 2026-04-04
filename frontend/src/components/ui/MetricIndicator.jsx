@@ -22,7 +22,7 @@ export function AILevelBadge({ level, className }) {
 export function AIInsightCard({ level, title, description, action, onAction, className }) {
     const config = AI_LEVELS[level] || AI_LEVELS.descriptive;
     return (
-        <div className={cn("border border-slate-200 dark:border-th-border rounded-lg p-4 bg-white dark:bg-th-surface-raised", className)}>
+        <div className={cn("border border-th-border rounded-lg p-4 bg-th-surface-raised", className)}>
             <div className="flex items-start justify-between mb-2">
                 <AILevelBadge level={level} />
                 {action && (
@@ -31,7 +31,7 @@ export function AIInsightCard({ level, title, description, action, onAction, cla
                     </button>
                 )}
             </div>
-            <h4 className="text-sm font-semibold text-slate-900 dark:text-th-heading mb-1">{title}</h4>
+            <h4 className="text-[13px] font-semibold text-th-heading mb-1">{title}</h4>
             <p className="text-xs text-th-muted dark:text-th-secondary leading-relaxed">{description}</p>
         </div>
     );
