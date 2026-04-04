@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Integration Hub &amp; Connectors | RCM Enterprise</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex">
+<!-- Side Navigation Sidebar -->
+<aside class="w-64 border-r border-slate-200 dark:border-slate-800 flex flex-col h-screen sticky top-0 bg-white dark:bg-background-dark">
+<div class="p-6 flex flex-col gap-8 h-full">
+<div class="flex items-center gap-3">
+<div class="size-10 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined fill-1">hub</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-base font-bold leading-tight">RCM Admin</h1>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-medium">Enterprise Hub</p>
+</div>
+</div>
+<nav class="flex flex-col gap-1 flex-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary font-medium" href="#">
+<span class="material-symbols-outlined text-[20px]">grid_view</span>
+<span class="text-sm">Integration Hub</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">monitoring</span>
+<span class="text-sm">Live Traffic</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">history</span>
+<span class="text-sm">Sync Logs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+<span class="text-sm">Security</span>
+</a>
+<div class="my-4 border-t border-slate-200 dark:border-slate-800"></div>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="text-sm">Settings</span>
+</a>
+</nav>
+<button class="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:bg-primary/90 transition-all">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                New Workspace
+            </button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark overflow-y-auto">
+<!-- Header Section -->
+<header class="p-8 pb-4 flex flex-col gap-6">
+<div class="flex flex-wrap justify-between items-start gap-4">
+<div class="max-w-2xl">
+<h2 class="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Integration Hub</h2>
+<p class="text-slate-500 dark:text-slate-400 mt-1">Manage 600+ real-time healthcare system connections across EHR, Payer, and Financial layers.</p>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-primary/20 transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">add_link</span>
+                    New Connection
+                </button>
+</div>
+<!-- Stats & Live Health Map Row -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+<!-- Map Panel -->
+<div class="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden relative group">
+<div class="absolute top-4 left-4 z-10 bg-black/40 backdrop-blur-md border border-white/10 rounded-lg px-3 py-1.5">
+<div class="flex items-center gap-2">
+<span class="size-2 bg-emerald-500 rounded-full animate-pulse"></span>
+<span class="text-xs font-bold text-white uppercase tracking-wider">Live Traffic Map</span>
+</div>
+</div>
+<div class="h-[240px] w-full bg-slate-100 dark:bg-slate-950 bg-cover bg-center opacity-80 group-hover:opacity-100 transition-opacity" data-alt="Abstract dark world map with neon data connection trails" data-location="Global" style="background-image: url('https://placeholder.pics/svg/300');">
+</div>
+<div class="absolute bottom-4 right-4 text-right">
+<p class="text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded">GLOBAL_EDGE_NODES: ACTIVE</p>
+</div>
+</div>
+<!-- Stats Panel -->
+<div class="flex flex-col gap-4">
+<div class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col justify-center">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Total Active</p>
+<div class="flex items-baseline gap-2">
+<h3 class="text-3xl font-black text-slate-900 dark:text-white">584/612</h3>
+<span class="text-emerald-500 text-xs font-bold">+2.4%</span>
+</div>
+</div>
+<div class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col justify-center">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">System Throughput</p>
+<div class="flex items-baseline gap-2">
+<h3 class="text-3xl font-black text-slate-900 dark:text-white">1.2M <span class="text-lg font-normal opacity-60">rec/hr</span></h3>
+<span class="text-emerald-500 text-xs font-bold">+12.1%</span>
+</div>
+</div>
+<div class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 flex flex-col justify-center">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Avg. Latency</p>
+<div class="flex items-baseline gap-2">
+<h3 class="text-3xl font-black text-slate-900 dark:text-white">42ms</h3>
+<span class="text-orange-500 text-xs font-bold">-5.2%</span>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Search and Filters Sticky Bar -->
+<div class="sticky top-0 z-20 px-8 py-4 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-y border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-4">
+<div class="flex-1 min-w-[300px]">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+<input class="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-lg pl-10 pr-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm transition-all" placeholder="Search 600+ connectors (e.g. Epic, Cerner, Stripe)..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+<button class="px-4 py-2 bg-primary text-white text-xs font-bold rounded-full whitespace-nowrap">All Connectors</button>
+<button class="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold rounded-full hover:border-primary transition-all whitespace-nowrap">EHR Systems</button>
+<button class="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold rounded-full hover:border-primary transition-all whitespace-nowrap">Payer Portals</button>
+<button class="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold rounded-full hover:border-primary transition-all whitespace-nowrap">Financial</button>
+<button class="px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold rounded-full hover:border-primary transition-all whitespace-nowrap">Clearinghouse</button>
+</div>
+</div>
+<!-- Connector Marketplace Grid -->
+<div class="p-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+<!-- Connector Card: Epic -->
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 transition-all group flex flex-col gap-4 shadow-sm hover:shadow-xl">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="size-12 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center p-2 overflow-hidden">
+<img class="w-full h-full object-contain" data-alt="Epic Systems logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJXcOcXiF8q40vPQ2z9gN73axe4tx8chRRQfQ6rla3SH9dddVuW8TiXtFdnKRN9MAvgsO9vv6-c6ASnScj26fyDdJvgOTeaGxgoK7mGw9irmTWgKh9WFrHK7opSzGzJ4CGuJkf3xMtIfEFUlhjkMhrhvT_s4ee_w_xdvW6SJJcHDk_Vvzhg6b_uxFyaLqkmLnNlgAd84DXmgw6QGJE-rFvDTd_AtaiePoRFIclgj2uagLU-5BreDnDvHfPSoLifbZ54z58lUqku4YW"/>
+</div>
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">Epic App Orchard</h4>
+<p class="text-xs text-slate-500 font-medium uppercase tracking-tight">EHR Integration</p>
+</div>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+<span class="size-1.5 bg-emerald-500 rounded-full"></span>
+<span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Active</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 py-2 border-y border-slate-100 dark:border-slate-800/50">
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Latency</p>
+<p class="text-sm font-mono font-bold">12ms</p>
+</div>
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Success Rate</p>
+<p class="text-sm font-mono font-bold text-emerald-500">99.98%</p>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-auto">
+<button class="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2 rounded-lg text-xs font-bold transition-all">Config</button>
+<button class="flex-1 bg-primary/10 hover:bg-primary/20 text-primary py-2 rounded-lg text-xs font-bold transition-all">Logs</button>
+</div>
+</div>
+<!-- Connector Card: Cerner -->
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 transition-all group flex flex-col gap-4 shadow-sm hover:shadow-xl">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="size-12 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center p-2 overflow-hidden">
+<img class="w-full h-full object-contain" data-alt="Cerner logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAv-uul2Gpo3sCqUh43rad0xU8YWs3tjcquEajevBnM2j-0labefWwypkAvczYRVFQgg2D2UklS61-7ZnUUXtSE-fVuhrwGSWdmESgcfa7qHQAtN03Km7iaU5PXU_QW3ZZPoVwoKbIlCNHAJCT4PkXSMDBqWk5xHy7lovuJ8fm5GMHxmQspDfW5G7ap7ZrLW6O9Mlcj3u2PR9UKq4F6Hkw9cT7Z53yy8LmcQyqmWKgY8bC7wlsIDfBuPIKMnXS_mjNnD8SlBlq9McF2"/>
+</div>
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">Cerner Ignite</h4>
+<p class="text-xs text-slate-500 font-medium uppercase tracking-tight">EHR Integration</p>
+</div>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded-full border border-primary/20">
+<span class="size-1.5 bg-primary rounded-full animate-pulse"></span>
+<span class="text-[10px] font-bold text-primary uppercase tracking-wide">Syncing</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 py-2 border-y border-slate-100 dark:border-slate-800/50">
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Latency</p>
+<p class="text-sm font-mono font-bold">84ms</p>
+</div>
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Success Rate</p>
+<p class="text-sm font-mono font-bold text-emerald-500">98.2%</p>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-auto">
+<button class="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2 rounded-lg text-xs font-bold transition-all">Config</button>
+<button class="flex-1 bg-primary/10 hover:bg-primary/20 text-primary py-2 rounded-lg text-xs font-bold transition-all">Logs</button>
+</div>
+</div>
+<!-- Connector Card: Stripe -->
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 transition-all group flex flex-col gap-4 shadow-sm hover:shadow-xl">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="size-12 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center p-2 overflow-hidden">
+<img class="w-full h-full object-contain" data-alt="Stripe logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQpSlW3iHw1IWoY2ZdtjVm6A1O2L2a2oqSoGneaU4qlWYwRB3p6zcExmuavOSb8xcZNf1LlFGrJNH1Aqats6J6F_486x98L7cHxW-Fg1WfrPJ_S9XGiODbUxDvyGNuiw4kktwl-qhHMJXUMK54B2wC-dBRmw5JX2y3dTzwhDRcOvmiByJLmaQDD5ADJFWO01sqGkpw6dmrDAOauEmOaYV9AgQhYPOZXBWHZ9pqKfSr3McSwMQ_Nm4wM2vaDPD-OABDY34O0vNvmN5u"/>
+</div>
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">Stripe Billing</h4>
+<p class="text-xs text-slate-500 font-medium uppercase tracking-tight">Financial Gateway</p>
+</div>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+<span class="size-1.5 bg-emerald-500 rounded-full"></span>
+<span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Active</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 py-2 border-y border-slate-100 dark:border-slate-800/50">
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Latency</p>
+<p class="text-sm font-mono font-bold">32ms</p>
+</div>
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Success Rate</p>
+<p class="text-sm font-mono font-bold text-emerald-500">100%</p>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-auto">
+<button class="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2 rounded-lg text-xs font-bold transition-all">Config</button>
+<button class="flex-1 bg-primary/10 hover:bg-primary/20 text-primary py-2 rounded-lg text-xs font-bold transition-all">Logs</button>
+</div>
+</div>
+<!-- Connector Card: Change Healthcare -->
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-red-500/50 transition-all group flex flex-col gap-4 shadow-sm hover:shadow-xl border-l-4 border-l-red-500">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="size-12 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center p-2 overflow-hidden">
+<img class="w-full h-full object-contain" data-alt="Change Healthcare logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWFcjecEQWVjYV5F4I77bgZG9uEeQaR-75rlWyrFwj0T4iNdgsjIjBFTGl5jgEgkZ2vMtwQ0w134TIIf3j5GxkvunYyDsix1vfp8l96nkZUJknY-nMKUPflSXJkkhaskEDA8F-9WHYiif6oLran54oUNTXx7NchYq6LWaf_IdrI3TDuZYfhQELZMIq6GO29Js272oA6bUZ-trHV4r-rJtKGHIjiw3GLEgKYAEtnumsztgP96jT6vpfrcTmgs-WADPJ1bEX7RR7wS9N"/>
+</div>
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">Change Health</h4>
+<p class="text-xs text-slate-500 font-medium uppercase tracking-tight">Clearinghouse</p>
+</div>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-1 bg-red-500/10 rounded-full border border-red-500/20">
+<span class="size-1.5 bg-red-500 rounded-full"></span>
+<span class="text-[10px] font-bold text-red-500 uppercase tracking-wide">Error</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 py-2 border-y border-slate-100 dark:border-slate-800/50">
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Latency</p>
+<p class="text-sm font-mono font-bold text-red-400">TIMEOUT</p>
+</div>
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Success Rate</p>
+<p class="text-sm font-mono font-bold text-red-500">42.1%</p>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-auto">
+<button class="flex-1 bg-red-500 text-white py-2 rounded-lg text-xs font-bold transition-all shadow-md shadow-red-500/20">Fix Connection</button>
+<button class="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2 rounded-lg text-xs font-bold transition-all">Logs</button>
+</div>
+</div>
+<!-- Repeated Grid Items for Scale Visualization -->
+<!-- Athena Health -->
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 transition-all group flex flex-col gap-4 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="size-12 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center p-2">
+<img class="w-full h-full object-contain" data-alt="Athenahealth logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBOIasXNTgSVxhU25-kxRz3GPgK4qnt5uBM8vFXfwsbTXdYfLYhf4Mz1BJWUgHV8xENIuuACBQ5D0aFvTcWIfW5mRIwS1VsBNlK2Cs4ChMxozyt1RA8qe9lahIv9Gg2ABgkjVkBVkRtRKt_7mIs_q7LXAo9VFM0DW9Wde9Ad8ZQ9-9Z-u0-Z60c67xuDOtCQJgiIyqSnw1L5BZJyPJ67Y1AA5k66bAlDKlGG6OvM50LmdUievN-o2AWMV41kN4Ynv36xYJ-WfketD1N"/>
+</div>
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">Athenahealth</h4>
+<p class="text-xs text-slate-500 font-medium uppercase tracking-tight">EHR Integration</p>
+</div>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+<span class="size-1.5 bg-emerald-500 rounded-full"></span>
+<span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Active</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 py-2 border-y border-slate-100 dark:border-slate-800/50">
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Latency</p>
+<p class="text-sm font-mono font-bold">28ms</p>
+</div>
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Success Rate</p>
+<p class="text-sm font-mono font-bold text-emerald-500">99.4%</p>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-auto">
+<button class="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2 rounded-lg text-xs font-bold transition-all">Config</button>
+<button class="flex-1 bg-primary/10 hover:bg-primary/20 text-primary py-2 rounded-lg text-xs font-bold transition-all">Logs</button>
+</div>
+</div>
+<!-- UnitedHealthcare -->
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 transition-all group flex flex-col gap-4 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="size-12 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center p-2">
+<img class="w-full h-full object-contain" data-alt="UHC logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAq6zgHS21Eqe6OrKWvL8HFvwTvTaBTvsGgJNivtzcyYhg5-wVRaJ7p9AZxDoAPOUh--ekz1_zNMwtAP-JDjpaAGoQStneGV5UCKysHwx6dNJY9Hhu-Fhk159s849rMKfDB64SUxmDF05DnBIQsQ58H8YmzkahxJZUWdiDy1OTt23fRW7Pt7vNtxR4i-eGti4ytlVUONSxr6k7dVLGW0LdyuHv370yQt-WQVw48x_oyLCEKIlAtD1-VaQhLxD2pshnkfrWNfA65mZ-7"/>
+</div>
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">UHC Provider</h4>
+<p class="text-xs text-slate-500 font-medium uppercase tracking-tight">Payer Portal</p>
+</div>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+<span class="size-1.5 bg-emerald-500 rounded-full"></span>
+<span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Active</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 py-2 border-y border-slate-100 dark:border-slate-800/50">
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Latency</p>
+<p class="text-sm font-mono font-bold">142ms</p>
+</div>
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Success Rate</p>
+<p class="text-sm font-mono font-bold text-emerald-500">96.8%</p>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-auto">
+<button class="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2 rounded-lg text-xs font-bold transition-all">Config</button>
+<button class="flex-1 bg-primary/10 hover:bg-primary/20 text-primary py-2 rounded-lg text-xs font-bold transition-all">Logs</button>
+</div>
+</div>
+<!-- Flywire -->
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 transition-all group flex flex-col gap-4 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="size-12 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center p-2">
+<img class="w-full h-full object-contain" data-alt="Flywire logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxko--zdnRxYkzEQk6hrQYh6pWZpLSJUJSFM27e_Ex_e6_rSA7JbfT3mPhQDmSRwxstn0Rhk1jV8GnqUvUAcNgSYNJQdEl_iHtfq_jHL9R66bylXBZV0i9u2b7ns2l1Mj28FLAB3IUVNZ8YtKVg2qdUlHY8M4FZWpnT-bv1GhpDxckUkbysOaADHjvp6U5cletQFkjaYREoKp235U3GBu7TzOQNs2pglzx1tqljyloLvMNSIi0jKIezkE29I4tYFM2xgWKN-uzvyoq"/>
+</div>
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">Flywire Health</h4>
+<p class="text-xs text-slate-500 font-medium uppercase tracking-tight">Financial Gateway</p>
+</div>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+<span class="size-1.5 bg-emerald-500 rounded-full"></span>
+<span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Active</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 py-2 border-y border-slate-100 dark:border-slate-800/50">
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Latency</p>
+<p class="text-sm font-mono font-bold">45ms</p>
+</div>
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Success Rate</p>
+<p class="text-sm font-mono font-bold text-emerald-500">100%</p>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-auto">
+<button class="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2 rounded-lg text-xs font-bold transition-all">Config</button>
+<button class="flex-1 bg-primary/10 hover:bg-primary/20 text-primary py-2 rounded-lg text-xs font-bold transition-all">Logs</button>
+</div>
+</div>
+<!-- Waystar -->
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 transition-all group flex flex-col gap-4 shadow-sm">
+<div class="flex justify-between items-start">
+<div class="flex items-center gap-3">
+<div class="size-12 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center p-2">
+<img class="w-full h-full object-contain" data-alt="Waystar logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxODzBSzOOKkILndMpTLvdU0pZvsFsj8Xntlu5iEi8u53pyzmS2OaEyqLBiRrKmyfCTDfvioAi_ywKlEUu-GUFP_GT5-jTBsKy1htoA1YsYA7_gkCSIp-FzNyvqHfaWb6L7Wej321Et0CMjKRC8SiLcvN4OeuLwMvYfF-dultZ0IytWtjAfo9xDqrhUdLym_9hMe9OENqEv4iaPdmSI6BVGc34OvNAARLv6SS6IbHRZb5WCVMSyXgZhC-Xw7Mk7CmZm4GnUmi4L4Mc"/>
+</div>
+<div>
+<h4 class="font-bold text-slate-900 dark:text-white">Waystar Portal</h4>
+<p class="text-xs text-slate-500 font-medium uppercase tracking-tight">Clearinghouse</p>
+</div>
+</div>
+<div class="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+<span class="size-1.5 bg-emerald-500 rounded-full"></span>
+<span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Active</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 py-2 border-y border-slate-100 dark:border-slate-800/50">
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Latency</p>
+<p class="text-sm font-mono font-bold">92ms</p>
+</div>
+<div>
+<p class="text-[10px] text-slate-400 font-bold uppercase">Success Rate</p>
+<p class="text-sm font-mono font-bold text-emerald-500">99.1%</p>
+</div>
+</div>
+<div class="flex items-center gap-2 mt-auto">
+<button class="flex-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 py-2 rounded-lg text-xs font-bold transition-all">Config</button>
+<button class="flex-1 bg-primary/10 hover:bg-primary/20 text-primary py-2 rounded-lg text-xs font-bold transition-all">Logs</button>
+</div>
+</div>
+</div>
+<!-- Smart Suggestion AI Banner -->
+<div class="mx-8 mb-12 p-6 bg-primary/10 border border-primary/20 rounded-2xl flex flex-wrap items-center justify-between gap-6 overflow-hidden relative">
+<div class="absolute -right-12 top-1/2 -translate-y-1/2 text-primary/10 text-9xl pointer-events-none">
+<span class="material-symbols-outlined text-[160px]">auto_awesome</span>
+</div>
+<div class="flex gap-4 relative z-10">
+<div class="size-12 rounded-xl bg-primary flex items-center justify-center text-white shrink-0">
+<span class="material-symbols-outlined">auto_awesome</span>
+</div>
+<div>
+<h5 class="font-bold text-slate-900 dark:text-white">AI Optimization Suggestion</h5>
+<p class="text-sm text-slate-600 dark:text-slate-400 max-w-xl mt-1">Our AI detected a potential performance bottleneck in the Cerner FHIR API. Switching to the Batch-Fetch protocol could reduce latency by 45%.</p>
+</div>
+</div>
+<button class="relative z-10 bg-primary text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-all">Apply Optimization</button>
+</div>
+</main>
+</body></html>

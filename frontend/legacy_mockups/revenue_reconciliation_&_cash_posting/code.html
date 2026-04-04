@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Revenue Reconciliation &amp; Cash Posting</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+        }
+        .high-density-table td, .high-density-table th {
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+        .currency-mono {
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark px-6 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-primary">
+<div class="size-8 bg-primary text-white rounded flex items-center justify-center">
+<span class="material-symbols-outlined">account_balance</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight">RevenueCycleAI</h2>
+</div>
+<label class="flex flex-col min-w-40 !h-9 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full">
+<div class="text-slate-500 flex border-none bg-slate-100 dark:bg-slate-800 items-center justify-center pl-3 rounded-l-lg border-r-0">
+<span class="material-symbols-outlined text-sm">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-slate-900 dark:text-white focus:outline-0 focus:ring-0 border-none bg-slate-100 dark:bg-slate-800 focus:border-none h-full placeholder:text-slate-500 px-3 rounded-l-none border-l-0 text-sm font-normal leading-normal" placeholder="Search Transactions..." value=""/>
+</div>
+</label>
+</div>
+<div class="flex flex-1 justify-end gap-6 items-center">
+<nav class="flex items-center gap-6">
+<a class="text-slate-600 dark:text-slate-300 text-sm font-medium hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-primary text-sm font-bold border-b-2 border-primary py-1" href="#">Reconciliation</a>
+<a class="text-slate-600 dark:text-slate-300 text-sm font-medium hover:text-primary transition-colors" href="#">Claims</a>
+<a class="text-slate-600 dark:text-slate-300 text-sm font-medium hover:text-primary transition-colors" href="#">Analytics</a>
+</nav>
+<div class="flex gap-2 border-l border-slate-200 dark:border-slate-800 pl-6">
+<button class="flex items-center justify-center rounded-lg h-9 w-9 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+<span class="material-symbols-outlined text-lg">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-9 w-9 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+<span class="material-symbols-outlined text-lg">settings</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-9 w-9 ring-2 ring-primary/20" data-alt="User profile avatar portrait" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAGKLyQEf-utPyzifCcR7F5tX4wZ2v474yJxL3_oIqR-CnY7GKwF-F8xfXmJUtzuzggAh_GmYrBr_zcU69ezD-XmpT77HYOxKq6j1-nNC7qH9gtcbkQcFpzG8YtY_ZLordVKTSFreM_MsbRFLepaPgFX7g2cKnVA3ueEmHDWXOTgapbZoYxnIIZ2J9RQY1wr-I339qvem1DsNutImQKyX0vwNfPMY0p7LfDtu0r17hMuqpO8oDlMLMGwN6YqOKdK_bha0KqkuV_sOIZ");'></div>
+</div>
+</header>
+<main class="flex-1 flex flex-col p-6 max-w-[1600px] mx-auto w-full gap-6">
+<!-- Breadcrumbs & Heading Section -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center gap-2 text-sm">
+<a class="text-slate-500 hover:text-primary transition-colors" href="#">Financial Management</a>
+<span class="text-slate-400">/</span>
+<span class="text-slate-900 dark:text-white font-medium">Revenue Reconciliation &amp; Cash Posting</span>
+</div>
+<div class="flex flex-wrap justify-between items-end gap-6">
+<div class="flex flex-col gap-1 max-w-2xl">
+<h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Revenue Reconciliation &amp; Cash Posting</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm">Automated three-way matching between Billed, Adjudicated, and Deposited amounts with AI variance detection.</p>
+</div>
+<!-- Cash Flow Forecast Mini Chart -->
+<div class="flex flex-col items-end gap-1 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 min-w-[300px]">
+<div class="flex justify-between w-full items-center mb-1">
+<span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Liquidity Trend (30d)</span>
+<span class="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 rounded">+5.4%</span>
+</div>
+<div class="h-12 w-full flex items-end gap-0.5">
+<svg class="w-full h-full" fill="none" preserveaspectratio="none" viewbox="0 0 478 100">
+<path d="M0 80C18 80 18 20 36 20C54 20 54 40 72 40C90 40 90 90 108 90C127 90 127 30 145 30C163 30 163 100 181 100C199 100 199 60 217 60C236 60 236 45 254 45C272 45 272 85 290 85C308 85 308 95 326 95C344 95 344 5 363 5C381 5 381 80 399 80C417 80 417 90 435 90C453 90 453 25 472 25" fill="none" stroke="#135bec" stroke-width="2"></path>
+<path d="M0 80C18 80 18 20 36 20C54 20 54 40 72 40C90 40 90 90 108 90C127 90 127 30 145 30C163 30 163 100 181 100C199 100 199 60 217 60C236 60 236 45 254 45C272 45 272 85 290 85C308 85 308 95 326 95C344 95 344 5 363 5C381 5 381 80 399 80C417 80 417 90 435 90C453 90 453 25 472 25V100H0V80Z" fill="url(#grad)" opacity="0.1"></path>
+<defs>
+<lineargradient id="grad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#135bec"></stop>
+<stop offset="100%" stop-color="transparent"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+</div>
+</div>
+</div>
+<!-- Metric Ribbon -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="flex flex-col gap-2 rounded-xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+<div class="flex justify-between items-start">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Total Reconciled</p>
+<span class="material-symbols-outlined text-emerald-500">check_circle</span>
+</div>
+<p class="text-slate-900 dark:text-white text-2xl font-bold tracking-tight">$1,248,390</p>
+<div class="flex items-center gap-1.5">
+<span class="text-emerald-600 text-xs font-bold">+12.4%</span>
+<span class="text-slate-400 text-xs">vs last month</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+<div class="flex justify-between items-start">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Unposted Cash</p>
+<span class="material-symbols-outlined text-amber-500">pending_actions</span>
+</div>
+<p class="text-slate-900 dark:text-white text-2xl font-bold tracking-tight">$45,210</p>
+<div class="flex items-center gap-1.5">
+<span class="text-rose-600 text-xs font-bold">-5.2%</span>
+<span class="text-slate-400 text-xs">resolution rate</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm ring-2 ring-rose-500/10">
+<div class="flex justify-between items-start">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Active Variances</p>
+<span class="material-symbols-outlined text-rose-500">warning</span>
+</div>
+<p class="text-slate-900 dark:text-white text-2xl font-bold tracking-tight">128</p>
+<div class="flex items-center gap-1.5">
+<span class="text-rose-600 text-xs font-bold">+8 new</span>
+<span class="text-slate-400 text-xs">requires manual review</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+<div class="flex justify-between items-start">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">Net Liquidity</p>
+<span class="material-symbols-outlined text-primary">payments</span>
+</div>
+<p class="text-slate-900 dark:text-white text-2xl font-bold tracking-tight">$890,442</p>
+<div class="flex items-center gap-1.5">
+<span class="text-emerald-600 text-xs font-bold">+8.1%</span>
+<span class="text-slate-400 text-xs">current reserves</span>
+</div>
+</div>
+</div>
+<!-- Ledger Table Section -->
+<div class="flex flex-col flex-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+<!-- Filter Bar -->
+<div class="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+<div class="flex gap-3 items-center">
+<div class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+<span class="material-symbols-outlined text-base">filter_list</span>
+<span>Filters</span>
+</div>
+<div class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+<span>Payer: BlueCross</span>
+<span class="material-symbols-outlined text-sm">close</span>
+</div>
+<div class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+<span>Status: High Variance</span>
+<span class="material-symbols-outlined text-sm">close</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-bold rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-200 transition-colors">
+<span class="material-symbols-outlined text-base">download</span>
+<span>Export CSV</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-primary/20">
+<span class="material-symbols-outlined text-base">post_add</span>
+<span>Batch Post Cash</span>
+</button>
+</div>
+</div>
+<!-- Table Container -->
+<div class="overflow-x-auto flex-1">
+<table class="w-full text-left border-collapse high-density-table">
+<thead class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 sticky top-0 uppercase text-[11px] font-bold tracking-widest border-b border-slate-200 dark:border-slate-700">
+<tr>
+<th class="w-12 text-center"><input class="rounded border-slate-300 text-primary focus:ring-primary" type="checkbox"/></th>
+<th>Patient / Payer ID</th>
+<th>Service Date</th>
+<th class="text-right">Billed Amount</th>
+<th class="text-right">ERA/EOB Amount</th>
+<th class="text-right">Bank Deposit</th>
+<th class="text-right">Variance</th>
+<th class="text-center">AI Confidence</th>
+<th class="text-center">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<!-- Row 1: High Variance -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors bg-rose-50/20 dark:bg-rose-900/10">
+<td class="text-center"><input class="rounded border-slate-300 text-primary" type="checkbox"/></td>
+<td>
+<div class="flex flex-col">
+<span class="font-bold text-slate-900 dark:text-white">John Doe</span>
+<span class="text-xs text-slate-400 font-mono">BCBS-882194</span>
+</div>
+</td>
+<td>Oct 12, 2023</td>
+<td class="text-right font-medium currency-mono">$1,450.00</td>
+<td class="text-right font-medium currency-mono">$1,200.00</td>
+<td class="text-right font-medium currency-mono">$0.00</td>
+<td class="text-right font-bold text-rose-600 currency-mono">-$1,200.00</td>
+<td class="text-center">
+<span class="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 text-[10px] font-bold">24% LOW</span>
+</td>
+<td>
+<div class="flex justify-center gap-1.5">
+<button class="px-2.5 py-1 text-xs font-bold bg-primary text-white rounded hover:bg-blue-700 transition-colors">Adjust</button>
+<button class="px-2.5 py-1 text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded">Ignore</button>
+</div>
+</td>
+</tr>
+<!-- Row 2: Matched -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="text-center"><input checked="" class="rounded border-slate-300 text-primary" type="checkbox"/></td>
+<td>
+<div class="flex flex-col">
+<span class="font-bold text-slate-900 dark:text-white">Sarah Smith</span>
+<span class="text-xs text-slate-400 font-mono">AET-009211</span>
+</div>
+</td>
+<td>Oct 11, 2023</td>
+<td class="text-right font-medium currency-mono">$850.00</td>
+<td class="text-right font-medium currency-mono">$850.00</td>
+<td class="text-right font-medium currency-mono">$850.00</td>
+<td class="text-right font-bold text-emerald-600 currency-mono">$0.00</td>
+<td class="text-center">
+<span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">99% AUTO</span>
+</td>
+<td>
+<div class="flex justify-center">
+<span class="material-symbols-outlined text-emerald-500 text-lg">verified</span>
+</div>
+</td>
+</tr>
+<!-- Row 3: Medium Variance -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors bg-amber-50/10 dark:bg-amber-900/5">
+<td class="text-center"><input class="rounded border-slate-300 text-primary" type="checkbox"/></td>
+<td>
+<div class="flex flex-col">
+<span class="font-bold text-slate-900 dark:text-white">Robert Johnson</span>
+<span class="text-xs text-slate-400 font-mono">UHC-227311</span>
+</div>
+</td>
+<td>Oct 10, 2023</td>
+<td class="text-right font-medium currency-mono">$2,210.00</td>
+<td class="text-right font-medium currency-mono">$2,100.00</td>
+<td class="text-right font-medium currency-mono">$2,100.00</td>
+<td class="text-right font-bold text-amber-600 currency-mono">-$110.00</td>
+<td class="text-center">
+<span class="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 text-[10px] font-bold">78% CONF</span>
+</td>
+<td>
+<div class="flex justify-center gap-1.5">
+<button class="px-2.5 py-1 text-xs font-bold bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors">Match</button>
+<button class="px-2.5 py-1 text-xs font-bold bg-primary text-white rounded hover:bg-blue-700 transition-colors">Adjust</button>
+</div>
+</td>
+</tr>
+<!-- Additional Sample Rows -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="text-center"><input class="rounded border-slate-300 text-primary" type="checkbox"/></td>
+<td>
+<div class="flex flex-col">
+<span class="font-bold text-slate-900 dark:text-white">Alice Williams</span>
+<span class="text-xs text-slate-400 font-mono">BCBS-111029</span>
+</div>
+</td>
+<td>Oct 10, 2023</td>
+<td class="text-right font-medium currency-mono">$445.00</td>
+<td class="text-right font-medium currency-mono">$445.00</td>
+<td class="text-right font-medium currency-mono">$445.00</td>
+<td class="text-right font-bold text-emerald-600 currency-mono">$0.00</td>
+<td class="text-center">
+<span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">99% AUTO</span>
+</td>
+<td>
+<div class="flex justify-center">
+<span class="material-symbols-outlined text-emerald-500 text-lg">verified</span>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="text-center"><input class="rounded border-slate-300 text-primary" type="checkbox"/></td>
+<td>
+<div class="flex flex-col">
+<span class="font-bold text-slate-900 dark:text-white">Michael Brown</span>
+<span class="text-xs text-slate-400 font-mono">CIG-992100</span>
+</div>
+</td>
+<td>Oct 09, 2023</td>
+<td class="text-right font-medium currency-mono">$3,100.00</td>
+<td class="text-right font-medium currency-mono">$2,800.00</td>
+<td class="text-right font-medium currency-mono">$2,800.00</td>
+<td class="text-right font-bold text-rose-600 currency-mono">-$300.00</td>
+<td class="text-center">
+<span class="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 text-[10px] font-bold">45% MED</span>
+</td>
+<td>
+<div class="flex justify-center gap-1.5">
+<button class="px-2.5 py-1 text-xs font-bold bg-primary text-white rounded hover:bg-blue-700 transition-colors">Adjust</button>
+<button class="px-2.5 py-1 text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded">Details</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</main>
+<!-- Close Period Status Footer Bar -->
+<footer class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between z-50 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+<div class="flex items-center gap-8 flex-1">
+<div class="flex flex-col gap-1 min-w-[200px]">
+<div class="flex justify-between text-xs font-bold text-slate-500">
+<span>OCTOBER 2023 CLOSING</span>
+<span>84%</span>
+</div>
+<div class="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full transition-all" style="width: 84%;"></div>
+</div>
+</div>
+<div class="flex items-center gap-4 border-l border-slate-200 dark:border-slate-800 pl-8">
+<div class="flex flex-col">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Period Balance</span>
+<span class="text-sm font-bold text-slate-900 dark:text-white">$142,402.00 Unmatched</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Days Remaining</span>
+<span class="text-sm font-bold text-slate-900 dark:text-white">4 Business Days</span>
+</div>
+</div>
+</div>
+<div class="flex gap-4">
+<button class="px-4 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-700 transition-colors">
+                Run Audit Report
+            </button>
+<button class="px-6 py-2 text-sm font-bold text-white bg-slate-900 dark:bg-primary rounded-lg hover:opacity-90 transition-all shadow-lg">
+                Finalize &amp; Close Period
+            </button>
+</div>
+</footer>
+</body></html>

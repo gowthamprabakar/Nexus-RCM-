@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Global System Settings Hub | RCM AI Platform</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen text-[#111318]">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-72 bg-white dark:bg-slate-900 border-r border-[#dbdfe6] flex flex-col justify-between p-4 shrink-0">
+<div class="flex flex-col gap-8">
+<div class="flex items-center gap-3 px-2">
+<div class="bg-primary size-10 rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-2xl">account_balance</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-[#111318] dark:text-white text-base font-bold leading-tight">RCM Global Hub</h1>
+<p class="text-[#616f89] text-xs font-normal">Enterprise AI Platform</p>
+</div>
+</div>
+<nav class="flex flex-col gap-1">
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">apartment</span>
+<p class="text-sm font-semibold">Practice Profile</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-[#616f89]">rule</span>
+<p class="text-[#111318] dark:text-slate-300 text-sm font-medium">Billing Rules</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-[#616f89]">psychology</span>
+<p class="text-[#111318] dark:text-slate-300 text-sm font-medium">AI Configurations</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-[#616f89]">group</span>
+<p class="text-[#111318] dark:text-slate-300 text-sm font-medium">User Management</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-[#616f89]">hub</span>
+<p class="text-[#111318] dark:text-slate-300 text-sm font-medium">Integrations &amp; API</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-[#616f89]">gavel</span>
+<p class="text-[#111318] dark:text-slate-300 text-sm font-medium">Compliance &amp; Audit</p>
+</div>
+</nav>
+</div>
+<div class="flex flex-col gap-1 border-t border-[#dbdfe6] pt-4">
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800">
+<span class="material-symbols-outlined text-[#616f89]">help</span>
+<p class="text-[#111318] dark:text-slate-300 text-sm font-medium">Support</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600">
+<span class="material-symbols-outlined">logout</span>
+<p class="text-sm font-medium">Sign Out</p>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col overflow-y-auto">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-[#f0f2f4] px-8 py-3">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4">
+<h2 class="text-[#111318] dark:text-white text-lg font-bold tracking-tight">System Settings</h2>
+</div>
+<div class="relative w-72">
+<span class="material-symbols-outlined absolute left-3 top-2 text-[#616f89] text-xl">search</span>
+<input class="w-full h-10 pl-10 pr-4 bg-[#f0f2f4] dark:bg-slate-800 border-none rounded-lg focus:ring-2 focus:ring-primary text-sm" placeholder="Search parameters, rules, or users..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 bg-primary text-white h-10 px-6 rounded-lg font-bold text-sm tracking-wide shadow-sm hover:bg-blue-700 transition-all">
+<span>Save Changes</span>
+</button>
+<div class="flex items-center gap-2 border-l border-[#f0f2f4] pl-4">
+<button class="size-10 flex items-center justify-center bg-[#f0f2f4] dark:bg-slate-800 rounded-lg text-[#111318] dark:text-slate-300">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="size-10 flex items-center justify-center bg-[#f0f2f4] dark:bg-slate-800 rounded-lg text-[#111318] dark:text-slate-300">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 ml-2 border-2 border-primary/20" data-alt="Admin user avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDKt8HJGnXIQFKbf4EQxPEShp9e_JhiGTqX4R-76udhVm05K47l7XG0W6vCtOv8g2wLIP3el6r_Oa2y0EKKD2r_eVgK5FDsSMAU-tzNtNAPDKU-4Zxu07wcDhCYFczNcmju8fidyGYuAU69iJ9r-HPIgr6XghxLZ2bWyZ9yg5l4bTeC90VaaSrFfBQdBfI7RY7wpalCI1D-eL3ut4B5gBT1QdPrIPkXEN5cvOeiwymMDGsvQvt7kgfR3HdAkvWc6pfmFDLSWwPzalQA");'></div>
+</div>
+</div>
+</header>
+<!-- Breadcrumbs -->
+<div class="px-8 py-4 flex items-center gap-2 text-sm">
+<a class="text-[#616f89] hover:text-primary transition-colors font-medium" href="#">Settings</a>
+<span class="material-symbols-outlined text-[#616f89] text-sm">chevron_right</span>
+<span class="text-[#111318] dark:text-slate-400 font-semibold">Practice Profile</span>
+</div>
+<div class="px-8 pb-12 max-w-6xl">
+<!-- Page Heading -->
+<div class="flex flex-wrap justify-between items-end gap-4 mb-8">
+<div class="flex flex-col gap-2">
+<h1 class="text-[#111318] dark:text-white text-4xl font-black tracking-tight">Practice Profile</h1>
+<p class="text-[#616f89] text-base max-w-2xl leading-relaxed">
+                            Configure multiple locations, provider NPIs, and tax IDs for your organization's financial ecosystem. Ensure all data matches your payer enrollment records.
+                        </p>
+</div>
+<button class="flex items-center gap-2 bg-[#f0f2f4] dark:bg-slate-800 text-[#111318] dark:text-white px-5 h-11 rounded-lg font-bold text-sm border border-[#dbdfe6] hover:bg-gray-200 transition-colors">
+<span class="material-symbols-outlined">add</span>
+<span>Add Location</span>
+</button>
+</div>
+<!-- Locations Table -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-[#dbdfe6] shadow-sm overflow-hidden mb-10">
+<div class="px-6 py-4 border-b border-[#dbdfe6] flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
+<h3 class="font-bold text-sm uppercase tracking-wider text-[#616f89]">Registered Entities</h3>
+<div class="flex gap-2">
+<button class="size-8 flex items-center justify-center text-[#616f89] hover:bg-gray-100 rounded">
+<span class="material-symbols-outlined text-lg">filter_list</span>
+</button>
+<button class="size-8 flex items-center justify-center text-[#616f89] hover:bg-gray-100 rounded">
+<span class="material-symbols-outlined text-lg">download</span>
+</button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-white dark:bg-slate-900 border-b border-[#dbdfe6]">
+<th class="px-6 py-4 text-sm font-semibold text-[#111318] dark:text-slate-300">Location Name</th>
+<th class="px-6 py-4 text-sm font-semibold text-[#111318] dark:text-slate-300">NPI</th>
+<th class="px-6 py-4 text-sm font-semibold text-[#111318] dark:text-slate-300">Tax ID</th>
+<th class="px-6 py-4 text-sm font-semibold text-[#111318] dark:text-slate-300">Status</th>
+<th class="px-6 py-4 text-sm font-semibold text-[#111318] dark:text-slate-300 text-right">Last Audit</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#dbdfe6] dark:divide-slate-800">
+<tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-6 py-5">
+<div class="flex flex-col">
+<span class="font-bold text-[#111318] dark:text-white">North General Hospital</span>
+<span class="text-xs text-[#616f89]">202 Hospital Drive, New York, NY</span>
+</div>
+</td>
+<td class="px-6 py-5 text-[#616f89] font-mono text-sm">1234567890</td>
+<td class="px-6 py-5 text-[#616f89] font-mono text-sm">99-1234567</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+<span class="size-1.5 rounded-full bg-green-500 mr-2"></span> Active
+                                        </span>
+</td>
+<td class="px-6 py-5 text-[#616f89] text-sm text-right font-medium">Oct 12, 2023</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-6 py-5">
+<div class="flex flex-col">
+<span class="font-bold text-[#111318] dark:text-white">West Side Clinic</span>
+<span class="text-xs text-[#616f89]">45 West Ave, Newark, NJ</span>
+</div>
+</td>
+<td class="px-6 py-5 text-[#616f89] font-mono text-sm">0987654321</td>
+<td class="px-6 py-5 text-[#616f89] font-mono text-sm">99-7654321</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+<span class="size-1.5 rounded-full bg-green-500 mr-2"></span> Active
+                                        </span>
+</td>
+<td class="px-6 py-5 text-[#616f89] text-sm text-right font-medium">Nov 05, 2023</td>
+</tr>
+<tr class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+<td class="px-6 py-5">
+<div class="flex flex-col">
+<span class="font-bold text-[#111318] dark:text-white">South Hub Labs</span>
+<span class="text-xs text-[#616f89]">88 Industrial Way, Austin, TX</span>
+</div>
+</td>
+<td class="px-6 py-5 text-[#616f89] font-mono text-sm">1122334455</td>
+<td class="px-6 py-5 text-[#616f89] font-mono text-sm">99-5544332</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700">
+<span class="size-1.5 rounded-full bg-amber-500 mr-2"></span> Pending
+                                        </span>
+</td>
+<td class="px-6 py-5 text-[#616f89] text-sm text-right font-medium">Nov 20, 2023</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Secondary Sections - Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- AI Configurations Card -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-[#dbdfe6] p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-6">
+<div class="size-10 rounded-lg bg-indigo-50 dark:bg-slate-800 flex items-center justify-center text-indigo-600">
+<span class="material-symbols-outlined">psychology</span>
+</div>
+<h3 class="text-lg font-bold dark:text-white">AI Model Sensitivity</h3>
+</div>
+<div class="flex flex-col gap-6">
+<div>
+<div class="flex justify-between mb-2">
+<label class="text-sm font-semibold text-[#111318] dark:text-slate-300">Auto-Fix Confidence Threshold</label>
+<span class="text-sm font-bold text-primary">95%</span>
+</div>
+<input class="w-full h-2 bg-[#f0f2f4] rounded-lg appearance-none cursor-pointer accent-primary" max="100" min="50" type="range" value="95"/>
+<p class="text-xs text-[#616f89] mt-2">The system will only apply automatic corrections to claims if the model confidence exceeds this percentage.</p>
+</div>
+<div class="flex items-center justify-between p-4 bg-background-light dark:bg-slate-800 rounded-lg">
+<div class="flex flex-col">
+<span class="text-sm font-semibold dark:text-white">Deep Learning Scrubbing</span>
+<span class="text-xs text-[#616f89]">Enable multi-layered payer logic analysis</span>
+</div>
+<div class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-primary transition-colors duration-200">
+<span class="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+</div>
+</div>
+</div>
+</div>
+<!-- Integrations Status -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-[#dbdfe6] p-6 shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-lg bg-emerald-50 dark:bg-slate-800 flex items-center justify-center text-emerald-600">
+<span class="material-symbols-outlined">hub</span>
+</div>
+<h3 class="text-lg font-bold dark:text-white">Connector Health</h3>
+</div>
+<button class="text-xs font-bold text-primary hover:underline">Manage All</button>
+</div>
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between p-3 border border-[#dbdfe6] rounded-lg">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded bg-gray-100 flex items-center justify-center">
+<span class="material-symbols-outlined text-sm">storage</span>
+</div>
+<div>
+<p class="text-sm font-bold dark:text-white">Epic EHR Connector</p>
+<p class="text-xs text-green-600 font-medium">99.9% Uptime</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-green-500">check_circle</span>
+</div>
+<div class="flex items-center justify-between p-3 border border-[#dbdfe6] rounded-lg">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded bg-gray-100 flex items-center justify-center">
+<span class="material-symbols-outlined text-sm">cloud</span>
+</div>
+<div>
+<p class="text-sm font-bold dark:text-white">Optum Clearinghouse</p>
+<p class="text-xs text-green-600 font-medium">Connected</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-green-500">check_circle</span>
+</div>
+<div class="flex items-center justify-between p-3 border border-red-200 bg-red-50 dark:bg-red-900/10 rounded-lg">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded bg-white dark:bg-slate-800 flex items-center justify-center">
+<span class="material-symbols-outlined text-sm text-red-600">account_balance</span>
+</div>
+<div>
+<p class="text-sm font-bold text-red-700 dark:text-red-400">Chase Bank (SFTP)</p>
+<p class="text-xs text-red-600 font-medium">Auth Expiring in 2 days</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-red-600">warning</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Billing Rules Section -->
+<div class="mt-8 bg-white dark:bg-slate-900 rounded-xl border border-[#dbdfe6] p-6 shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<div class="flex flex-col gap-1">
+<h3 class="text-lg font-bold dark:text-white">Active Claim Scrubbing Logic</h3>
+<p class="text-sm text-[#616f89]">Define global CPT/ICD-10 crosswalks and custom logic for specific payers.</p>
+</div>
+<button class="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold text-sm hover:bg-primary/20 transition-all">New Rule Editor</button>
+</div>
+<div class="space-y-3">
+<div class="flex items-start gap-4 p-4 border-l-4 border-primary bg-background-light dark:bg-slate-800 rounded-r-lg">
+<span class="material-symbols-outlined text-primary mt-0.5">code</span>
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<h4 class="text-sm font-bold dark:text-white">Medicare Crosswalk: Cardiology</h4>
+<span class="text-[10px] font-black uppercase tracking-widest text-[#616f89]">Rule #R-8821</span>
+</div>
+<p class="text-xs text-[#616f89] leading-normal">IF CPT is (93000..93010) AND Payer is (Medicare Part B) THEN require (Modifier 26) AND Diagnosis within (I10..I15).</p>
+</div>
+<div class="flex gap-2">
+<button class="size-8 flex items-center justify-center hover:bg-gray-200 rounded">
+<span class="material-symbols-outlined text-sm">edit</span>
+</button>
+<button class="size-8 flex items-center justify-center hover:bg-gray-200 rounded text-red-600">
+<span class="material-symbols-outlined text-sm">delete</span>
+</button>
+</div>
+</div>
+<div class="flex items-start gap-4 p-4 border-l-4 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 border border-[#dbdfe6] rounded-r-lg">
+<span class="material-symbols-outlined text-[#616f89] mt-0.5">code</span>
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<h4 class="text-sm font-bold dark:text-white">Aetna Behavioral Health Scrub</h4>
+<span class="text-[10px] font-black uppercase tracking-widest text-[#616f89]">Rule #R-1029</span>
+</div>
+<p class="text-xs text-[#616f89] leading-normal">Validation for telehealth modifiers (95, GT) when place of service is 02 or 10.</p>
+</div>
+<div class="flex gap-2">
+<button class="size-8 flex items-center justify-center hover:bg-gray-200 rounded">
+<span class="material-symbols-outlined text-sm">edit</span>
+</button>
+<button class="size-8 flex items-center justify-center hover:bg-gray-200 rounded text-red-600">
+<span class="material-symbols-outlined text-sm">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Audit Footer Info -->
+<div class="mt-8 pt-8 border-t border-[#dbdfe6] flex justify-between text-xs text-[#616f89] font-medium italic">
+<p>Blockchain Audit Log Hash: 0x8a1...f3e2 | Retention Policy: 7 Years (HIPAA Compliant)</p>
+<p>System v4.2.1-stable | Last modified by admin_jdoe on Nov 24, 2023</p>
+</div>
+</div>
+</main>
+</div>
+</body></html>

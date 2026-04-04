@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EVV Claims Compliance Analysis</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ecec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102222",
+                        "card-dark": "#1a2e2e",
+                        "border-dark": "#283939"
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #283939; border-radius: 10px; }
+        .chart-line-1 { stroke-dasharray: 5, 5; }
+        .heatmap-cell { transition: all 0.2s; }
+        .heatmap-cell:hover { filter: brightness(1.2); cursor: pointer; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex flex-col">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-border-dark px-6 py-3 bg-background-light dark:bg-background-dark sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3">
+<div class="size-8 bg-primary rounded flex items-center justify-center text-background-dark">
+<span class="material-symbols-outlined font-bold">query_stats</span>
+</div>
+<div class="flex flex-col">
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight">EVV Command Center</h2>
+<p class="text-xs text-slate-500 dark:text-[#9db9b9]">Enterprise AI-Native RCM</p>
+</div>
+</div>
+<div class="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-border-dark px-3 py-1.5 rounded-lg">
+<span class="material-symbols-outlined text-sm text-slate-400">shield_with_heart</span>
+<span class="text-xs font-semibold text-slate-400">Compliance Mode:</span>
+<span class="text-xs font-bold text-primary">Active Analysis</span>
+</div>
+</div>
+<div class="flex flex-1 justify-end gap-6 items-center">
+<nav class="hidden lg:flex items-center gap-6">
+<a class="text-slate-600 dark:text-[#9db9b9] text-sm font-medium hover:text-primary transition-colors" href="#">Live Monitor</a>
+<a class="text-primary text-sm font-bold border-b-2 border-primary pb-1" href="#">Claims Compliance</a>
+<a class="text-slate-600 dark:text-[#9db9b9] text-sm font-medium hover:text-primary transition-colors" href="#">Providers</a>
+<a class="text-slate-600 dark:text-[#9db9b9] text-sm font-medium hover:text-primary transition-colors" href="#">Audit Logs</a>
+</nav>
+<div class="flex gap-3">
+<button class="p-2 rounded-lg bg-slate-100 dark:bg-border-dark text-slate-600 dark:text-white hover:bg-primary/20 transition-colors relative">
+<span class="material-symbols-outlined text-xl">notifications</span>
+<span class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-background-dark"></span>
+</button>
+<button class="p-2 rounded-lg bg-slate-100 dark:bg-border-dark text-slate-600 dark:text-white hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-xl">settings</span>
+</button>
+</div>
+<div class="h-10 w-10 rounded-full border-2 border-primary/30 p-0.5">
+<img alt="User Profile" class="rounded-full bg-slate-200" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAnbH1BhWwF1eZasiH1jbacqAZunsQIR36swXxuYos_7D3dWxNOiNdvZZBxm-ciXNrkD1mgvwAfZhmUZY57ue9VBunelaqxHCGWqhUy4WVRQDAeaMbVolOrsbf5Or9l8fnyo9P3UivQB94n0BHpS6yR2w7CaPe1bM4ks_qB9WYexuLLbDfOmRIPgsIfv2BWwZDj4RiLqkDNYSPx3jskh--FkvLhQnU7DTgnSEtP19o-d3Nr35dWQJEyLGVVVvOudCf2aFXZfDYoJqMx"/>
+</div>
+</div>
+</header>
+<main class="flex-1 flex overflow-hidden">
+<aside class="w-64 border-r border-border-dark bg-background-light dark:bg-background-dark hidden xl:flex flex-col p-4 gap-6">
+<div class="flex flex-col gap-2">
+<p class="text-[10px] font-bold text-slate-400 dark:text-[#9db9b9] uppercase tracking-widest px-3">Analysis View</p>
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20 cursor-pointer">
+<span class="material-symbols-outlined text-sm">assignment_turned_in</span>
+<p class="text-sm font-bold">Claims Compliance</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-[#9db9b9] hover:bg-slate-100 dark:hover:bg-border-dark cursor-pointer transition-all">
+<span class="material-symbols-outlined text-sm">warning</span>
+<p class="text-sm font-medium">Denial Risk Mapping</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-[#9db9b9] hover:bg-slate-100 dark:hover:bg-border-dark cursor-pointer transition-all">
+<span class="material-symbols-outlined text-sm">speed</span>
+<p class="text-sm font-medium">Reimbursement Velocity</p>
+</div>
+</div>
+<div class="flex flex-col gap-2 mt-4">
+<p class="text-[10px] font-bold text-slate-400 dark:text-[#9db9b9] uppercase tracking-widest px-3">Quick Filters</p>
+<div class="px-3">
+<select class="w-full bg-slate-100 dark:bg-border-dark border-none rounded-lg text-xs text-slate-300 focus:ring-1 focus:ring-primary">
+<option>All Payers</option>
+<option>Medicare Advantage</option>
+<option>State Medicaid</option>
+</select>
+</div>
+<div class="px-3 mt-2">
+<select class="w-full bg-slate-100 dark:bg-border-dark border-none rounded-lg text-xs text-slate-300 focus:ring-1 focus:ring-primary">
+<option>Last 30 Days</option>
+<option>Current Quarter</option>
+<option>Last 12 Months</option>
+</select>
+</div>
+</div>
+<div class="mt-auto p-4 bg-primary/5 rounded-xl border border-primary/10">
+<p class="text-[10px] font-bold text-white uppercase mb-2">Audit Readiness Score</p>
+<div class="flex items-baseline gap-2 mb-1">
+<p class="text-2xl font-black text-primary">89.4</p>
+<p class="text-[10px] text-emerald-500 font-bold">+2.1% WoW</p>
+</div>
+<div class="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 89.4%"></div>
+</div>
+<p class="text-[10px] text-slate-500 mt-2">Target: 95.0 for Gold Status</p>
+</div>
+</aside>
+<div class="flex-1 flex flex-col overflow-hidden">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-6 border-b border-border-dark">
+<div class="flex flex-col gap-1 rounded-xl p-4 border border-slate-200 dark:border-[#3b5454] bg-white dark:bg-background-dark/50 shadow-sm">
+<div class="flex items-center justify-between mb-1">
+<p class="text-slate-500 dark:text-[#9db9b9] text-[10px] font-bold uppercase tracking-wider">Claims Pending EVV</p>
+<span class="material-symbols-outlined text-primary text-lg">pending_actions</span>
+</div>
+<div class="flex items-baseline gap-2">
+<p class="text-slate-900 dark:text-white text-2xl font-black leading-none">1,412</p>
+<p class="text-amber-500 text-[10px] font-bold uppercase">Critical</p>
+</div>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-4 border border-slate-200 dark:border-[#3b5454] bg-white dark:bg-background-dark/50 shadow-sm">
+<div class="flex items-center justify-between mb-1">
+<p class="text-slate-500 dark:text-[#9db9b9] text-[10px] font-bold uppercase tracking-wider">EVV Compliance %</p>
+<span class="material-symbols-outlined text-emerald-500 text-lg">verified_user</span>
+</div>
+<div class="flex items-baseline gap-2">
+<p class="text-slate-900 dark:text-white text-2xl font-black leading-none">96.8%</p>
+<p class="text-emerald-500 text-[10px] font-bold">Above Benchmark</p>
+</div>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-4 border border-red-500/20 bg-red-500/5 shadow-sm">
+<div class="flex items-center justify-between mb-1">
+<p class="text-red-400 text-[10px] font-bold uppercase tracking-wider">Projected Revenue at Risk</p>
+<span class="material-symbols-outlined text-red-500 text-lg">account_balance_wallet</span>
+</div>
+<div class="flex items-baseline gap-2">
+<p class="text-red-500 text-2xl font-black leading-none">$124.5k</p>
+<p class="text-red-400 text-[10px] font-bold flex items-center"><span class="material-symbols-outlined text-xs">trending_up</span> 4.2%</p>
+</div>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-4 border border-primary/20 bg-primary/5 shadow-sm">
+<div class="flex items-center justify-between mb-1">
+<p class="text-primary text-[10px] font-bold uppercase tracking-wider">Avg Audit Readiness Score</p>
+<span class="material-symbols-outlined text-primary text-lg">fact_check</span>
+</div>
+<div class="flex items-baseline gap-2">
+<p class="text-primary text-2xl font-black leading-none">89.4</p>
+<p class="text-slate-400 text-[10px] font-bold">Tier: High</p>
+</div>
+</div>
+</div>
+<div class="flex-1 p-6 grid grid-cols-12 gap-6 overflow-hidden">
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6 overflow-hidden">
+<div class="flex flex-col p-4 rounded-xl border border-border-dark bg-card-dark h-[45%]">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Denial Risk by Exception Type</h3>
+<span class="material-symbols-outlined text-sm text-slate-500">info</span>
+</div>
+<div class="flex-1 flex items-center gap-4">
+<div class="relative size-32 flex-shrink-0">
+<svg class="size-full -rotate-90" viewBox="0 0 36 36">
+<circle cx="18" cy="18" fill="transparent" r="15.9" stroke="#13ecec" stroke-dasharray="60 40" stroke-width="4"></circle>
+<circle cx="18" cy="18" fill="transparent" r="15.9" stroke="#f59e0b" stroke-dasharray="25 75" stroke-dashoffset="-60" stroke-width="4"></circle>
+<circle cx="18" cy="18" fill="transparent" r="15.9" stroke="#ef4444" stroke-dasharray="15 85" stroke-dashoffset="-85" stroke-width="4"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center flex-col">
+<span class="text-lg font-black text-white">412</span>
+<span class="text-[8px] text-slate-500 uppercase">Exceptions</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 flex-1">
+<div class="flex items-center justify-between text-[10px]">
+<div class="flex items-center gap-2"><div class="size-2 rounded-full bg-primary"></div><span class="text-slate-300">GPS Mismatch</span></div>
+<span class="font-bold text-white">60%</span>
+</div>
+<div class="flex items-center justify-between text-[10px]">
+<div class="flex items-center gap-2"><div class="size-2 rounded-full bg-amber-500"></div><span class="text-slate-300">Missing Signature</span></div>
+<span class="font-bold text-white">25%</span>
+</div>
+<div class="flex items-center justify-between text-[10px]">
+<div class="flex items-center gap-2"><div class="size-2 rounded-full bg-red-500"></div><span class="text-slate-300">Time Variance</span></div>
+<span class="font-bold text-white">15%</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col p-4 rounded-xl border border-border-dark bg-card-dark flex-1">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">EVV Compliance vs Reimbursement Speed</h3>
+</div>
+<div class="flex-1 flex flex-col justify-between">
+<div class="h-32 w-full relative">
+<div class="absolute inset-0 flex flex-col justify-between opacity-10">
+<div class="w-full border-t border-white"></div>
+<div class="w-full border-t border-white"></div>
+<div class="w-full border-t border-white"></div>
+</div>
+<svg class="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+<polyline class="w-full h-full" fill="none" points="0,80 50,60 100,70 150,40 200,30 250,50 300,20" stroke="#13ecec" stroke-width="2"></polyline>
+<polyline class="w-full h-full" fill="none" points="0,100 50,90 100,80 150,70 200,60 250,55 300,50" stroke="#9db9b9" stroke-dasharray="4" stroke-width="2"></polyline>
+</svg>
+</div>
+<div class="flex justify-between items-center mt-4">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1.5">
+<div class="w-3 h-0.5 bg-primary"></div>
+<span class="text-[9px] text-slate-400 uppercase font-bold">Compliance %</span>
+</div>
+<div class="flex items-center gap-1.5">
+<div class="w-3 h-0.5 border-t-2 border-dashed border-[#9db9b9]"></div>
+<span class="text-[9px] text-slate-400 uppercase font-bold">Days to Paid</span>
+</div>
+</div>
+<span class="text-[9px] text-primary font-black">AI Insight: Strong Correlation</span>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-8 xl:col-span-5 flex flex-col gap-4 overflow-hidden">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<h3 class="text-sm font-bold uppercase tracking-widest text-slate-400">Claims Compliance List</h3>
+<span class="px-2 py-0.5 rounded-full bg-border-dark text-[10px] text-slate-300">Live Queue</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-1.5 rounded bg-border-dark text-slate-400 hover:text-white"><span class="material-symbols-outlined text-sm">filter_list</span></button>
+<button class="p-1.5 rounded bg-border-dark text-slate-400 hover:text-white"><span class="material-symbols-outlined text-sm">download</span></button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar border border-border-dark rounded-xl bg-card-dark/30">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 bg-card-dark z-10">
+<tr class="border-b border-border-dark">
+<th class="p-3 text-[10px] font-black text-slate-500 uppercase">Claim ID</th>
+<th class="p-3 text-[10px] font-black text-slate-500 uppercase">Payer</th>
+<th class="p-3 text-[10px] font-black text-slate-500 uppercase">Provider</th>
+<th class="p-3 text-[10px] font-black text-slate-500 uppercase">EVV Status</th>
+<th class="p-3 text-[10px] font-black text-slate-500 uppercase w-32">Compliance</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-dark">
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer group">
+<td class="p-3 font-mono text-xs text-primary font-bold">#CLM-9082</td>
+<td class="p-3">
+<div class="flex flex-col">
+<span class="text-xs font-bold text-white">UnitedH-West</span>
+<span class="text-[9px] text-slate-500">Contract: VCG-88</span>
+</div>
+</td>
+<td class="p-3 text-xs text-slate-300">Sarah Jenkins</td>
+<td class="p-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold">
+<span class="size-1.5 bg-emerald-500 rounded-full"></span> Match
+                                    </span>
+</td>
+<td class="p-3">
+<div class="flex items-center gap-2">
+<div class="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500" style="width: 100%"></div>
+</div>
+<span class="text-[10px] font-bold">100%</span>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer">
+<td class="p-3 font-mono text-xs text-primary font-bold">#CLM-9077</td>
+<td class="p-3 text-xs font-bold text-white">Aetna Health</td>
+<td class="p-3 text-xs text-slate-300">Marcus Thorne</td>
+<td class="p-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-bold">
+<span class="size-1.5 bg-amber-500 rounded-full"></span> Offset
+                                    </span>
+</td>
+<td class="p-3">
+<div class="flex items-center gap-2">
+<div class="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-amber-500" style="width: 72%"></div>
+</div>
+<span class="text-[10px] font-bold">72%</span>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer">
+<td class="p-3 font-mono text-xs text-primary font-bold">#CLM-9064</td>
+<td class="p-3 text-xs font-bold text-white">Cigna Group</td>
+<td class="p-3 text-xs text-slate-300">Elena Rodriguez</td>
+<td class="p-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 text-[10px] font-bold">
+<span class="size-1.5 bg-red-500 rounded-full"></span> Missing
+                                    </span>
+</td>
+<td class="p-3">
+<div class="flex items-center gap-2">
+<div class="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-red-500" style="width: 45%"></div>
+</div>
+<span class="text-[10px] font-bold text-red-400">45%</span>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer">
+<td class="p-3 font-mono text-xs text-primary font-bold">#CLM-9051</td>
+<td class="p-3 text-xs font-bold text-white">State Medicaid</td>
+<td class="p-3 text-xs text-slate-300">Tom Harrison</td>
+<td class="p-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold">
+<span class="size-1.5 bg-emerald-500 rounded-full"></span> Match
+                                    </span>
+</td>
+<td class="p-3">
+<div class="flex items-center gap-2">
+<div class="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500" style="width: 98%"></div>
+</div>
+<span class="text-[10px] font-bold">98%</span>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-primary/5 transition-colors cursor-pointer">
+<td class="p-3 font-mono text-xs text-primary font-bold">#CLM-9042</td>
+<td class="p-3 text-xs font-bold text-white">UnitedH-West</td>
+<td class="p-3 text-xs text-slate-300">John Miller</td>
+<td class="p-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold">
+<span class="size-1.5 bg-emerald-500 rounded-full"></span> Match
+                                    </span>
+</td>
+<td class="p-3">
+<div class="flex items-center gap-2">
+<div class="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500" style="width: 100%"></div>
+</div>
+<span class="text-[10px] font-bold">100%</span>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="col-span-12 xl:col-span-3 flex flex-col gap-4 overflow-hidden">
+<div class="flex items-center justify-between">
+<h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">State Compliance Heatmap</h3>
+<span class="material-symbols-outlined text-sm text-primary">public</span>
+</div>
+<div class="flex-1 bg-card-dark rounded-xl border border-border-dark p-4 flex flex-col gap-6">
+<div class="relative w-full aspect-square bg-[#0c1a1a] rounded-lg overflow-hidden p-2">
+<div class="grid grid-cols-8 grid-rows-6 gap-1 h-full">
+<div class="heatmap-cell bg-emerald-500/20 rounded-sm"></div><div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-emerald-500/40 rounded-sm"></div>
+<div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-emerald-500/30 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/20 rounded-sm"></div><div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-emerald-500/60 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/80 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/40 rounded-sm"></div>
+<div class="heatmap-cell bg-emerald-500/10 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/30 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/50 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/20 rounded-sm"></div><div class="heatmap-cell bg-amber-500/60 rounded-sm"></div><div class="heatmap-cell bg-red-500/80 rounded-sm border border-red-500"></div><div class="heatmap-cell bg-emerald-500/70 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/20 rounded-sm"></div>
+<div class="heatmap-cell bg-emerald-500/20 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/40 rounded-sm"></div><div class="heatmap-cell bg-red-500/40 rounded-sm border border-red-500/50"></div><div class="heatmap-cell bg-amber-500/40 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/30 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/40 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/20 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/10 rounded-sm"></div>
+<div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-emerald-500/30 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/60 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/40 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/20 rounded-sm"></div><div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-transparent"></div>
+<div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-emerald-500/10 rounded-sm"></div><div class="heatmap-cell bg-emerald-500/10 rounded-sm"></div><div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-transparent"></div><div class="heatmap-cell bg-transparent"></div>
+</div>
+<div class="absolute bottom-2 left-2 flex items-center gap-3 bg-background-dark/80 px-2 py-1 rounded border border-border-dark">
+<span class="text-[8px] text-slate-500 uppercase font-bold">Risk:</span>
+<div class="flex gap-1">
+<div class="size-1.5 bg-emerald-500 rounded-full"></div>
+<div class="size-1.5 bg-amber-500 rounded-full"></div>
+<div class="size-1.5 bg-red-500 rounded-full"></div>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<div class="flex flex-col gap-1">
+<p class="text-[10px] font-black text-white uppercase tracking-wider">Top Audit Risk States</p>
+<div class="flex flex-col gap-2 mt-2">
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-slate-300">Pennsylvania</span>
+<span class="text-[9px] bg-red-500/20 text-red-500 px-1 rounded">High Risk</span>
+</div>
+<span class="text-xs font-mono text-red-400">8.4% Fail Rate</span>
+</div>
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-slate-300">Texas</span>
+<span class="text-[9px] bg-amber-500/20 text-amber-500 px-1 rounded">Moderate</span>
+</div>
+<span class="text-xs font-mono text-amber-400">4.2% Fail Rate</span>
+</div>
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-slate-300">California</span>
+<span class="text-[9px] bg-emerald-500/20 text-emerald-500 px-1 rounded">Healthy</span>
+</div>
+<span class="text-xs font-mono text-emerald-400">0.9% Fail Rate</span>
+</div>
+</div>
+</div>
+<button class="w-full py-2 bg-primary text-background-dark text-[10px] font-black rounded uppercase hover:bg-white transition-colors">Generate Compliance Report</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<footer class="bg-background-dark border-t border-border-dark px-6 py-2.5 flex items-center justify-between text-[10px] font-medium text-slate-400">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2">
+<span class="size-2 bg-emerald-500 rounded-full"></span>
+<span>Submissions: 94.2% Automated</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="size-2 bg-amber-500 rounded-full"></span>
+<span>Manual Review Required: 142 Claims</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="size-2 bg-primary rounded-full"></span>
+<span>Avg Denial Rate: 1.2% (Industry: 4.5%)</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-border-dark">
+<span class="material-symbols-outlined text-xs text-primary">auto_awesome</span>
+<span class="text-primary font-bold">AI CO-PILOT: OPTIMIZED</span>
+</div>
+<span class="font-mono opacity-50">v4.82-ANALYTICS-CORE</span>
+</div>
+</footer>
+
+</body></html>

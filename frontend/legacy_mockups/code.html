@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Analytics Ticketing &amp; Performance Hub | Enterprise RCM</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "card-dark": "#1a2231",
+                        "border-dark": "#2d3748",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased min-h-screen flex relative overflow-x-hidden">
+<aside class="w-64 border-r border-slate-200 dark:border-border-dark flex flex-col h-screen sticky top-0 bg-white dark:bg-background-dark shrink-0">
+<div class="p-6 flex flex-col gap-6 h-full">
+<div class="flex items-center gap-3">
+<div class="size-10 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined">confirmation_number</span>
+</div>
+<div>
+<h1 class="text-sm font-bold leading-tight">LIDA Hub</h1>
+<p class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">AI-Native RCM</p>
+</div>
+</div>
+<nav class="flex flex-col gap-1 grow">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-card-dark transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">insights</span>
+<span class="text-sm">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-100 dark:bg-card-dark text-primary font-medium" href="#">
+<span class="material-symbols-outlined text-[20px]">assignment</span>
+<span class="text-sm">Ticket Hub</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-card-dark transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">monitoring</span>
+<span class="text-sm">Performance</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-card-dark transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">groups</span>
+<span class="text-sm">Team Lead</span>
+</a>
+</nav>
+<div class="mt-auto space-y-4">
+<div class="p-4 bg-slate-100 dark:bg-card-dark rounded-xl">
+<p class="text-[10px] font-bold text-slate-500 uppercase mb-2">Resolution Rate</p>
+<div class="flex items-end justify-between mb-1">
+<span class="text-lg font-bold">84%</span>
+<span class="text-[10px] text-emerald-500 font-bold">+5%</span>
+</div>
+<div class="w-full bg-slate-200 dark:bg-background-dark h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[84%]"></div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col overflow-x-hidden">
+<header class="h-16 border-b border-slate-200 dark:border-border-dark flex items-center justify-between px-8 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-10">
+<div class="flex items-center gap-4">
+<h2 class="text-lg font-bold tracking-tight">Analytics Ticketing &amp; Performance Hub</h2>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex bg-slate-100 dark:bg-card-dark p-1 rounded-lg">
+<button class="px-4 py-1.5 rounded-md text-xs font-bold bg-white dark:bg-background-dark text-primary shadow-sm">My Tickets</button>
+<button class="px-4 py-1.5 rounded-md text-xs font-bold text-slate-400">Team Queue</button>
+</div>
+<div class="h-8 w-[1px] bg-slate-200 dark:border-dark"></div>
+<div class="flex items-center gap-3">
+<div class="text-right hidden sm:block">
+<p class="text-xs font-bold">Sarah Jenkins</p>
+<p class="text-[10px] text-slate-500">Revenue Cycle Manager</p>
+</div>
+<div class="size-9 rounded-full bg-slate-300 overflow-hidden border border-white dark:border-border-dark bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuClSEZOur4pcw0GrvO5cXVUnPZOI9kZHsdvjELb12RR_RNYCA1vOMfQNqeBDqVRIa_pGpoqZ9qIEv-M6PIRyOJ1b0drJiL7oHqprvT-ygtvk1YripfRxyEsbANkZ-f_BqTlSjL9GXNWsPMuGHjI2HByd9nvLACe1KO2M2tZoMwiJzwObvp-h1lirHblms-0j32ZVCwK0gkvS3oBlUrn3-jF-kXirA6BWg1fjwDRZ_AlD4HpW5Q3JuCqbc_d4jiN8UQkiEFd9dGTNkWb')"></div>
+</div>
+</div>
+</header>
+<div class="p-8 grid grid-cols-12 gap-8 max-w-[1600px] mx-auto w-full">
+<div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
+<div class="flex items-center justify-between">
+<div>
+<h3 class="text-xl font-bold">Active Insights Tickets</h3>
+<p class="text-sm text-slate-500">Manage tasks derived directly from AI data insights</p>
+</div>
+<div class="flex gap-2">
+<button class="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span> Create Ticket
+                    </button>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<div class="bg-white dark:bg-card-dark border border-slate-200 dark:border-border-dark rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer group">
+<div class="p-5 flex gap-6">
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-2">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 uppercase">Critical Priority</span>
+<span class="text-[10px] font-bold text-slate-400 uppercase">TKT-8842</span>
+</div>
+<h4 class="text-base font-bold mb-1 group-hover:text-primary transition-colors">Aetna Denial Spike in New York Region</h4>
+<p class="text-sm text-slate-500 mb-4">Investigate sudden 15% increase in 'Duplicate Claim' denials for NY outpatient services.</p>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 py-4 border-y border-slate-100 dark:border-border-dark/50">
+<div>
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Assigned Leader</p>
+<div class="flex items-center gap-2">
+<div class="size-6 rounded-full bg-slate-200 bg-cover" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuClSEZOur4pcw0GrvO5cXVUnPZOI9kZHsdvjELb12RR_RNYCA1vOMfQNqeBDqVRIa_pGpoqZ9qIEv-M6PIRyOJ1b0drJiL7oHqprvT-ygtvk1YripfRxyEsbANkZ-f_BqTlSjL9GXNWsPMuGHjI2HByd9nvLACe1KO2M2tZoMwiJzwObvp-h1lirHblms-0j32ZVCwK0gkvS3oBlUrn3-jF-kXirA6BWg1fjwDRZ_AlD4HpW5Q3JuCqbc_d4jiN8UQkiEFd9dGTNkWb')"></div>
+<span class="text-xs font-medium">David Miller</span>
+</div>
+</div>
+<div>
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Source Insight</p>
+<div class="flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-[14px]">query_stats</span>
+<span class="text-xs font-medium">Payer Variance</span>
+</div>
+</div>
+<div>
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Est. Recovery</p>
+<span class="text-xs font-bold text-emerald-500">$142,500</span>
+</div>
+<div>
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Timeline</p>
+<span class="text-xs font-medium">2 days left</span>
+</div>
+</div>
+</div>
+<div class="w-48 shrink-0 flex flex-col gap-2">
+<p class="text-[10px] font-bold text-slate-400 uppercase">Related Chart</p>
+<div class="bg-slate-50 dark:bg-background-dark rounded-lg p-3 h-full border border-slate-100 dark:border-border-dark/30">
+<div class="flex items-end gap-1 h-full pt-4">
+<div class="flex-1 bg-rose-500/20 rounded-t-sm h-[30%]"></div>
+<div class="flex-1 bg-rose-500/20 rounded-t-sm h-[40%]"></div>
+<div class="flex-1 bg-rose-500/20 rounded-t-sm h-[35%]"></div>
+<div class="flex-1 bg-rose-500 rounded-t-sm h-[90%]"></div>
+<div class="flex-1 bg-rose-500 rounded-t-sm h-[85%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-card-dark border border-slate-200 dark:border-border-dark rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+<div class="p-5 flex gap-6">
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-2">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400 uppercase">High Priority</span>
+<span class="text-[10px] font-bold text-slate-400 uppercase">TKT-8845</span>
+</div>
+<h4 class="text-base font-bold mb-1">Medicare Part B AR Aging Over 90 Days</h4>
+<p class="text-sm text-slate-500 mb-4">LIDA AI identified $420k in aging accounts that meet auto-appeal criteria.</p>
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 py-4 border-y border-slate-100 dark:border-border-dark/50">
+<div>
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Assigned Leader</p>
+<div class="flex items-center gap-2">
+<div class="size-6 rounded-full bg-slate-200 bg-cover" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuClSEZOur4pcw0GrvO5cXVUnPZOI9kZHsdvjELb12RR_RNYCA1vOMfQNqeBDqVRIa_pGpoqZ9qIEv-M6PIRyOJ1b0drJiL7oHqprvT-ygtvk1YripfRxyEsbANkZ-f_BqTlSjL9GXNWsPMuGHjI2HByd9nvLACe1KO2M2tZoMwiJzwObvp-h1lirHblms-0j32ZVCwK0gkvS3oBlUrn3-jF-kXirA6BWg1fjwDRZ_AlD4HpW5Q3JuCqbc_d4jiN8UQkiEFd9dGTNkWb')"></div>
+<span class="text-xs font-medium">Elena Rodriguez</span>
+</div>
+</div>
+<div>
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Source Insight</p>
+<div class="flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+<span class="text-xs font-medium">Predictive AR</span>
+</div>
+</div>
+<div>
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Est. Recovery</p>
+<span class="text-xs font-bold text-emerald-500">$420,000</span>
+</div>
+<div>
+<p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Timeline</p>
+<span class="text-xs font-medium">5 days left</span>
+</div>
+</div>
+</div>
+<div class="w-48 shrink-0 flex flex-col gap-2">
+<p class="text-[10px] font-bold text-slate-400 uppercase">Related Chart</p>
+<div class="bg-slate-50 dark:bg-background-dark rounded-lg p-3 h-full border border-slate-100 dark:border-border-dark/30">
+<div class="flex items-end justify-between h-full pt-4">
+<div class="w-3 bg-primary rounded-t-sm h-[100%]"></div>
+<div class="w-3 bg-primary/80 rounded-t-sm h-[80%]"></div>
+<div class="w-3 bg-primary/60 rounded-t-sm h-[60%]"></div>
+<div class="w-3 bg-primary/40 rounded-t-sm h-[40%]"></div>
+<div class="w-3 bg-primary/20 rounded-t-sm h-[20%]"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
+<div class="bg-white dark:bg-card-dark border border-slate-200 dark:border-border-dark rounded-xl p-6 shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-bold">Team Performance</h3>
+<span class="material-symbols-outlined text-slate-400">more_horiz</span>
+</div>
+<div class="space-y-6">
+<div>
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-emerald-500 text-[20px]">verified</span>
+<span class="text-xs font-bold uppercase tracking-wider">Top Performers</span>
+</div>
+<div class="space-y-3">
+<div class="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-background-dark/50 border border-slate-100 dark:border-border-dark/30">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-slate-300"></div>
+<div>
+<p class="text-xs font-bold">Marcus Chen</p>
+<p class="text-[10px] text-slate-500">Avg Resolution: 4.2h</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-xs font-bold text-emerald-500">12 Tickets</p>
+<p class="text-[10px] text-slate-500">Closed</p>
+</div>
+</div>
+<div class="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-background-dark/50 border border-slate-100 dark:border-border-dark/30">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-slate-300"></div>
+<div>
+<p class="text-xs font-bold">Elena Rodriguez</p>
+<p class="text-[10px] text-slate-500">Avg Resolution: 5.8h</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-xs font-bold text-emerald-500">9 Tickets</p>
+<p class="text-[10px] text-slate-500">Closed</p>
+</div>
+</div>
+</div>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-amber-500 text-[20px]">pending_actions</span>
+<span class="text-xs font-bold uppercase tracking-wider">Lagging Response</span>
+</div>
+<div class="space-y-3">
+<div class="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-background-dark/50 border border-slate-100 dark:border-border-dark/30">
+<div class="flex items-center gap-3">
+<div class="size-8 rounded-full bg-slate-300"></div>
+<div>
+<p class="text-xs font-bold">Tom Braddock</p>
+<p class="text-[10px] text-slate-500">Avg Resolution: 28.5h</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-xs font-bold text-rose-500">4 Overdue</p>
+<p class="text-[10px] text-slate-500">Stalled</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-gradient-to-br from-primary to-blue-800 p-6 rounded-xl text-white shadow-xl">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined">auto_awesome</span>
+<h4 class="text-sm font-bold">LIDA Efficiency Insight</h4>
+</div>
+<p class="text-xs leading-relaxed opacity-90 mb-4">"Direct ticket generation from Chat has reduced triage time by 42% this month. Teams focusing on 'Critical' items first have seen a 12% revenue lift."</p>
+<button class="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold py-2 rounded-lg transition-colors">Analyze Team Impact</button>
+</div>
+</div>
+</div>
+</main>
+<div class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 hidden">
+<div class="bg-background-dark border border-border-dark w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden">
+<div class="p-6 border-b border-border-dark flex items-center justify-between">
+<h3 class="text-lg font-bold">Create New Insight Ticket</h3>
+<button class="text-slate-400 hover:text-white transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+<div class="p-4 bg-card-dark/50 border border-border-dark rounded-xl">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-primary text-[18px]">analytics</span>
+<p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Source Insight Preview: NY Denial Variance</p>
+</div>
+<div class="h-24 flex items-end gap-1 px-4">
+<div class="flex-1 bg-slate-700 h-[20%] rounded-t-sm"></div>
+<div class="flex-1 bg-slate-700 h-[35%] rounded-t-sm"></div>
+<div class="flex-1 bg-slate-700 h-[45%] rounded-t-sm"></div>
+<div class="flex-1 bg-primary h-[85%] rounded-t-sm shadow-[0_0_15px_rgba(19,91,236,0.3)]"></div>
+<div class="flex-1 bg-primary h-[70%] rounded-t-sm shadow-[0_0_15px_rgba(19,91,236,0.3)]"></div>
+<div class="flex-1 bg-slate-700 h-[30%] rounded-t-sm"></div>
+</div>
+<p class="text-[10px] text-center text-slate-500 mt-2">Showing 15% Spike in Aetna Outpatient Denials (T-7 Days)</p>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="col-span-2">
+<label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Ticket Title</label>
+<input class="w-full bg-card-dark border-border-dark rounded-lg text-sm focus:ring-primary focus:border-primary text-slate-200" type="text" value="Aetna Denial Spike Investigation: NY Region"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Priority Level</label>
+<select class="w-full bg-card-dark border-border-dark rounded-lg text-sm focus:ring-primary focus:border-primary text-slate-200">
+<option>Critical</option>
+<option>High</option>
+<option>Medium</option>
+<option>Low</option>
+</select>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Assigned Leader</label>
+<select class="w-full bg-card-dark border-border-dark rounded-lg text-sm focus:ring-primary focus:border-primary text-slate-200">
+<option>David Miller</option>
+<option>Elena Rodriguez</option>
+<option>Marcus Chen</option>
+</select>
+</div>
+<div class="col-span-2">
+<label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Estimated Revenue Recovery</label>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">$</span>
+<input class="w-full pl-7 bg-card-dark border-border-dark rounded-lg text-sm focus:ring-primary focus:border-primary text-slate-200" type="number" value="142500"/>
+</div>
+</div>
+<div class="col-span-2">
+<div class="flex items-center justify-between mb-1.5">
+<label class="block text-[10px] font-bold text-slate-400 uppercase">AI-Generated Context</label>
+<span class="text-[9px] bg-primary/20 text-primary px-1.5 py-0.5 rounded font-bold uppercase">Auto-Refined by LIDA</span>
+</div>
+<textarea class="w-full bg-card-dark border-border-dark rounded-lg text-sm focus:ring-primary focus:border-primary text-slate-300" rows="4">LIDA AI detected a cluster of 842 denials from Aetna in the NY region, specifically coded for 'Duplicate Claim' (CO-18). This pattern deviates from historical norms by 14.8%. Recommendation: Audit the outpatient billing system integration for NY regional nodes to ensure clearinghouse response loops are functioning correctly.</textarea>
+</div>
+</div>
+</div>
+<div class="p-6 border-t border-border-dark flex justify-end gap-3 bg-card-dark/20">
+<button class="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white transition-colors">Cancel</button>
+<button class="px-6 py-2 bg-primary hover:bg-primary/90 text-white text-xs font-bold rounded-lg transition-colors">Generate Ticket</button>
+</div>
+</div>
+</div>
+<div class="fixed inset-y-0 right-0 z-[110] w-[450px] bg-background-dark border-l border-border-dark shadow-2xl flex flex-col transform transition-transform duration-300 translate-x-0">
+<div class="p-6 border-b border-border-dark bg-card-dark/30">
+<div class="flex items-center justify-between mb-4">
+<span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">TKT-8842 / Review</span>
+<button class="text-slate-400 hover:text-white transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="flex items-center justify-between">
+<h3 class="text-lg font-bold">Aetna Denial Spike</h3>
+<div class="flex bg-slate-800 p-1 rounded-lg border border-border-dark">
+<button class="px-3 py-1 text-[10px] font-bold rounded-md bg-amber-500/20 text-amber-500">Pending</button>
+<button class="px-3 py-1 text-[10px] font-bold rounded-md text-slate-500 hover:text-slate-300">Verified</button>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-6 scrollbar-hide">
+<h4 class="text-[10px] font-bold text-slate-400 uppercase mb-6 tracking-widest">Timeline of Communication</h4>
+<div class="space-y-8 relative before:absolute before:left-4 before:top-2 before:bottom-2 before:w-[2px] before:bg-border-dark">
+<div class="relative pl-10">
+<div class="absolute left-1 top-0 size-6 rounded-full bg-primary flex items-center justify-center text-white ring-4 ring-background-dark">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+</div>
+<div class="bg-card-dark border border-border-dark rounded-xl p-4">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold text-primary">LIDA Intelligence</span>
+<span class="text-[10px] text-slate-500 font-medium">Oct 24, 09:12 AM</span>
+</div>
+<p class="text-sm text-slate-300">Ticket automatically generated from NY Payer Variance alert. Priority set to <span class="text-rose-400 font-bold">Critical</span> due to $142.5k revenue exposure.</p>
+</div>
+</div>
+<div class="relative pl-10">
+<div class="absolute left-1 top-0 size-6 rounded-full bg-slate-300 bg-cover ring-4 ring-background-dark" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuClSEZOur4pcw0GrvO5cXVUnPZOI9kZHsdvjELb12RR_RNYCA1vOMfQNqeBDqVRIa_pGpoqZ9qIEv-M6PIRyOJ1b0drJiL7oHqprvT-ygtvk1YripfRxyEsbANkZ-f_BqTlSjL9GXNWsPMuGHjI2HByd9nvLACe1KO2M2tZoMwiJzwObvp-h1lirHblms-0j32ZVCwK0gkvS3oBlUrn3-jF-kXirA6BWg1fjwDRZ_AlD4HpW5Q3JuCqbc_d4jiN8UQkiEFd9dGTNkWb')"></div>
+<div class="bg-card-dark border border-border-dark rounded-xl p-4">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold">David Miller</span>
+<span class="text-[10px] text-slate-500 font-medium">Oct 24, 11:30 AM</span>
+</div>
+<p class="text-sm text-slate-300">I've initiated the audit of the NY clearinghouse logs. <span class="text-primary font-medium">@Marcus Chen</span>, can you verify if the CO-18 codes are hitting the middleware correctly?</p>
+</div>
+</div>
+<div class="relative pl-10">
+<div class="absolute left-1 top-0 size-6 rounded-full bg-emerald-500 flex items-center justify-center text-white ring-4 ring-background-dark">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+</div>
+<div class="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold text-emerald-500">Progress Verified</span>
+<span class="text-[10px] text-slate-500 font-medium">Oct 25, 02:45 PM</span>
+</div>
+<p class="text-sm text-slate-300">Configuration error in Node-NY4 identified. Routing issue corrected for Aetna 835 response files.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="p-6 border-t border-border-dark bg-card-dark/30">
+<div class="relative">
+<textarea class="w-full bg-card-dark border-border-dark rounded-xl text-sm p-4 focus:ring-primary focus:border-primary text-slate-200 scrollbar-hide resize-none" placeholder="Add a comment or @tag a team member..." rows="3"></textarea>
+<div class="absolute bottom-3 right-3 flex items-center gap-3">
+<button class="text-slate-500 hover:text-slate-300"><span class="material-symbols-outlined">attach_file</span></button>
+<button class="bg-primary hover:bg-primary/90 text-white p-2 rounded-lg transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">send</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+
+</body></html>

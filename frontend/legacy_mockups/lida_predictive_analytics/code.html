@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LIDA Predictive Analytics | Enterprise RCM</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                        "card-dark": "#1a2231",
+                        "border-dark": "#2d3748",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased min-h-screen flex">
+<!-- Sidebar -->
+<aside class="w-64 border-r border-slate-200 dark:border-border-dark flex flex-col h-screen sticky top-0 bg-white dark:bg-background-dark shrink-0">
+<div class="p-6 flex flex-col gap-6 h-full">
+<div class="flex items-center gap-3">
+<div class="size-10 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined">insights</span>
+</div>
+<div>
+<h1 class="text-sm font-bold leading-tight">LIDA Analytics</h1>
+<p class="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">Enterprise RCM</p>
+</div>
+</div>
+<nav class="flex flex-col gap-1 grow">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-100 dark:bg-card-dark text-primary font-medium" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="text-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-card-dark transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">chat_bubble</span>
+<span class="text-sm">LIDA NLQ</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-card-dark transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">trending_up</span>
+<span class="text-sm">Revenue Forecast</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-card-dark transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+<span class="text-sm">Payer Perf</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-card-dark transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="text-sm">Settings</span>
+</a>
+</nav>
+<div class="mt-auto">
+<button class="w-full bg-primary hover:bg-blue-700 text-white rounded-lg py-2.5 text-sm font-bold transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">sync</span>
+                    Sync Data
+                </button>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col overflow-x-hidden">
+<!-- Top Navigation -->
+<header class="h-16 border-b border-slate-200 dark:border-border-dark flex items-center justify-between px-8 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md sticky top-0 z-10">
+<div class="flex items-center gap-4">
+<h2 class="text-lg font-bold tracking-tight">LIDA Predictive Analytics</h2>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex gap-2">
+<button class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-card-dark rounded-full">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-card-dark rounded-full">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+</div>
+<div class="h-8 w-[1px] bg-slate-200 dark:bg-border-dark"></div>
+<div class="flex items-center gap-3">
+<div class="text-right hidden sm:block">
+<p class="text-xs font-bold">Admin User</p>
+<p class="text-[10px] text-slate-500">Finance Director</p>
+</div>
+<div class="size-9 rounded-full bg-slate-300 overflow-hidden border border-white dark:border-border-dark bg-cover bg-center" data-alt="User profile avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuClSEZOur4pcw0GrvO5cXVUnPZOI9kZHsdvjELb12RR_RNYCA1vOMfQNqeBDqVRIa_pGpoqZ9qIEv-M6PIRyOJ1b0drJiL7oHqprvT-ygtvk1YripfRxyEsbANkZ-f_BqTlSjL9GXNWsPMuGHjI2HByd9nvLACe1KO2M2tZoMwiJzwObvp-h1lirHblms-0j32ZVCwK0gkvS3oBlUrn3-jF-kXirA6BWg1fjwDRZ_AlD4HpW5Q3JuCqbc_d4jiN8UQkiEFd9dGTNkWb')"></div>
+</div>
+</div>
+</header>
+<!-- Dynamic Content Area -->
+<div class="p-8 max-w-7xl mx-auto w-full flex flex-col gap-8">
+<!-- NLQ Search Bar Section -->
+<section class="flex flex-col gap-4">
+<div class="flex flex-col">
+<h3 class="text-xl font-bold">Natural Language Query</h3>
+<p class="text-slate-500 text-sm">Ask LIDA anything about your organization's revenue data</p>
+</div>
+<div class="relative group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-primary group-focus-within:scale-110 transition-transform">bolt</span>
+</div>
+<input class="block w-full pl-12 pr-12 py-4 bg-white dark:bg-card-dark border-2 border-transparent dark:border-border-dark focus:border-primary dark:focus:border-primary rounded-xl text-lg shadow-xl dark:shadow-none placeholder:text-slate-400 focus:ring-0 transition-all outline-none" placeholder="Show me revenue trends by payer for the last 6 months" type="text"/>
+<div class="absolute inset-y-0 right-4 flex items-center gap-2">
+<kbd class="hidden sm:inline-flex items-center px-2 py-1 text-xs font-semibold text-slate-400 bg-slate-100 dark:bg-background-dark border border-slate-200 dark:border-border-dark rounded-md">
+                            ⌘ K
+                        </kbd>
+<button class="p-2 bg-primary text-white rounded-lg">
+<span class="material-symbols-outlined">search</span>
+</button>
+</div>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="text-xs font-medium text-slate-500 px-1">Suggested:</span>
+<button class="text-xs px-3 py-1.5 rounded-full bg-slate-100 dark:bg-card-dark text-slate-600 dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors border border-slate-200 dark:border-border-dark">"Predict Q4 cash flow"</button>
+<button class="text-xs px-3 py-1.5 rounded-full bg-slate-100 dark:bg-card-dark text-slate-600 dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors border border-slate-200 dark:border-border-dark">"Top 3 denial reasons"</button>
+<button class="text-xs px-3 py-1.5 rounded-full bg-slate-100 dark:bg-card-dark text-slate-600 dark:text-slate-300 hover:bg-primary/10 hover:text-primary transition-colors border border-slate-200 dark:border-border-dark">"Medicare payment efficiency"</button>
+</div>
+</section>
+<!-- AI Insight Grid -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Insight Card 1 -->
+<div class="bg-white dark:bg-card-dark border border-slate-200 dark:border-border-dark p-6 rounded-xl flex flex-col gap-4 shadow-sm">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Revenue Trends</p>
+<h4 class="text-2xl font-bold">$4.2M</h4>
+</div>
+<span class="flex items-center text-emerald-500 text-xs font-bold gap-1 bg-emerald-500/10 px-2 py-1 rounded">
+<span class="material-symbols-outlined text-sm">trending_up</span> 12.5%
+                        </span>
+</div>
+<div class="h-32 flex items-end gap-1 px-1">
+<div class="flex-1 bg-primary/20 rounded-t-sm h-[40%]"></div>
+<div class="flex-1 bg-primary/20 rounded-t-sm h-[60%]"></div>
+<div class="flex-1 bg-primary/20 rounded-t-sm h-[45%]"></div>
+<div class="flex-1 bg-primary/20 rounded-t-sm h-[70%]"></div>
+<div class="flex-1 bg-primary/20 rounded-t-sm h-[85%]"></div>
+<div class="flex-1 bg-primary rounded-t-sm h-[95%]"></div>
+</div>
+<div class="flex justify-between text-[10px] font-bold text-slate-400">
+<span>JAN</span><span>FEB</span><span>MAR</span><span>APR</span><span>MAY</span><span>JUN</span>
+</div>
+</div>
+<!-- Insight Card 2 -->
+<div class="bg-white dark:bg-card-dark border border-slate-200 dark:border-border-dark p-6 rounded-xl flex flex-col gap-4 shadow-sm">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Collection Efficiency</p>
+<h4 class="text-2xl font-bold">92.4%</h4>
+</div>
+<span class="flex items-center text-rose-500 text-xs font-bold gap-1 bg-rose-500/10 px-2 py-1 rounded">
+<span class="material-symbols-outlined text-sm">trending_down</span> 2.1%
+                        </span>
+</div>
+<div class="flex-1 flex items-center justify-center relative">
+<div class="w-24 h-24 rounded-full border-[10px] border-slate-100 dark:border-background-dark flex items-center justify-center">
+<div class="absolute w-24 h-24 rounded-full border-[10px] border-primary border-t-transparent -rotate-45"></div>
+<span class="text-lg font-bold">92%</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-2">
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="text-[10px] font-medium text-slate-500">Collected</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-slate-200 dark:bg-background-dark"></div>
+<span class="text-[10px] font-medium text-slate-500">Outstanding</span>
+</div>
+</div>
+</div>
+<!-- Insight Card 3 (LIDA AI Analysis) -->
+<div class="bg-gradient-to-br from-primary to-blue-800 p-6 rounded-xl flex flex-col gap-4 text-white shadow-xl lg:col-span-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined">auto_awesome</span>
+<h4 class="text-sm font-bold">LIDA AI Summary</h4>
+</div>
+<div class="space-y-4">
+<div class="bg-white/10 p-3 rounded-lg border border-white/20">
+<p class="text-xs leading-relaxed italic opacity-90">"Medicare payments are processing 5.2 days faster than average. Potential for $240k liquidity gain if optimized further."</p>
+</div>
+<ul class="space-y-2">
+<li class="flex items-start gap-2 text-xs">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span>Denial rate down by 0.8% for BCBS</span>
+</li>
+<li class="flex items-start gap-2 text-xs">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+<span>Aetna lag increasing in Northeast</span>
+</li>
+</ul>
+</div>
+<button class="mt-auto bg-white text-primary text-xs font-bold py-2 rounded-lg hover:bg-blue-50 transition-colors">Generate Full Report</button>
+</div>
+</section>
+<!-- Revenue Forecast Section -->
+<section class="bg-white dark:bg-card-dark border border-slate-200 dark:border-border-dark p-6 rounded-xl shadow-sm">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+<div>
+<h3 class="text-xl font-bold">90-Day Revenue Forecast</h3>
+<p class="text-slate-500 text-sm">Predictive confidence interval at 95%</p>
+</div>
+<div class="flex bg-slate-100 dark:bg-background-dark p-1 rounded-lg">
+<button class="px-4 py-1.5 rounded-md text-xs font-bold text-slate-400">30D</button>
+<button class="px-4 py-1.5 rounded-md text-xs font-bold text-slate-400">60D</button>
+<button class="px-4 py-1.5 rounded-md text-xs font-bold bg-white dark:bg-card-dark text-primary shadow-sm">90D</button>
+</div>
+</div>
+<div class="h-64 w-full relative">
+<!-- Historical Data -->
+<svg class="w-full h-full" preserveaspectratio="none">
+<!-- Confidence Interval -->
+<path d="M500 120 L550 100 L600 110 L650 90 L700 85 L750 95 L800 105 L850 115 L900 120 L900 180 L850 190 L800 180 L750 170 L700 160 L650 150 L600 160 L550 170 L500 180 Z" fill="rgba(19, 91, 236, 0.1)" stroke="none"></path>
+<!-- Actual Line -->
+<path d="M0 200 L50 180 L100 190 L150 170 L200 160 L250 150 L300 170 L350 160 L400 140 L450 150 L500 150" fill="none" stroke="#135bec" stroke-width="3"></path>
+<!-- Prediction Line (Dashed) -->
+<path d="M500 150 L550 135 L600 145 L650 120 L700 125 L750 130 L800 145 L850 155 L900 150" fill="none" stroke="#135bec" stroke-dasharray="6 4" stroke-width="3"></path>
+<!-- Grid Lines -->
+<line stroke="currentColor" stroke-opacity="0.05" x1="0" x2="100%" y1="50" y2="50"></line>
+<line stroke="currentColor" stroke-opacity="0.05" x1="0" x2="100%" y1="100" y2="100"></line>
+<line stroke="currentColor" stroke-opacity="0.05" x1="0" x2="100%" y1="150" y2="150"></line>
+<line stroke="currentColor" stroke-opacity="0.05" x1="0" x2="100%" y1="200" y2="200"></line>
+<!-- Prediction Indicator -->
+<line stroke="#135bec" stroke-dasharray="2 2" stroke-opacity="0.2" x1="500" x2="500" y1="0" y2="100%"></line>
+</svg>
+<div class="absolute top-0 left-[50%] -translate-x-1/2 bg-primary text-white text-[10px] font-bold px-2 py-1 rounded">
+                        PRESENT DAY
+                    </div>
+</div>
+<div class="mt-4 flex justify-between text-xs font-bold text-slate-400">
+<span>AUG 01</span>
+<span>AUG 15</span>
+<span>SEP 01</span>
+<span>SEP 15</span>
+<span>OCT 01 (PREDICTED)</span>
+<span>OCT 15</span>
+<span>NOV 01</span>
+</div>
+</section>
+<!-- Payer Performance Grid -->
+<section class="flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<h3 class="text-xl font-bold">Payer Performance</h3>
+<button class="text-sm text-primary font-bold flex items-center gap-1">
+                        View Detailed Grid <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="text-[10px] font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-border-dark">
+<th class="px-4 py-4">Payer Name</th>
+<th class="px-4 py-4">Efficiency Score</th>
+<th class="px-4 py-4">Avg. Days to Pay</th>
+<th class="px-4 py-4">Denial Rate</th>
+<th class="px-4 py-4">Monthly Volume</th>
+<th class="px-4 py-4 text-right">Trend</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-slate-100 dark:border-border-dark/50 hover:bg-slate-50 dark:hover:bg-card-dark transition-colors">
+<td class="px-4 py-5 font-bold">Medicare Part B</td>
+<td class="px-4 py-5">
+<div class="flex items-center gap-3">
+<div class="w-16 bg-slate-200 dark:bg-background-dark h-1.5 rounded-full">
+<div class="bg-emerald-500 h-full rounded-full w-[94%]"></div>
+</div>
+                                        94.2%
+                                    </div>
+</td>
+<td class="px-4 py-5">14.2 Days</td>
+<td class="px-4 py-5 text-emerald-500 font-bold">4.2%</td>
+<td class="px-4 py-5">$1.2M</td>
+<td class="px-4 py-5 text-right">
+<span class="material-symbols-outlined text-emerald-500">trending_up</span>
+</td>
+</tr>
+<tr class="border-b border-slate-100 dark:border-border-dark/50 hover:bg-slate-50 dark:hover:bg-card-dark transition-colors">
+<td class="px-4 py-5 font-bold">BlueCross BlueShield</td>
+<td class="px-4 py-5">
+<div class="flex items-center gap-3">
+<div class="w-16 bg-slate-200 dark:bg-background-dark h-1.5 rounded-full">
+<div class="bg-primary h-full rounded-full w-[88%]"></div>
+</div>
+                                        88.5%
+                                    </div>
+</td>
+<td class="px-4 py-5">22.8 Days</td>
+<td class="px-4 py-5 text-slate-500 font-bold">8.4%</td>
+<td class="px-4 py-5">$940k</td>
+<td class="px-4 py-5 text-right">
+<span class="material-symbols-outlined text-slate-400">trending_flat</span>
+</td>
+</tr>
+<tr class="border-b border-slate-100 dark:border-border-dark/50 hover:bg-slate-50 dark:hover:bg-card-dark transition-colors">
+<td class="px-4 py-5 font-bold">Aetna Health</td>
+<td class="px-4 py-5">
+<div class="flex items-center gap-3">
+<div class="w-16 bg-slate-200 dark:bg-background-dark h-1.5 rounded-full">
+<div class="bg-amber-500 h-full rounded-full w-[72%]"></div>
+</div>
+                                        72.1%
+                                    </div>
+</td>
+<td class="px-4 py-5">34.5 Days</td>
+<td class="px-4 py-5 text-rose-500 font-bold">14.8%</td>
+<td class="px-4 py-5">$420k</td>
+<td class="px-4 py-5 text-right">
+<span class="material-symbols-outlined text-rose-500">trending_down</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+</main>
+</body></html>

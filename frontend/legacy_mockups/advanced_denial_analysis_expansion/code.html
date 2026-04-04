@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Advanced Denial Analysis Expansion</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f20d0d",
+                        "background-light": "#f8f5f5",
+                        "background-dark": "#221010",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .filled-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-gray-900 dark:text-white min-h-screen">
+<div class="layout-container flex flex-col min-h-screen">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-primary/20 bg-background-light dark:bg-background-dark px-10 py-3 sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white">analytics</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">RCM Analytics AI</h2>
+</div>
+<nav class="hidden md:flex items-center gap-9">
+<a class="text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-sm font-medium leading-normal text-primary" href="#">Claims</a>
+<a class="text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Denials</a>
+<a class="text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Appeals</a>
+<a class="text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Reports</a>
+</nav>
+</div>
+<div class="flex flex-1 justify-end gap-6">
+<label class="flex flex-col min-w-40 h-10 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full bg-gray-200 dark:bg-primary/10">
+<div class="flex items-center justify-center pl-4 rounded-l-lg">
+<span class="material-symbols-outlined text-gray-500 dark:text-gray-400">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 border-none bg-transparent focus:ring-0 h-full placeholder:text-gray-500 dark:placeholder:text-gray-400 px-4 pl-2 text-base font-normal" placeholder="Search claims..." value=""/>
+</div>
+</label>
+<div class="flex gap-2">
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-gray-200 dark:bg-primary/10 hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-gray-200 dark:bg-primary/10 hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10 border-2 border-primary" data-alt="User avatar profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBDPZrkckIv9ksD10_R1NxhZSKcr77o65QSZjH3wXtBRfUmmGyfHcCMZ8Wvm4-iGLc71pkUYVBae9fw7dKALuDQMmGE2vCWBlJQP3ZNhvOvqMowhlb-AaCSmsVd17yMIXPXePIQpnG4udko37wzO5v1_Xed31lfUANPQOEizqvUrvnKIeuUc6OyAFoDfPyxz6-F6B9yH7uitWoc433-YszBYpkmnVENzRetWRH8HdaH9OIZ7JfBi54Z-nYh9jF2GfSrYOm3c3L9gGvG");'></div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-64 border-r border-primary/10 bg-background-light dark:bg-background-dark p-4 hidden lg:flex flex-col gap-6">
+<div class="flex flex-col">
+<h1 class="text-base font-bold">Denial Management</h1>
+<p class="text-gray-500 text-xs font-medium uppercase tracking-wider">Enterprise Edition</p>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 cursor-pointer">
+<span class="material-symbols-outlined">dashboard</span>
+<p class="text-sm font-medium">Overview</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary text-white cursor-pointer shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined filled-icon">trending_down</span>
+<p class="text-sm font-medium">Financial Leakage</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 cursor-pointer">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<p class="text-sm font-medium">Payer Performance</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 cursor-pointer">
+<span class="material-symbols-outlined">account_tree</span>
+<p class="text-sm font-medium">Root Cause</p>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 cursor-pointer">
+<span class="material-symbols-outlined">neurology</span>
+<p class="text-sm font-medium">AI Insights</p>
+</div>
+</div>
+<div class="mt-auto pt-6 border-t border-primary/10">
+<div class="bg-primary/10 rounded-xl p-4">
+<p class="text-xs font-bold text-primary mb-1">DATA REFRESH</p>
+<p class="text-[10px] text-gray-500 mb-2">Last sync: 12m ago</p>
+<button class="w-full py-2 bg-primary text-white text-xs font-bold rounded-lg uppercase tracking-widest">Refresh Now</button>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto bg-gray-50 dark:bg-[#1a0c0c] p-6">
+<!-- Page Heading -->
+<div class="flex flex-wrap justify-between items-end gap-3 mb-6">
+<div class="flex flex-col gap-1">
+<p class="text-3xl font-black leading-tight tracking-[-0.033em]">Advanced Denial Analysis</p>
+<p class="text-gray-500 dark:text-gray-400 text-sm font-normal">Identifying $4.2M in annual financial leakage through root cause mapping.</p>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-gray-200 dark:bg-primary/10 text-sm font-bold">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+<span>Filters</span>
+</button>
+<button class="flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">ios_share</span>
+<span>Export Report</span>
+</button>
+</div>
+</div>
+<!-- Chips/Filters -->
+<div class="flex flex-wrap gap-3 mb-8">
+<button class="flex h-8 items-center gap-x-2 rounded-full bg-white dark:bg-primary/20 border border-primary/20 pl-4 pr-3">
+<p class="text-xs font-semibold">Range: Last 90 Days</p>
+<span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+<button class="flex h-8 items-center gap-x-2 rounded-full bg-white dark:bg-primary/20 border border-primary/20 pl-4 pr-3">
+<p class="text-xs font-semibold">Region: Northeast</p>
+<span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+<button class="flex h-8 items-center gap-x-2 rounded-full bg-white dark:bg-primary/20 border border-primary/20 pl-4 pr-3">
+<p class="text-xs font-semibold">Payer: CMS &amp; United</p>
+<span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+<button class="flex h-8 items-center gap-x-2 rounded-full bg-primary/20 border border-primary/40 pl-4 pr-3">
+<p class="text-xs font-semibold text-primary">Risk: High Impact</p>
+<span class="material-symbols-outlined text-sm text-primary">cancel</span>
+</button>
+</div>
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-background-dark border border-primary/10 shadow-sm">
+<p class="text-gray-500 text-sm font-medium">Total Leakage</p>
+<p class="tracking-tight text-3xl font-black text-primary">$4.2M</p>
+<div class="flex items-center gap-1 text-red-500 text-xs font-bold">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span>+12.5% vs Prev Quarter</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-background-dark border border-primary/10 shadow-sm">
+<p class="text-gray-500 text-sm font-medium">Denial Rate</p>
+<p class="tracking-tight text-3xl font-black">12.4%</p>
+<div class="flex items-center gap-1 text-green-500 text-xs font-bold">
+<span class="material-symbols-outlined text-sm">trending_down</span>
+<span>-2.1% Industry Avg</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-background-dark border border-primary/10 shadow-sm">
+<p class="text-gray-500 text-sm font-medium">Avg. Appeal Days</p>
+<p class="tracking-tight text-3xl font-black">42 Days</p>
+<div class="flex items-center gap-1 text-red-500 text-xs font-bold">
+<span class="material-symbols-outlined text-sm">warning</span>
+<span>+5.0% Lag detected</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-white dark:bg-background-dark border border-primary/10 shadow-sm">
+<p class="text-gray-500 text-sm font-medium">Recovery Potential</p>
+<p class="tracking-tight text-3xl font-black text-amber-500">$1.8M</p>
+<div class="flex items-center gap-1 text-green-500 text-xs font-bold">
+<span class="material-symbols-outlined text-sm">check_circle</span>
+<span>82% Accuracy Confidence</span>
+</div>
+</div>
+</div>
+<!-- Main Visualization Grid -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+<!-- Left: Tree Map & Benchmark Table -->
+<div class="xl:col-span-2 flex flex-col gap-6">
+<!-- Denial Root Cause Tree Map -->
+<div class="bg-white dark:bg-background-dark rounded-xl border border-primary/10 p-6">
+<div class="flex justify-between items-center mb-6">
+<div>
+<h3 class="text-lg font-bold">Denial Root Cause Tree Map</h3>
+<p class="text-xs text-gray-500">Block size correlates to lost revenue value</p>
+</div>
+<div class="flex gap-2">
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-primary/20 text-[10px] font-bold text-primary">CRITICAL</span>
+<span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-amber-500/20 text-[10px] font-bold text-amber-500">HIGH RISK</span>
+</div>
+</div>
+<!-- Mock Tree Map -->
+<div class="h-[400px] w-full grid grid-cols-12 grid-rows-6 gap-2">
+<div class="col-span-8 row-span-4 bg-primary/90 rounded-lg p-4 flex flex-col justify-between text-white border border-white/10">
+<span class="font-bold text-xl">Medical Necessity</span>
+<div class="flex flex-col">
+<span class="text-3xl font-black">$2.1M</span>
+<span class="text-xs opacity-80">50% of total leakage</span>
+</div>
+</div>
+<div class="col-span-4 row-span-3 bg-amber-500/90 rounded-lg p-4 flex flex-col justify-between text-white border border-white/10">
+<span class="font-bold">Eligibility</span>
+<div>
+<span class="text-xl font-black block">$840K</span>
+<span class="text-[10px] opacity-80">20% of total</span>
+</div>
+</div>
+<div class="col-span-4 row-span-3 bg-orange-600/90 rounded-lg p-4 flex flex-col justify-between text-white border border-white/10">
+<span class="font-bold">Coding Errors</span>
+<div>
+<span class="text-xl font-black block">$630K</span>
+<span class="text-[10px] opacity-80">15% of total</span>
+</div>
+</div>
+<div class="col-span-5 row-span-2 bg-primary/40 rounded-lg p-3 flex flex-col justify-between text-white border border-white/10">
+<span class="font-bold text-xs uppercase">Duplicates</span>
+<span class="text-lg font-black">$420K</span>
+</div>
+<div class="col-span-3 row-span-2 bg-gray-500/40 rounded-lg p-3 flex flex-col justify-between text-white border border-white/10">
+<span class="font-bold text-xs uppercase">Timely Filing</span>
+<span class="text-lg font-black">$210K</span>
+</div>
+</div>
+</div>
+<!-- Payer Benchmark Table -->
+<div class="bg-white dark:bg-background-dark rounded-xl border border-primary/10 p-6 overflow-hidden">
+<h3 class="text-lg font-bold mb-4">Payer Denial Benchmark</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="text-xs text-gray-500 border-b border-primary/10 font-bold">
+<th class="py-3 px-2">PAYER</th>
+<th class="py-3 px-2 text-right">CURRENT RATE</th>
+<th class="py-3 px-2 text-right">IND. AVG</th>
+<th class="py-3 px-2 text-center">VARIANCE</th>
+<th class="py-3 px-2">TREND (30D)</th>
+<th class="py-3 px-2 text-right">RECOVERY</th>
+</tr>
+</thead>
+<tbody class="text-sm">
+<tr class="border-b border-primary/10 hover:bg-primary/5">
+<td class="py-4 px-2 font-bold">UnitedHealthcare</td>
+<td class="py-4 px-2 text-right font-semibold">18.4%</td>
+<td class="py-4 px-2 text-right text-gray-500">12.1%</td>
+<td class="py-4 px-2 text-center">
+<span class="text-red-500 bg-red-500/10 px-2 py-0.5 rounded text-xs font-bold">+6.3%</span>
+</td>
+<td class="py-4 px-2">
+<div class="w-16 h-4 bg-gray-100 dark:bg-primary/10 rounded-full relative overflow-hidden">
+<div class="absolute inset-0 bg-red-500 w-3/4 opacity-40"></div>
+</div>
+</td>
+<td class="py-4 px-2 text-right font-bold text-primary">$1.1M</td>
+</tr>
+<tr class="border-b border-primary/10 hover:bg-primary/5">
+<td class="py-4 px-2 font-bold">Aetna</td>
+<td class="py-4 px-2 text-right font-semibold">14.2%</td>
+<td class="py-4 px-2 text-right text-gray-500">11.8%</td>
+<td class="py-4 px-2 text-center">
+<span class="text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded text-xs font-bold">+2.4%</span>
+</td>
+<td class="py-4 px-2">
+<div class="w-16 h-4 bg-gray-100 dark:bg-primary/10 rounded-full relative overflow-hidden">
+<div class="absolute inset-0 bg-amber-500 w-1/2 opacity-40"></div>
+</div>
+</td>
+<td class="py-4 px-2 text-right font-bold">$420K</td>
+</tr>
+<tr class="border-b border-primary/10 hover:bg-primary/5">
+<td class="py-4 px-2 font-bold">Cigna</td>
+<td class="py-4 px-2 text-right font-semibold">9.8%</td>
+<td class="py-4 px-2 text-right text-gray-500">10.5%</td>
+<td class="py-4 px-2 text-center">
+<span class="text-green-500 bg-green-500/10 px-2 py-0.5 rounded text-xs font-bold">-0.7%</span>
+</td>
+<td class="py-4 px-2">
+<div class="w-16 h-4 bg-gray-100 dark:bg-primary/10 rounded-full relative overflow-hidden">
+<div class="absolute inset-0 bg-green-500 w-1/4 opacity-40"></div>
+</div>
+</td>
+<td class="py-4 px-2 text-right font-bold text-green-500">$95K</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right Sidebar: AI Actionable Insights -->
+<div class="flex flex-col gap-6">
+<!-- AI Insights Section -->
+<div class="bg-white dark:bg-background-dark rounded-xl border border-primary/20 p-6 flex-1 flex flex-col gap-4 shadow-xl shadow-primary/5">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary filled-icon">bolt</span>
+<h3 class="text-lg font-bold">AI Actionable Insights</h3>
+</div>
+<!-- Insight Card 1 -->
+<div class="p-4 rounded-lg bg-red-500/5 border-l-4 border-red-500 flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<span class="text-xs font-bold text-red-500 uppercase">Impact: Extreme</span>
+<span class="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full font-bold">URGENT</span>
+</div>
+<p class="text-sm font-semibold leading-snug">
+                                    Automate Eligibility checks for Cardiology Dept.
+                                </p>
+<p class="text-xs text-gray-500 leading-normal">
+                                    Found 42% recurring denial rate due to missing authorization for Blue Shield plans. Updating intake logic could save <span class="text-primary font-bold">$125K/mo</span>.
+                                </p>
+<button class="w-full py-2 bg-red-500 text-white text-xs font-bold rounded-lg hover:bg-red-600 transition-colors">Apply Systemic Fix</button>
+</div>
+<!-- Insight Card 2 -->
+<div class="p-4 rounded-lg bg-amber-500/5 border-l-4 border-amber-500 flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<span class="text-xs font-bold text-amber-500 uppercase">Impact: High</span>
+<span class="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-full font-bold">RECOVERY</span>
+</div>
+<p class="text-sm font-semibold leading-snug">
+                                    Bulk Appeal: ICD-10 Coding Mismatch
+                                </p>
+<p class="text-xs text-gray-500 leading-normal">
+                                    AI detected 128 claims denied in error for "Incorrect Modifier". Predictive model suggests 94% win rate on Level 1 appeal.
+                                </p>
+<button class="w-full py-2 bg-amber-500 text-white text-xs font-bold rounded-lg hover:bg-amber-600 transition-colors">Generate 128 Appeals</button>
+</div>
+<!-- Denial Aging Central Chart (Visualized) -->
+<div class="mt-4 pt-6 border-t border-primary/10">
+<h4 class="text-sm font-bold mb-4">Denial Aging Velocity</h4>
+<div class="relative h-40 w-full flex items-end gap-2 pb-6 px-2">
+<!-- Bar Chart Mock -->
+<div class="flex-1 flex flex-col justify-end gap-1 group cursor-help">
+<div class="w-full bg-primary/20 hover:bg-primary/40 rounded-t h-[30%]"></div>
+<span class="text-[8px] text-center font-bold">0-30d</span>
+</div>
+<div class="flex-1 flex flex-col justify-end gap-1 group cursor-help">
+<div class="w-full bg-primary/40 hover:bg-primary/60 rounded-t h-[50%]"></div>
+<span class="text-[8px] text-center font-bold">31-60d</span>
+</div>
+<div class="flex-1 flex flex-col justify-end gap-1 group cursor-help">
+<div class="w-full bg-primary rounded-t h-[90%] relative">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-primary">LAG</div>
+</div>
+<span class="text-[8px] text-center font-bold">61-90d</span>
+</div>
+<div class="flex-1 flex flex-col justify-end gap-1 group cursor-help">
+<div class="w-full bg-amber-500 rounded-t h-[70%]"></div>
+<span class="text-[8px] text-center font-bold">91-120d</span>
+</div>
+<div class="flex-1 flex flex-col justify-end gap-1 group cursor-help">
+<div class="w-full bg-gray-500 rounded-t h-[40%]"></div>
+<span class="text-[8px] text-center font-bold">120d+</span>
+</div>
+</div>
+<div class="bg-primary/10 p-3 rounded-lg flex items-start gap-2">
+<span class="material-symbols-outlined text-primary text-sm">info</span>
+<p class="text-[10px] leading-tight">Claims in 61-90d bracket represent $1.2M at risk of write-off due to timely filing deadlines.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</div>
+</body></html>

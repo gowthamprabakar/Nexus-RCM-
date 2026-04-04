@@ -38,11 +38,11 @@ export function KPICard({
 
  return (
    <div
-     className={`bg-th-surface-raised border border-th-border rounded-md p-4 shadow-card transition-colors duration-150 hover:border-th-border-strong ${hasAccent ? `border-t-2 ${ACCENT_CLASSES[accentKey]}` : ''} ${onClick ? 'cursor-pointer' : ''}`}
+     className={`bg-th-surface-raised border border-th-border rounded-lg p-4 transition-colors duration-150 hover:border-th-border-strong ${hasAccent ? `border-t-2 ${ACCENT_CLASSES[accentKey]}` : ''} ${onClick ? 'cursor-pointer' : ''}`}
      onClick={onClick}
    >
      <div className="flex justify-between items-center mb-3">
-       <span className="text-[12px] text-th-muted uppercase tracking-wide">{title}</span>
+       <span className="text-[11px] font-medium text-th-muted uppercase tracking-wide">{title}</span>
        {icon && (
          <span className="material-symbols-outlined text-base text-th-muted">{icon}</span>
        )}

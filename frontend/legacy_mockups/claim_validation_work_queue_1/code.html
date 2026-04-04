@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Batch Actions Management | Nexus RCM AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ecec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#102222",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Manrope', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #283939;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex flex-col">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-[#283939] px-6 py-3 bg-background-light dark:bg-background-dark sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-white">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center text-background-dark">
+<span class="material-symbols-outlined text-2xl font-bold">account_tree</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Nexus RCM AI</h2>
+</div>
+<nav class="hidden lg:flex items-center gap-6">
+<a class="text-slate-600 dark:text-[#9db9b9] hover:text-primary text-sm font-medium transition-colors" href="#">Dashboard</a>
+<a class="text-primary text-sm font-bold border-b-2 border-primary py-1" href="#">Claims</a>
+<a class="text-slate-600 dark:text-[#9db9b9] hover:text-primary text-sm font-medium transition-colors" href="#">Payers</a>
+<a class="text-slate-600 dark:text-[#9db9b9] hover:text-primary text-sm font-medium transition-colors" href="#">Reports</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<label class="hidden md:flex flex-col min-w-48 !h-9 max-w-64">
+<div class="flex w-full flex-1 items-stretch rounded-lg h-full bg-slate-200 dark:bg-[#283939]">
+<div class="text-slate-500 dark:text-[#9db9b9] flex items-center justify-center pl-3">
+<span class="material-symbols-outlined text-xl">search</span>
+</div>
+<input class="form-input w-full bg-transparent border-none focus:ring-0 text-sm placeholder:text-slate-500 dark:placeholder:text-[#9db9b9] py-0 px-2" placeholder="Search Batches..."/>
+</div>
+</label>
+<button class="p-2 text-slate-600 dark:text-[#9db9b9] hover:text-primary">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 border border-primary/30" data-alt="User profile avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDvUWe2rk021CqyuDU7MoM3hAE5UhQDG1NKu2Xtw_3l96bNukRUttlmmn7TvMXfbKzRWKpCdqsJOWeW0noI--u_7Wy2FsXt5Khho8Ed4Drk6gybIcOKpvOKQwTQ8kB5StE7uvOK1sT0-aEd3d8YsJNZZAw6IS0_E-j7L9kBE6EIFQQT7sJ5beKwLjMIO6ExMC435PF878PzFZNwZnHGEXkQ08GbkVs6SI0UueFoPiv-QF16uLX63bmrYQ1vacvsCqVedZE2Fb6E5fMC");'></div>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<aside class="w-64 border-r border-[#283939] hidden xl:flex flex-col justify-between bg-background-light dark:bg-background-dark p-4 shrink-0">
+<div class="flex flex-col gap-6">
+<div class="flex flex-col px-2">
+<h1 class="text-slate-900 dark:text-white text-xs font-bold uppercase tracking-widest opacity-50">Workflow Management</h1>
+<p class="text-primary text-sm font-semibold mt-1">Batch Operations</p>
+</div>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-[#9db9b9] hover:bg-slate-200 dark:hover:bg-[#283939]/50 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<p class="text-sm font-medium">Overview</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-[#9db9b9] hover:bg-slate-200 dark:hover:bg-[#283939]/50 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">inbox</span>
+<p class="text-sm font-medium">Work Queue</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary border border-primary/20" href="#">
+<span class="material-symbols-outlined text-[20px] fill-1">dynamic_form</span>
+<p class="text-sm font-bold">Batch Actions</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-600 dark:text-[#9db9b9] hover:bg-slate-200 dark:hover:bg-[#283939]/50 transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">cleaning_services</span>
+<p class="text-sm font-medium">Mass Scrub</p>
+</a>
+</div>
+<div class="pt-6 border-t border-[#283939]">
+<h3 class="px-3 text-xs font-bold uppercase tracking-widest opacity-50 mb-4">Quick Stats</h3>
+<div class="space-y-4 px-3">
+<div>
+<div class="flex justify-between text-[10px] text-[#9db9b9] mb-1">
+<span>SYSTEM CAPACITY</span>
+<span class="text-primary font-bold">74%</span>
+</div>
+<div class="h-1 bg-[#283939] rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[74%]"></div>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-xs text-[#9db9b9]">Active Jobs</span>
+<span class="text-xs font-bold text-white">12</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-xs text-[#9db9b9]">Queued</span>
+<span class="text-xs font-bold text-white">4</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-primary/5 border border-primary/20 rounded-xl p-4">
+<p class="text-xs text-[#9db9b9] mb-2 uppercase font-bold tracking-tighter">New Operation</p>
+<button class="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 bg-primary text-background-dark text-sm font-bold transition-transform active:scale-95">
+<span class="material-symbols-outlined text-sm">add_circle</span>
+                    Create New Batch
+                </button>
+</div>
+</aside>
+<main class="flex-1 flex flex-col overflow-y-auto custom-scrollbar p-6 bg-background-light dark:bg-background-dark">
+<div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
+<div class="flex flex-col gap-1">
+<h1 class="text-slate-900 dark:text-white text-3xl font-black tracking-tight">Batch Actions Management</h1>
+<p class="text-slate-600 dark:text-[#9db9b9] text-base">Monitor and orchestrate automated claim processing jobs.</p>
+</div>
+<div class="flex flex-wrap gap-4">
+<div class="flex min-w-[140px] flex-col gap-1 rounded-xl p-4 border border-[#3b5454] bg-slate-100 dark:bg-transparent">
+<p class="text-slate-500 dark:text-[#9db9b9] text-xs font-bold uppercase">Success Rate</p>
+<div class="flex items-end gap-2">
+<p class="text-slate-900 dark:text-white text-2xl font-bold leading-none">98.2%</p>
+<p class="text-[#0bda50] text-xs font-bold pb-1 flex items-center"><span class="material-symbols-outlined text-xs">trending_up</span></p>
+</div>
+</div>
+<div class="flex min-w-[140px] flex-col gap-1 rounded-xl p-4 border border-[#3b5454] bg-slate-100 dark:bg-transparent">
+<p class="text-slate-500 dark:text-[#9db9b9] text-xs font-bold uppercase">Avg Processing</p>
+<div class="flex items-end gap-2">
+<p class="text-slate-900 dark:text-white text-2xl font-bold leading-none">1.2m</p>
+<p class="text-primary text-[10px] font-bold pb-1 italic">Optimal</p>
+</div>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between border-b border-[#3b5454] mb-6">
+<div class="flex gap-8">
+<button class="flex items-center gap-2 border-b-2 border-primary text-primary pb-3 font-bold text-sm tracking-wide">
+                        All Batches (24)
+                    </button>
+<button class="flex items-center gap-2 border-b-2 border-transparent text-[#9db9b9] pb-3 font-bold text-sm tracking-wide hover:text-white transition-all">
+                        Active (5)
+                    </button>
+<button class="flex items-center gap-2 border-b-2 border-transparent text-[#9db9b9] pb-3 font-bold text-sm tracking-wide hover:text-white transition-all">
+                        Completed
+                    </button>
+</div>
+<div class="flex gap-2 pb-3">
+<button class="px-3 py-1.5 rounded bg-slate-200 dark:bg-[#283939] text-slate-700 dark:text-white text-xs font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">history</span> View Logs
+                    </button>
+</div>
+</div>
+<div class="bg-slate-100 dark:bg-[#111818] rounded-xl border border-[#3b5454] overflow-hidden flex flex-col flex-1">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-200/50 dark:bg-[#283939]/40 border-b border-[#3b5454]">
+<th class="px-4 py-4 text-xs font-bold uppercase tracking-wider text-[#9db9b9]">Batch ID &amp; Name</th>
+<th class="px-4 py-4 text-xs font-bold uppercase tracking-wider text-[#9db9b9]">Status</th>
+<th class="px-4 py-4 text-xs font-bold uppercase tracking-wider text-[#9db9b9]">Progress &amp; Metrics</th>
+<th class="px-4 py-4 text-xs font-bold uppercase tracking-wider text-[#9db9b9]">Time Started</th>
+<th class="px-4 py-4 text-xs font-bold uppercase tracking-wider text-[#9db9b9] text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#3b5454]/50">
+<tr class="hover:bg-slate-200/30 dark:hover:bg-primary/5 transition-colors group">
+<td class="px-4 py-4">
+<div class="text-sm font-bold text-slate-900 dark:text-white">Batch Submit #402</div>
+<div class="text-[10px] font-mono text-primary">#JOB-2024-X992</div>
+</td>
+<td class="px-4 py-4">
+<span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold w-fit border border-primary/20">
+<span class="size-1.5 bg-primary rounded-full animate-pulse"></span>
+                                        PROCESSING
+                                    </span>
+</td>
+<td class="px-4 py-4">
+<div class="flex flex-col gap-2 w-64">
+<div class="flex justify-between text-[10px] font-bold">
+<span class="text-white">78% Complete</span>
+<span class="text-[#9db9b9]">2,400 / 3,077</span>
+</div>
+<div class="flex h-2 bg-[#283939] rounded-full overflow-hidden">
+<div class="bg-primary h-full" style="width: 78%"></div>
+<div class="bg-red-500/50 h-full" style="width: 2%"></div>
+</div>
+<div class="flex gap-4 text-[9px] font-bold uppercase">
+<span class="text-primary">2,352 Success</span>
+<span class="text-red-400">48 Failed</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="text-xs text-white">Today, 09:12 AM</div>
+<div class="text-[10px] text-[#9db9b9]">Est. 14m remaining</div>
+</td>
+<td class="px-4 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-1.5 rounded-lg border border-[#3b5454] text-[#9db9b9] hover:bg-yellow-500/20 hover:text-yellow-500 transition-all" title="Pause">
+<span class="material-symbols-outlined text-sm">pause</span>
+</button>
+<button class="p-1.5 rounded-lg border border-[#3b5454] text-[#9db9b9] hover:bg-red-500/20 hover:text-red-500 transition-all" title="Cancel">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-slate-200/30 dark:hover:bg-primary/5 transition-colors group">
+<td class="px-4 py-4">
+<div class="text-sm font-bold text-slate-900 dark:text-white">Rule Update Re-Scrub</div>
+<div class="text-[10px] font-mono text-primary">#JOB-2024-X998</div>
+</td>
+<td class="px-4 py-4">
+<span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-yellow-500/10 text-yellow-500 text-[10px] font-bold w-fit border border-yellow-500/20">
+<span class="material-symbols-outlined text-[12px]">pause</span>
+                                        PAUSED
+                                    </span>
+</td>
+<td class="px-4 py-4">
+<div class="flex flex-col gap-2 w-64 opacity-60">
+<div class="flex justify-between text-[10px] font-bold">
+<span class="text-white">32% Complete</span>
+<span class="text-[#9db9b9]">452 / 1,412</span>
+</div>
+<div class="flex h-2 bg-[#283939] rounded-full overflow-hidden">
+<div class="bg-yellow-500 h-full" style="width: 32%"></div>
+</div>
+<div class="flex gap-4 text-[9px] font-bold uppercase">
+<span class="text-yellow-500">452 Success</span>
+<span class="text-[#9db9b9]">0 Failed</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="text-xs text-white">Today, 10:45 AM</div>
+<div class="text-[10px] text-[#9db9b9]">Paused by Admin</div>
+</td>
+<td class="px-4 py-4 text-right">
+<div class="flex justify-end gap-2">
+<button class="p-1.5 rounded-lg border border-[#3b5454] text-[#9db9b9] hover:bg-primary/20 hover:text-primary transition-all" title="Resume">
+<span class="material-symbols-outlined text-sm">play_arrow</span>
+</button>
+<button class="p-1.5 rounded-lg border border-[#3b5454] text-[#9db9b9] hover:bg-red-500/20 hover:text-red-500 transition-all" title="Cancel">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+</td>
+</tr>
+<tr class="hover:bg-slate-200/30 dark:hover:bg-primary/5 transition-colors group opacity-80">
+<td class="px-4 py-4">
+<div class="text-sm font-bold text-slate-900 dark:text-white">Payer Validation Sweep</div>
+<div class="text-[10px] font-mono text-primary">#JOB-2024-X982</div>
+</td>
+<td class="px-4 py-4">
+<span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-green-500/10 text-green-500 text-[10px] font-bold w-fit border border-green-500/20">
+<span class="material-symbols-outlined text-[12px]">check_circle</span>
+                                        COMPLETED
+                                    </span>
+</td>
+<td class="px-4 py-4">
+<div class="flex flex-col gap-2 w-64">
+<div class="flex justify-between text-[10px] font-bold">
+<span class="text-white">100% Complete</span>
+<span class="text-[#9db9b9]">8,200 / 8,200</span>
+</div>
+<div class="flex h-2 bg-[#283939] rounded-full overflow-hidden">
+<div class="bg-green-500 h-full" style="width: 100%"></div>
+</div>
+<div class="flex gap-4 text-[9px] font-bold uppercase text-green-400">
+<span>8,110 Success</span>
+<span class="text-red-400">90 Failed</span>
+</div>
+</div>
+</td>
+<td class="px-4 py-4">
+<div class="text-xs text-white">Yesterday, 04:30 PM</div>
+<div class="text-[10px] text-[#9db9b9]">Duration: 12m 4s</div>
+</td>
+<td class="px-4 py-4 text-right">
+<button class="p-1.5 rounded-lg border border-[#3b5454] text-[#9db9b9] hover:bg-primary hover:text-background-dark transition-all">
+<span class="material-symbols-outlined text-sm">description</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="flex items-center justify-between px-6 py-4 bg-slate-200/20 dark:bg-[#283939]/20 border-t border-[#3b5454]">
+<p class="text-xs text-[#9db9b9]">Showing 1-10 of 24 batch jobs</p>
+<div class="flex items-center gap-1">
+<button class="p-1 rounded hover:bg-slate-200 dark:hover:bg-[#283939] text-slate-500 dark:text-white disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined text-lg">chevron_left</span>
+</button>
+<button class="px-2.5 py-1 text-xs font-bold rounded bg-primary text-background-dark">1</button>
+<button class="px-2.5 py-1 text-xs font-bold rounded hover:bg-slate-200 dark:hover:bg-[#283939] text-slate-500 dark:text-white">2</button>
+<button class="px-2.5 py-1 text-xs font-bold rounded hover:bg-slate-200 dark:hover:bg-[#283939] text-slate-500 dark:text-white">3</button>
+<button class="p-1 rounded hover:bg-slate-200 dark:hover:bg-[#283939] text-slate-500 dark:text-white">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<aside class="w-80 border-l border-[#283939] hidden 2xl:flex flex-col bg-background-light dark:bg-background-dark p-6 overflow-y-auto custom-scrollbar">
+<h3 class="text-white text-lg font-bold mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">settings_input_component</span>
+                Configure New Batch
+            </h3>
+<div class="space-y-6">
+<section>
+<label class="text-xs font-bold uppercase tracking-widest text-[#9db9b9] mb-3 block">Target Payer</label>
+<select class="w-full bg-slate-200 dark:bg-[#283939] border-[#3b5454] rounded-lg text-sm text-white focus:ring-primary focus:border-primary">
+<option>All Payers</option>
+<option>Medicare</option>
+<option>UnitedHealth</option>
+<option>BlueCross BS</option>
+<option>Cigna</option>
+</select>
+</section>
+<section>
+<label class="text-xs font-bold uppercase tracking-widest text-[#9db9b9] mb-3 block">Date Range</label>
+<div class="grid grid-cols-2 gap-2">
+<div class="bg-slate-200 dark:bg-[#283939] p-2 rounded-lg border border-[#3b5454]">
+<p class="text-[10px] text-[#9db9b9] font-bold">START</p>
+<p class="text-xs text-white">01/01/2024</p>
+</div>
+<div class="bg-slate-200 dark:bg-[#283939] p-2 rounded-lg border border-[#3b5454]">
+<p class="text-[10px] text-[#9db9b9] font-bold">END</p>
+<p class="text-xs text-white">03/31/2024</p>
+</div>
+</div>
+</section>
+<section>
+<label class="text-xs font-bold uppercase tracking-widest text-[#9db9b9] mb-3 block">Claim Value Filter</label>
+<div class="space-y-4">
+<div class="flex justify-between text-[10px] font-bold text-[#9db9b9]">
+<span>MIN: $0</span>
+<span class="text-primary">$5,000+</span>
+</div>
+<input class="w-full h-1.5 bg-slate-200 dark:bg-[#283939] rounded-lg appearance-none cursor-pointer accent-primary" max="10000" min="0" step="500" type="range" value="5000"/>
+</div>
+</section>
+<section class="space-y-3 pt-6 border-t border-[#3b5454]">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input checked="" class="rounded border-[#3b5454] bg-transparent text-primary focus:ring-primary size-4" type="checkbox"/>
+<span class="text-xs text-[#9db9b9] group-hover:text-white transition-colors">Apply AI Auto-Correction</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-[#3b5454] bg-transparent text-primary focus:ring-primary size-4" type="checkbox"/>
+<span class="text-xs text-[#9db9b9] group-hover:text-white transition-colors">Force Re-Scrub Existing</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input checked="" class="rounded border-[#3b5454] bg-transparent text-primary focus:ring-primary size-4" type="checkbox"/>
+<span class="text-xs text-[#9db9b9] group-hover:text-white transition-colors">Notify on Completion</span>
+</label>
+</section>
+<div class="bg-primary/5 border border-primary/20 rounded-xl p-4 mt-8">
+<div class="flex items-center justify-between mb-2">
+<p class="text-xs font-bold text-white">Batch Summary</p>
+<span class="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded font-bold">~4,200 Claims</span>
+</div>
+<p class="text-[11px] text-[#9db9b9] leading-normal mb-4">
+                        Estimated processing time: <span class="text-white font-medium">18 minutes</span>. 
+                        Targeting high-value claims for Medicare.
+                    </p>
+<button class="w-full py-2.5 bg-primary text-background-dark rounded-lg text-sm font-bold flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm">rocket_launch</span>
+                        Execute Batch Job
+                    </button>
+</div>
+</div>
+</aside>
+</div>
+
+</body></html>

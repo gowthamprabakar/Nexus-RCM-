@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cron Job &amp; Task Scheduler | AI-Native RCM</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="flex flex-col w-full max-w-[1440px] mx-auto min-h-screen border-x border-slate-200 dark:border-slate-800">
+<!-- TopNavBar -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 px-6 py-3 bg-white dark:bg-background-dark sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3 text-primary">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined">schedule</span>
+</div>
+<div class="flex flex-col">
+<h2 class="text-slate-900 dark:text-white text-base font-bold leading-tight tracking-tight">RCM Scheduler</h2>
+<span class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">AI-Native Platform</span>
+</div>
+</div>
+<div class="hidden md:flex items-center gap-6">
+<a class="text-slate-600 dark:text-slate-300 text-sm font-medium hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-primary text-sm font-bold border-b-2 border-primary py-4 -mb-4" href="#">Cron Jobs</a>
+<a class="text-slate-600 dark:text-slate-300 text-sm font-medium hover:text-primary transition-colors" href="#">Execution Logs</a>
+<a class="text-slate-600 dark:text-slate-300 text-sm font-medium hover:text-primary transition-colors" href="#">Connectors</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<label class="flex items-center min-w-40 md:min-w-64 h-9 relative">
+<span class="material-symbols-outlined absolute left-3 text-slate-400 text-sm">search</span>
+<input class="w-full h-full rounded-lg text-sm border-none bg-slate-100 dark:bg-slate-800 focus:ring-1 focus:ring-primary pl-9 text-slate-900 dark:text-white placeholder:text-slate-500" placeholder="Search jobs, tags, or logs..."/>
+</label>
+<div class="flex gap-2 border-l border-slate-200 dark:border-slate-800 pl-4">
+<button class="flex items-center justify-center rounded-lg size-9 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="flex items-center justify-center rounded-lg size-9 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="size-9 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden ml-2 border border-slate-300 dark:border-slate-600">
+<img class="w-full h-full object-cover" data-alt="User profile avatar circle" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB80nRNTueNwkNSJShQ4NsKbcwIO2XT6bBSvvH_37MX5suIocumYdGTusI2y1gq8puzFQq3g51FRvlkPt_6gK0MwfAMuHv2obGwF1LG93SULXss9MXaYuHlBTjw6evhVL32fU1MCFoPRhZ_t2cxw3QX_oVkaZDp6F9lVFnLVAIHdd1tK5ygwKcdWaA2pI_o9IqzX2qhJXmXxLaxH_roYt42q7aRqj0SCIlahdcial2P5mYy2dDa3JkybL_IF-aM4YeZfxgb68fKfu_C"/>
+</div>
+</div>
+</div>
+</header>
+<main class="flex-1 p-6 space-y-6">
+<!-- PageHeading -->
+<div class="flex flex-wrap justify-between items-end gap-4">
+<div class="flex flex-col gap-1">
+<h1 class="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight">Cron Job Scheduler &amp; Monitor</h1>
+<div class="flex items-center gap-2">
+<span class="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium">System status: All high-frequency syncs operational (99.98% uptime)</p>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="flex items-center gap-2 px-4 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-bold border border-slate-200 dark:border-slate-700">
+<span class="material-symbols-outlined text-sm">history</span>
+                        View Audit Log
+                    </button>
+<button class="flex items-center gap-2 px-4 h-10 rounded-lg bg-primary text-white text-sm font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">add</span>
+                        Create New Job
+                    </button>
+</div>
+</div>
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="flex flex-col gap-2 rounded-xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
+<div class="flex items-center justify-between">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wider">Total Active Jobs</p>
+<span class="material-symbols-outlined text-primary">analytics</span>
+</div>
+<p class="text-slate-900 dark:text-white text-3xl font-bold leading-tight">124</p>
+<div class="flex items-center gap-1 text-emerald-500 text-xs font-bold">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+<span>+12% vs last month</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
+<div class="flex items-center justify-between">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wider">Avg. Success Rate</p>
+<span class="material-symbols-outlined text-emerald-500">check_circle</span>
+</div>
+<p class="text-slate-900 dark:text-white text-3xl font-bold leading-tight">99.85%</p>
+<div class="flex items-center gap-1 text-emerald-500 text-xs font-bold">
+<span class="material-symbols-outlined text-xs">keyboard_arrow_up</span>
+<span>0.02% improvement</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
+<div class="flex items-center justify-between">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wider">Records (24h)</p>
+<span class="material-symbols-outlined text-amber-500">database</span>
+</div>
+<p class="text-slate-900 dark:text-white text-3xl font-bold leading-tight">4.2M</p>
+<div class="flex items-center gap-1 text-rose-500 text-xs font-bold">
+<span class="material-symbols-outlined text-xs">trending_down</span>
+<span>-3% traffic dip</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
+<div class="flex items-center justify-between">
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wider">System Uptime</p>
+<span class="material-symbols-outlined text-indigo-500">speed</span>
+</div>
+<p class="text-slate-900 dark:text-white text-3xl font-bold leading-tight">14d 6h</p>
+<div class="flex items-center gap-1 text-slate-400 text-xs font-bold">
+<span>Last restart: Oct 12</span>
+</div>
+</div>
+</div>
+<!-- Throughput Chart -->
+<div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 overflow-hidden">
+<div class="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+<div>
+<h3 class="text-slate-900 dark:text-white text-lg font-bold">Job Throughput</h3>
+<p class="text-slate-500 text-sm">Records processed per minute across all active syncs</p>
+</div>
+<div class="flex bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+<button class="px-3 py-1 text-xs font-bold rounded-md bg-white dark:bg-slate-700 shadow-sm">24H</button>
+<button class="px-3 py-1 text-xs font-medium text-slate-500">7D</button>
+<button class="px-3 py-1 text-xs font-medium text-slate-500">30D</button>
+</div>
+</div>
+<div class="p-6">
+<div class="flex items-baseline gap-2 mb-4">
+<span class="text-slate-900 dark:text-white text-4xl font-black tracking-tight">4,200,500</span>
+<span class="text-emerald-500 text-sm font-bold flex items-center">
+<span class="material-symbols-outlined text-xs">arrow_upward</span> 8.4%
+                        </span>
+</div>
+<div class="h-48 w-full relative">
+<!-- Chart SVG -->
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 1000 200" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<lineargradient id="chartGradient" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#135bec" stop-opacity="0.3"></stop>
+<stop offset="100%" stop-color="#135bec" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+<path d="M0,150 Q50,140 100,160 T200,120 T300,100 T400,140 T500,80 T600,60 T700,90 T800,40 T900,70 T1000,50 V200 H0 Z" fill="url(#chartGradient)"></path>
+<path d="M0,150 Q50,140 100,160 T200,120 T300,100 T400,140 T500,80 T600,60 T700,90 T800,40 T900,70 T1000,50" fill="none" stroke="#135bec" stroke-width="3"></path>
+</svg>
+</div>
+<div class="flex justify-between mt-4 text-[11px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">
+<span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>Now</span>
+</div>
+</div>
+</div>
+<!-- Job List Table Section -->
+<div class="space-y-4">
+<div class="flex items-center justify-between px-1">
+<h2 class="text-slate-900 dark:text-white text-xl font-bold leading-tight">Active Cron Jobs</h2>
+<div class="flex gap-2">
+<select class="text-xs font-bold rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 h-8">
+<option>All Statuses</option>
+<option>Healthy</option>
+<option>Failing</option>
+<option>Paused</option>
+</select>
+<button class="size-8 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+</button>
+</div>
+</div>
+<div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 overflow-hidden shadow-sm">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[11px] uppercase tracking-widest text-slate-500 font-bold">
+<th class="px-6 py-4">Status</th>
+<th class="px-6 py-4">Job Details</th>
+<th class="px-6 py-4">Schedule (Cron)</th>
+<th class="px-6 py-4">Last Run</th>
+<th class="px-6 py-4">Success</th>
+<th class="px-6 py-4">Next Run</th>
+<th class="px-6 py-4 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<!-- Job Row 1 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+</span>
+<span class="text-xs font-bold text-emerald-500 uppercase">Running</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-sm font-bold text-slate-900 dark:text-white">Daily Medicare Eligibility Sync</span>
+<span class="text-xs text-slate-500">Source: CMS-Gateway-V4</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<code class="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono text-primary">0 0 * * *</code>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-medium text-slate-600 dark:text-slate-400">14m 22s</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-emerald-500">99.8%</span>
+<div class="w-12 h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="bg-emerald-500 h-full w-[99%]"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-mono font-medium text-slate-900 dark:text-slate-200">04h 12m 09s</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-1">
+<button class="p-1.5 rounded-md hover:bg-primary/10 text-slate-500 hover:text-primary transition-colors" title="Run Now">
+<span class="material-symbols-outlined text-sm">play_arrow</span>
+</button>
+<button class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors" title="Pause">
+<span class="material-symbols-outlined text-sm">pause</span>
+</button>
+<button class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors" title="Settings">
+<span class="material-symbols-outlined text-sm">edit</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Job Row 2 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="flex h-2 w-2 rounded-full bg-slate-400"></span>
+<span class="text-xs font-bold text-slate-500 uppercase">Idle</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-sm font-bold text-slate-900 dark:text-white">Hourly EHR Charge Capture</span>
+<span class="text-xs text-slate-500">Source: Epic-HL7-Feed</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<code class="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono text-primary">0 * * * *</code>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-medium text-slate-600 dark:text-slate-400">2m 45s</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-emerald-500">100%</span>
+<div class="w-12 h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="bg-emerald-500 h-full w-full"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-mono font-medium text-slate-900 dark:text-slate-200">18m 51s</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-1">
+<button class="p-1.5 rounded-md hover:bg-primary/10 text-slate-500 hover:text-primary"><span class="material-symbols-outlined text-sm">play_arrow</span></button>
+<button class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500"><span class="material-symbols-outlined text-sm">pause</span></button>
+<button class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500"><span class="material-symbols-outlined text-sm">edit</span></button>
+</div>
+</td>
+</tr>
+<!-- Job Row 3 (Failing) -->
+<tr class="hover:bg-red-50/50 dark:hover:bg-rose-900/10 transition-colors bg-rose-50/20 dark:bg-rose-900/5">
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="flex h-2 w-2 rounded-full bg-rose-500"></span>
+<span class="text-xs font-bold text-rose-500 uppercase">Failing</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-sm font-bold text-slate-900 dark:text-white">Real-time Claims Scrubbing</span>
+<span class="text-xs text-rose-500 font-medium">Error: Timeout on API endpoint</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<code class="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono text-primary">*/5 * * * *</code>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-medium text-slate-400">--</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-rose-500">62.4%</span>
+<div class="w-12 h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="bg-rose-500 h-full w-[62%]"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-mono font-medium text-rose-500">Retry in 1m 02s</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-1">
+<button class="p-1.5 rounded-md hover:bg-rose-100 dark:hover:bg-rose-800 text-rose-500"><span class="material-symbols-outlined text-sm">refresh</span></button>
+<button class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500"><span class="material-symbols-outlined text-sm">pause</span></button>
+<button class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500"><span class="material-symbols-outlined text-sm">edit</span></button>
+</div>
+</td>
+</tr>
+<!-- Job Row 4 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="flex h-2 w-2 rounded-full bg-slate-400"></span>
+<span class="text-xs font-bold text-slate-500 uppercase">Idle</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<div class="flex flex-col">
+<span class="text-sm font-bold text-slate-900 dark:text-white">Monthly Revenue Reconciliation</span>
+<span class="text-xs text-slate-500">Module: FinCore-Sync</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<code class="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono text-primary">0 0 1 * *</code>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-medium text-slate-600 dark:text-slate-400">1h 12m</span>
+</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="text-xs font-bold text-emerald-500">99.9%</span>
+<div class="w-12 h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="bg-emerald-500 h-full w-[99.9%]"></div>
+</div>
+</div>
+</td>
+<td class="px-6 py-4">
+<span class="text-xs font-mono font-medium text-slate-900 dark:text-slate-200">12d 08h 14m</span>
+</td>
+<td class="px-6 py-4 text-right">
+<div class="flex justify-end gap-1">
+<button class="p-1.5 rounded-md hover:bg-primary/10 text-slate-500 hover:text-primary"><span class="material-symbols-outlined text-sm">play_arrow</span></button>
+<button class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500"><span class="material-symbols-outlined text-sm">pause</span></button>
+<button class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500"><span class="material-symbols-outlined text-sm">edit</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-6 py-4 bg-slate-50 dark:bg-slate-800/30 flex items-center justify-between border-t border-slate-200 dark:border-slate-800">
+<span class="text-xs text-slate-500 font-medium tracking-tight">Showing 4 of 124 jobs</span>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 disabled:opacity-50" disabled="">Previous</button>
+<button class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">Next</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<footer class="mt-auto p-6 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark">
+<div class="flex flex-col md:flex-row justify-between items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">ShieldCheck</span>
+<span class="text-xs font-bold text-slate-500 uppercase tracking-widest">Enterprise RCM Data Engine v2.4.0</span>
+</div>
+<div class="flex gap-6 text-xs font-medium text-slate-400">
+<a class="hover:text-primary transition-colors" href="#">Documentation</a>
+<a class="hover:text-primary transition-colors" href="#">API Keys</a>
+<a class="hover:text-primary transition-colors" href="#">Support Portal</a>
+<a class="hover:text-primary transition-colors" href="#">System Health Status</a>
+</div>
+<p class="text-[10px] text-slate-500 font-mono">NODE_ENV: production | REGION: us-east-1</p>
+</div>
+</footer>
+</div>
+</body></html>

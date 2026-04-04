@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils';
 
 export function TabNav({ tabs, className }) {
     return (
-        <div className={cn("border-b border-th-border px-8", className)}>
+        <div className={cn("border-b border-th-border px-6", className)}>
             <nav className="flex gap-0 -mb-px">
                 {tabs.map((tab) => (
                     <NavLink
@@ -12,10 +12,10 @@ export function TabNav({ tabs, className }) {
                         to={tab.to}
                         end={tab.end}
                         className={({ isActive }) => cn(
-                            "px-3 py-2 text-[13px] border-b-2 transition-colors whitespace-nowrap",
+                            "px-3 py-2.5 text-[13px] border-b-2 transition-colors whitespace-nowrap",
                             isActive
-                                ? "border-th-primary text-th-primary font-semibold"
-                                : "border-transparent text-th-secondary hover:text-th-heading"
+                                ? "border-[rgb(var(--color-primary))] text-[rgb(var(--color-primary))] font-semibold"
+                                : "border-transparent text-th-secondary hover:text-th-primary"
                         )}
                     >
                         <div className="flex items-center gap-2">

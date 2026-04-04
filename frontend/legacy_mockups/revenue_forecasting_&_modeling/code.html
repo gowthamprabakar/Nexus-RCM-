@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Revenue Forecasting &amp; Modeling | RCM AI</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#135bec",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .chart-glow {
+            filter: drop-shadow(0 0 8px rgba(19, 91, 236, 0.4));
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen overflow-x-hidden">
+<div class="flex flex-col min-h-screen">
+<!-- Top Navigation -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-slate-200 dark:border-slate-800 px-10 py-3 bg-white dark:bg-[#111318]">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-4">
+<div class="size-8 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path clip-rule="evenodd" d="M47.2426 24L24 47.2426L0.757355 24L24 0.757355L47.2426 24ZM12.2426 21H35.7574L24 9.24264L12.2426 21Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-xl font-bold leading-tight tracking-tight">RCM Predictor</h2>
+</div>
+<nav class="flex items-center gap-6">
+<a class="text-slate-600 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Dashboard</a>
+<a class="text-primary text-sm font-bold border-b-2 border-primary pb-1" href="#">Forecasting</a>
+<a class="text-slate-600 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Payer Mix</a>
+<a class="text-slate-600 dark:text-slate-400 text-sm font-medium hover:text-primary transition-colors" href="#">Denials</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+<input class="bg-slate-100 dark:bg-slate-800 border-none rounded-lg pl-10 pr-4 py-2 text-sm w-64 focus:ring-2 focus:ring-primary" placeholder="Search facilities..." type="text"/>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all">
+<span class="material-symbols-outlined text-sm">download</span> Export Report
+                </button>
+<div class="size-10 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover bg-center border-2 border-primary" data-alt="User profile avatar" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDPm9E625tgTR7Ml-_mToQ0I8ZiZGPImYv12tYPRdTeOd7lK1j7MIgFuH53so1OS75xKjTwvLd6RGdFrOrkGTa9moBSWC58rX51MPrrhntoESNfbswlE-aBjkZ-xvO2xnOonL1y-nfxT8PpPM28YnabGNWuqpZ4KTFHwj_QFGWD-wHmJZAvq0dAZo8dXRfts9fEdaq17l0xwN-Ci16y-4frXE2ELAR0JyMTAFxy6qC-JNAHyiQNgZnXdwNIK-KLn0c8LVxe0iTKL0jg')"></div>
+</div>
+</header>
+<main class="flex-1 flex overflow-hidden">
+<!-- Main Content Area -->
+<div class="flex-1 overflow-y-auto px-10 py-8 space-y-8">
+<!-- Page Heading -->
+<div class="flex justify-between items-end">
+<div>
+<h1 class="text-4xl font-black tracking-tight text-slate-900 dark:text-white">Revenue Forecasting &amp; Modeling</h1>
+<p class="text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-lg">verified_user</span> 
+                            AI-powered 90-day predictive analysis with ±2% confidence interval
+                        </p>
+</div>
+<div class="flex gap-3">
+<button class="bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">calendar_month</span> Last 90 Days
+                        </button>
+<button class="bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">filter_alt</span> Global Filters
+                        </button>
+</div>
+</div>
+<!-- Main Chart Section -->
+<div class="bg-white dark:bg-[#1c1f27] rounded-xl border border-slate-200 dark:border-slate-800 p-6">
+<div class="flex justify-between items-start mb-6">
+<div>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wider">90-Day Revenue Forecast</p>
+<h3 class="text-3xl font-bold text-slate-900 dark:text-white mt-1">$12.4M Projected</h3>
+</div>
+<div class="flex gap-4 items-center">
+<div class="flex items-center gap-2">
+<span class="size-3 rounded-full bg-primary"></span>
+<span class="text-xs font-bold text-slate-500">Baseline</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="size-3 rounded-full bg-[#0bda5e]"></span>
+<span class="text-xs font-bold text-slate-500">Optimistic</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="size-3 rounded-full bg-orange-500"></span>
+<span class="text-xs font-bold text-slate-500">Pessimistic</span>
+</div>
+</div>
+</div>
+<div class="relative h-[320px] w-full">
+<!-- Chart SVG -->
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 1000 300">
+<!-- Confidence Interval Shading -->
+<path d="M0 210 Q 150 180, 300 200 T 600 150 T 1000 120 L 1000 160 Q 700 190, 600 180 T 300 230 T 0 240 Z" fill="rgba(19, 91, 236, 0.08)"></path>
+<!-- Pessimistic Line -->
+<path d="M0 250 Q 150 240, 300 260 T 600 220 T 1000 200" fill="none" opacity="0.6" stroke="#f97316" stroke-dasharray="4 4" stroke-width="2"></path>
+<!-- Optimistic Line -->
+<path d="M0 180 Q 150 160, 300 140 T 600 100 T 1000 70" fill="none" opacity="0.6" stroke="#0bda5e" stroke-dasharray="4 4" stroke-width="2"></path>
+<!-- Baseline (Main) Line -->
+<path class="chart-glow" d="M0 220 Q 150 210, 300 225 T 600 170 T 1000 140" fill="none" stroke="#135bec" stroke-width="4"></path>
+<!-- Vertical Grid Lines -->
+<line class="text-slate-100 dark:text-slate-800" stroke="currentColor" stroke-width="1" x1="250" x2="250" y1="0" y2="300"></line>
+<line class="text-slate-100 dark:text-slate-800" stroke="currentColor" stroke-width="1" x1="500" x2="500" y1="0" y2="300"></line>
+<line class="text-slate-100 dark:text-slate-800" stroke="currentColor" stroke-width="1" x1="750" x2="750" y1="0" y2="300"></line>
+</svg>
+<div class="flex justify-between mt-4 text-xs font-bold text-slate-400 uppercase tracking-widest px-2">
+<span>Current (Day 0)</span>
+<span>Day 30</span>
+<span>Day 60</span>
+<span>Day 90 (Forecast)</span>
+</div>
+</div>
+</div>
+<!-- Scenario Modeling Section -->
+<div>
+<h2 class="text-2xl font-bold mb-4">Scenario Modeling</h2>
+<div class="grid grid-cols-3 gap-6">
+<!-- Optimistic Card -->
+<div class="bg-[#1c1f27] border border-slate-800 p-5 rounded-xl group hover:border-[#0bda5e]/50 transition-all">
+<div class="flex justify-between items-start mb-6">
+<div class="size-10 bg-[#0bda5e]/10 text-[#0bda5e] rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">trending_up</span>
+</div>
+<span class="bg-[#0bda5e]/20 text-[#0bda5e] text-[10px] font-bold px-2 py-1 rounded uppercase">Active</span>
+</div>
+<h4 class="text-white font-bold text-lg">Optimistic</h4>
+<p class="text-slate-400 text-sm mb-4">+8.5% Above Baseline</p>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between text-xs mb-2">
+<span class="text-slate-300">Denial Reduction</span>
+<span class="text-[#0bda5e] font-bold">-4.2%</span>
+</div>
+<input class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[#0bda5e]" type="range"/>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-2">
+<span class="text-slate-300">Payer Mix Shift</span>
+<span class="text-[#0bda5e] font-bold">+2.0%</span>
+</div>
+<input class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[#0bda5e]" type="range"/>
+</div>
+</div>
+</div>
+<!-- Baseline Card -->
+<div class="bg-primary/5 border border-primary/30 p-5 rounded-xl ring-2 ring-primary">
+<div class="flex justify-between items-start mb-6">
+<div class="size-10 bg-primary/20 text-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">check_circle</span>
+</div>
+<span class="bg-primary text-white text-[10px] font-bold px-2 py-1 rounded uppercase">Current</span>
+</div>
+<h4 class="text-white font-bold text-lg">Baseline</h4>
+<p class="text-slate-400 text-sm mb-4">Standard Projection</p>
+<div class="space-y-4">
+<div class="bg-slate-800/50 p-3 rounded-lg flex items-center justify-between">
+<span class="text-xs text-slate-300">AI Confidence</span>
+<span class="text-xs font-bold text-primary">98.4%</span>
+</div>
+<div class="bg-slate-800/50 p-3 rounded-lg flex items-center justify-between">
+<span class="text-xs text-slate-300">Standard Variance</span>
+<span class="text-xs font-bold text-slate-100">±$240k</span>
+</div>
+</div>
+</div>
+<!-- Pessimistic Card -->
+<div class="bg-[#1c1f27] border border-slate-800 p-5 rounded-xl group hover:border-orange-500/50 transition-all">
+<div class="flex justify-between items-start mb-6">
+<div class="size-10 bg-orange-500/10 text-orange-500 rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined">trending_down</span>
+</div>
+</div>
+<h4 class="text-white font-bold text-lg">Pessimistic</h4>
+<p class="text-slate-400 text-sm mb-4">-3.2% Below Baseline</p>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between text-xs mb-2">
+<span class="text-slate-300">Staffing Shortage</span>
+<span class="text-orange-500 font-bold">+15% Impact</span>
+</div>
+<input class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-orange-500" type="range"/>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-2">
+<span class="text-slate-300">Policy Shift</span>
+<span class="text-orange-500 font-bold">-1.5%</span>
+</div>
+<input class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-orange-500" type="range"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Monthly Breakdown Table -->
+<div class="bg-white dark:bg-[#1c1f27] rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+<div class="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+<h3 class="font-bold text-lg">Monthly Breakdown &amp; Variance</h3>
+<button class="text-primary text-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">download</span> Full CSV Export
+                        </button>
+</div>
+<table class="w-full text-left text-sm">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 font-bold">
+<th class="px-6 py-4">Month</th>
+<th class="px-6 py-4">Projected Revenue</th>
+<th class="px-6 py-4">Actual Revenue</th>
+<th class="px-6 py-4">Variance ($)</th>
+<th class="px-6 py-4">Variance (%)</th>
+<th class="px-6 py-4">Trend</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4 font-bold">October 2023</td>
+<td class="px-6 py-4">$4,120,000</td>
+<td class="px-6 py-4">$4,285,400</td>
+<td class="px-6 py-4 text-[#0bda5e]">+$165,400</td>
+<td class="px-6 py-4 text-[#0bda5e] font-bold">+4.01%</td>
+<td class="px-6 py-4">
+<svg class="w-16 h-6" viewbox="0 0 100 40">
+<path d="M0 30 Q 25 10, 50 25 T 100 5" fill="none" stroke="#0bda5e" stroke-width="2"></path>
+</svg>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4 font-bold">November 2023</td>
+<td class="px-6 py-4">$4,250,000</td>
+<td class="px-6 py-4">$4,198,000</td>
+<td class="px-6 py-4 text-orange-500">-$52,000</td>
+<td class="px-6 py-4 text-orange-500 font-bold">-1.22%</td>
+<td class="px-6 py-4">
+<svg class="w-16 h-6" viewbox="0 0 100 40">
+<path d="M0 10 Q 25 35, 50 15 T 100 30" fill="none" stroke="#f97316" stroke-width="2"></path>
+</svg>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4 font-bold text-primary italic">December 2023 (Est.)</td>
+<td class="px-6 py-4">$4,350,000</td>
+<td class="px-6 py-4 text-slate-500">--</td>
+<td class="px-6 py-4 text-slate-500">--</td>
+<td class="px-6 py-4 text-slate-500">--</td>
+<td class="px-6 py-4">--</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Right Sidebar: Predictive Drivers -->
+<aside class="w-[340px] bg-white dark:bg-[#111318] border-l border-slate-200 dark:border-slate-800 p-6 flex flex-col gap-6">
+<div>
+<h3 class="text-xl font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">psychology</span>
+                        Predictive Drivers
+                    </h3>
+<p class="text-xs text-slate-500 mt-1 uppercase tracking-widest font-bold">Top AI Insights</p>
+</div>
+<div class="space-y-4 overflow-y-auto">
+<!-- Driver Item 1 -->
+<div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-blue-400">ac_unit</span>
+<span class="text-xs font-bold uppercase text-slate-400">Seasonal</span>
+</div>
+<p class="text-sm font-bold text-slate-900 dark:text-slate-100">Respiratory Surge Projection</p>
+<p class="text-xs text-slate-500 mt-2 leading-relaxed">
+                            Seasonal patterns indicate a 15% increase in respiratory-related visits over next 30 days. Estimated impact: <span class="text-[#0bda5e]">+$420k</span>.
+                        </p>
+</div>
+<!-- Driver Item 2 -->
+<div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-purple-400">gavel</span>
+<span class="text-xs font-bold uppercase text-slate-400">Policy Update</span>
+</div>
+<p class="text-sm font-bold text-slate-900 dark:text-slate-100">Medicare Part B Revision</p>
+<p class="text-xs text-slate-500 mt-2 leading-relaxed">
+                            New Medicare reimbursement rates for outpatient services effective Q1. Predictive model adjusts baseline by <span class="text-orange-400">-0.8%</span>.
+                        </p>
+</div>
+<!-- Driver Item 3 -->
+<div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-green-400">groups</span>
+<span class="text-xs font-bold uppercase text-slate-400">Operational</span>
+</div>
+<p class="text-sm font-bold text-slate-900 dark:text-slate-100">Staffing Efficiency Gains</p>
+<p class="text-xs text-slate-500 mt-2 leading-relaxed">
+                            Optimized scheduling at North Wing reduced overtime by 12%. Projected quarterly savings: <span class="text-[#0bda5e]">$85,000</span>.
+                        </p>
+</div>
+</div>
+<!-- AI Recommendations -->
+<div class="mt-auto pt-6 border-t border-slate-200 dark:border-slate-800">
+<p class="text-xs font-bold text-slate-400 uppercase mb-4 tracking-widest">AI Recommendations</p>
+<div class="space-y-3">
+<button class="w-full bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold p-3 rounded-lg flex items-center justify-between transition-all">
+                            Review Denial Hotspots
+                            <span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+<button class="w-full bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold p-3 rounded-lg flex items-center justify-between transition-all">
+                            Optimize Payer Outreach
+                            <span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</aside>
+</main>
+</div>
+</body></html>

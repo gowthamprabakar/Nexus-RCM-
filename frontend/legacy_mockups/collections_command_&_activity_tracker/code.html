@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Collections Command &amp; Activity Tracker</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13b6ec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#101d22",
+                        "surface-dark": "#16252b",
+                        "border-dark": "#283539",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .waterfall-connector {
+            background: linear-gradient(90deg, rgba(19, 182, 236, 0.2) 0%, rgba(19, 182, 236, 0) 100%);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white min-h-screen">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar Navigation -->
+<aside class="w-64 border-r border-border-dark bg-background-dark flex flex-col shrink-0">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-8">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center text-background-dark">
+<span class="material-symbols-outlined font-bold">account_balance_wallet</span>
+</div>
+<div>
+<h1 class="text-white text-base font-bold leading-none">Enterprise RCM</h1>
+<p class="text-primary text-[10px] font-bold uppercase tracking-widest mt-1">AI-Native Platform</p>
+</div>
+</div>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="text-sm font-medium">Command Center</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">account_tree</span>
+<span class="text-sm font-medium">Workflows</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">security</span>
+<span class="text-sm font-medium">Payer Intelligence</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">bar_chart</span>
+<span class="text-sm font-medium">Reporting</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">history_toggle_off</span>
+<span class="text-sm font-medium">Agent Activity</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-6 border-t border-border-dark">
+<div class="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer">
+<div class="size-8 rounded-full bg-slate-700 overflow-hidden" data-alt="User profile avatar headshot">
+<img alt="Profile" class="w-full h-full object-cover" data-alt="Abstract profile avatar placeholder" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBc9o6nqeR6m24ARTJWZEolumeg8vjUqTdsyy9tN5CyLl_HzGXEHBriZsMZ69XgbF1D2v2AIfVxADVL0YuvXWEUtehZkqXBgM9ETnmK9hd-nwFA-Yhgz2n9yIgQk56qVHO4EKersPmb9PNMgde7qXvWrrCUT_civ5SiZlKKwaAA4aC3D4qjN3TGo_kH6SJKYb270urGI98VXudG7u99XgAuNbj10UBU2D5w_f0bKnmMFcVMKyVeCVnACYOVyv7cySDp93X42EY9XnsO"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-bold text-white truncate">Alex Morgan</p>
+<p class="text-[10px] text-slate-400 truncate">RCM Director</p>
+</div>
+<span class="material-symbols-outlined text-slate-400 text-sm">settings</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col overflow-hidden">
+<!-- Top Navigation Bar -->
+<header class="h-16 border-b border-border-dark flex items-center justify-between px-8 bg-background-dark/50 backdrop-blur-sm z-10 shrink-0">
+<div class="flex items-center gap-4">
+<h2 class="text-lg font-bold text-white tracking-tight">Collections Command &amp; Activity</h2>
+<div class="flex items-center gap-2 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">
+<span class="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="text-[10px] font-bold text-emerald-500 uppercase">Live Systems</span>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+<input class="w-full bg-surface-dark border-border-dark rounded-lg pl-10 pr-4 py-1.5 text-sm text-white focus:ring-primary focus:border-primary" placeholder="Search claims, agents, payers..." type="text"/>
+</div>
+<div class="flex items-center gap-3">
+<button class="size-9 flex items-center justify-center rounded-lg bg-surface-dark border border-border-dark text-slate-300 hover:text-white transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="size-9 flex items-center justify-center rounded-lg bg-surface-dark border border-border-dark text-slate-300 hover:text-white transition-colors">
+<span class="material-symbols-outlined">calendar_today</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Dashboard Scrollable Section -->
+<div class="flex-1 overflow-y-auto p-8 space-y-6">
+<!-- KPI Section -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Weekly Revenue Forecast -->
+<div class="bg-surface-dark border border-border-dark p-6 rounded-xl">
+<div class="flex justify-between items-start mb-4">
+<p class="text-sm font-medium text-slate-400">Weekly Revenue Forecast</p>
+<span class="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded uppercase tracking-wider">On Track</span>
+</div>
+<div class="flex items-end gap-3">
+<h3 class="text-3xl font-bold text-white">$840,000</h3>
+<p class="text-sm font-medium text-slate-500 mb-1.5">/ $1.2M Target</p>
+</div>
+<div class="mt-4 h-2 bg-border-dark rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 70%;"></div>
+</div>
+<p class="mt-3 text-xs text-slate-400 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-emerald-500">trending_up</span>
+<span class="text-emerald-500 font-bold">+12%</span> vs last week
+                        </p>
+</div>
+<!-- Expected Daily Payment -->
+<div class="bg-surface-dark border border-border-dark p-6 rounded-xl">
+<div class="flex justify-between items-start mb-4">
+<p class="text-sm font-medium text-slate-400">Expected Daily Payment</p>
+<span class="material-symbols-outlined text-slate-500">payments</span>
+</div>
+<h3 class="text-3xl font-bold text-white">$145,000</h3>
+<p class="mt-3 text-xs text-slate-400">Today's target reached: <span class="text-white font-bold">82%</span></p>
+<div class="mt-4 flex gap-1">
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-primary rounded-full"></div>
+<div class="h-1 flex-1 bg-border-dark rounded-full"></div>
+</div>
+</div>
+<!-- AI Alert Panel -->
+<div class="lg:col-span-1 bg-primary/5 border border-primary/20 p-6 rounded-xl relative overflow-hidden">
+<div class="absolute top-0 right-0 p-3">
+<span class="material-symbols-outlined text-primary/40 text-4xl">auto_awesome</span>
+</div>
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-primary text-lg">psychology</span>
+<p class="text-sm font-bold text-primary tracking-wide uppercase">AI Insight</p>
+</div>
+<p class="text-sm text-slate-300 leading-relaxed">
+                            Daily payments are <span class="text-primary font-bold">5% below forecast</span> due to a holiday delay in Medicare processing. Weekly variance alert: High volume of 'Pending Documentation' is delaying $45k in projected reconciliation.
+                        </p>
+<button class="mt-4 text-xs font-bold text-primary hover:underline flex items-center gap-1">
+                            View Root Cause Analysis <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Waterfall & Main Chart -->
+<div class="bg-surface-dark border border-border-dark rounded-xl overflow-hidden">
+<div class="p-6 border-b border-border-dark flex justify-between items-center">
+<h3 class="text-base font-bold text-white">Financial Flow Waterfall</h3>
+<div class="flex gap-2">
+<div class="flex items-center gap-1.5 px-3 py-1 bg-border-dark rounded text-[10px] font-bold text-slate-300">
+<span class="size-2 bg-slate-500 rounded-full"></span> PREDICTED
+                            </div>
+<div class="flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 rounded text-[10px] font-bold text-primary">
+<span class="size-2 bg-primary rounded-full"></span> ACTUAL POSTED
+                            </div>
+</div>
+</div>
+<div class="p-8">
+<div class="flex items-end justify-between gap-4 h-64">
+<!-- Step 1 -->
+<div class="flex-1 flex flex-col items-center group">
+<div class="w-full bg-slate-700/50 border border-slate-600/50 rounded-t-lg relative" style="height: 100%;">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-bold text-slate-400">$1.8M</div>
+</div>
+<div class="mt-4 text-[10px] font-bold text-slate-500 uppercase text-center">Expected Revenue</div>
+</div>
+<!-- Step 2 -->
+<div class="flex-1 flex flex-col items-center">
+<div class="w-full bg-slate-700/50 border border-slate-600/50 rounded-t-lg relative" style="height: 85%;">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-bold text-slate-400">$1.52M</div>
+<div class="absolute inset-x-0 bottom-0 bg-primary/40 border-t border-primary" style="height: 80%;"></div>
+</div>
+<div class="mt-4 text-[10px] font-bold text-slate-500 uppercase text-center">Daily Forecast</div>
+</div>
+<!-- Step 3 -->
+<div class="flex-1 flex flex-col items-center">
+<div class="w-full bg-slate-700/50 border border-slate-600/50 rounded-t-lg relative" style="height: 65%;">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-bold text-slate-400">$1.1M</div>
+<div class="absolute inset-x-0 bottom-0 bg-primary border-t-2 border-white/20" style="height: 88%;"></div>
+<div class="absolute -right-2 top-0 bottom-0 w-px bg-rose-500/50 border-r border-dashed border-rose-500"></div>
+</div>
+<div class="mt-4 text-[10px] font-bold text-slate-500 uppercase text-center">Payment Posted (EHR)</div>
+</div>
+<!-- Step 4 -->
+<div class="flex-1 flex flex-col items-center">
+<div class="w-full bg-slate-700/50 border border-slate-600/50 rounded-t-lg relative" style="height: 45%;">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 text-xs font-bold text-slate-400">$840K</div>
+<div class="absolute inset-x-0 bottom-0 bg-emerald-500/80 border-t border-white/20" style="height: 100%;"></div>
+</div>
+<div class="mt-4 text-[10px] font-bold text-slate-500 uppercase text-center">Bank Reconciled</div>
+</div>
+</div>
+<div class="mt-12 p-4 bg-rose-500/10 border border-rose-500/20 rounded-lg flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-rose-500">warning</span>
+<div>
+<p class="text-xs font-bold text-white">Reconciliation Gap Detected</p>
+<p class="text-[10px] text-rose-400 mt-0.5">$260,000 variance between Posted and Reconciled amounts. Priority attention required.</p>
+</div>
+</div>
+<button class="bg-rose-500 text-white text-[10px] font-bold px-4 py-1.5 rounded uppercase hover:bg-rose-600 transition-colors">Resolve Gaps</button>
+</div>
+</div>
+</div>
+<!-- Bottom Row: Activity Tracker & Detailed Stats -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Activity Tracker -->
+<div class="lg:col-span-2 bg-surface-dark border border-border-dark rounded-xl overflow-hidden flex flex-col">
+<div class="p-6 border-b border-border-dark flex justify-between items-center">
+<h3 class="text-base font-bold text-white">Agent Activity Tracker</h3>
+<button class="text-[10px] font-bold text-slate-400 hover:text-white uppercase tracking-wider flex items-center gap-1">
+                                View Full Log <span class="material-symbols-outlined text-xs">open_in_new</span>
+</button>
+</div>
+<div class="flex-1 p-0 overflow-y-auto max-h-[400px]">
+<table class="w-full text-left">
+<thead class="bg-background-dark/30 sticky top-0">
+<tr class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+<th class="px-6 py-3 border-b border-border-dark">Time</th>
+<th class="px-6 py-3 border-b border-border-dark">Agent / System</th>
+<th class="px-6 py-3 border-b border-border-dark">Action</th>
+<th class="px-6 py-3 border-b border-border-dark">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-dark">
+<tr class="hover:bg-white/5 transition-colors">
+<td class="px-6 py-4 text-xs text-slate-400 font-medium">14:02</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="size-6 rounded bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[16px]">smart_toy</span>
+</div>
+<span class="text-xs font-bold text-white">AI Agent #04</span>
+</div>
+</td>
+<td class="px-6 py-4 text-xs text-slate-300">Completed 42 Medicare follow-up calls</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase tracking-tighter">Success</span>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors">
+<td class="px-6 py-4 text-xs text-slate-400 font-medium">13:45</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="size-6 rounded bg-slate-700 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined text-[16px]">person</span>
+</div>
+<span class="text-xs font-bold text-white">Sarah Jenkins</span>
+</div>
+</td>
+<td class="px-6 py-4 text-xs text-slate-300">Resolved claim denial #CL-88219 (Aetna)</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase tracking-tighter">Posted</span>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors">
+<td class="px-6 py-4 text-xs text-slate-400 font-medium">13:12</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="size-6 rounded bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[16px]">mail</span>
+</div>
+<span class="text-xs font-bold text-white">Auto-Mailer</span>
+</div>
+</td>
+<td class="px-6 py-4 text-xs text-slate-300">Batch of 450 patient statements dispatched</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-500/10 text-slate-400 border border-slate-500/20 uppercase tracking-tighter">Sent</span>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors">
+<td class="px-6 py-4 text-xs text-slate-400 font-medium">12:55</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<div class="size-6 rounded bg-slate-700 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined text-[16px]">person</span>
+</div>
+<span class="text-xs font-bold text-white">Robert Chen</span>
+</div>
+</td>
+<td class="px-6 py-4 text-xs text-slate-300">Escalated 5 high-value aging claims (&gt;90 days)</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase tracking-tighter">Action Req</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Side Stats / Payer Performance -->
+<div class="bg-surface-dark border border-border-dark rounded-xl p-6">
+<h3 class="text-sm font-bold text-white mb-6 uppercase tracking-wider text-slate-400">Payer Recovery Velocity</h3>
+<div class="space-y-6">
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-medium text-slate-300">Medicare</span>
+<span class="text-xs font-bold text-white">92%</span>
+</div>
+<div class="h-1.5 bg-border-dark rounded-full">
+<div class="h-full bg-emerald-500 rounded-full" style="width: 92%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-medium text-slate-300">BlueCross / BlueShield</span>
+<span class="text-xs font-bold text-white">78%</span>
+</div>
+<div class="h-1.5 bg-border-dark rounded-full">
+<div class="h-full bg-primary rounded-full" style="width: 78%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-medium text-slate-300">Aetna</span>
+<span class="text-xs font-bold text-white">64%</span>
+</div>
+<div class="h-1.5 bg-border-dark rounded-full">
+<div class="h-full bg-amber-500 rounded-full" style="width: 64%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-2">
+<span class="text-xs font-medium text-slate-300">UnitedHealthcare</span>
+<span class="text-xs font-bold text-white">41%</span>
+</div>
+<div class="h-1.5 bg-border-dark rounded-full">
+<div class="h-full bg-rose-500 rounded-full" style="width: 41%;"></div>
+</div>
+</div>
+</div>
+<div class="mt-10 p-4 border border-border-dark rounded-lg bg-background-dark/50">
+<p class="text-[10px] font-bold text-slate-500 uppercase mb-2">Recent Achievement</p>
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500">
+<span class="material-symbols-outlined">emoji_events</span>
+</div>
+<div>
+<p class="text-xs font-bold text-white">Denial Rate Low</p>
+<p class="text-[10px] text-slate-400">Current month denial rate is 2.4% better than Q3 average.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>
