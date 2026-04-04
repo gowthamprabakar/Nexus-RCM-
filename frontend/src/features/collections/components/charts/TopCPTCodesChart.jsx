@@ -1,15 +1,14 @@
 import React from 'react';
+import { getSeriesColors } from '../../../../lib/chartTheme';
 
 export function TopCPTCodesChart({ data }) {
+ const colors = getSeriesColors();
  const maxRevenue = Math.max(...data.map(item => item.revenue));
 
  return (
  <div className="space-y-4">
  {data.map((cpt, index) => {
  const widthPercentage = (cpt.revenue / maxRevenue) * 100;
- const revenueColor = index === 0 ? 'bg-blue-500' :
- index === 1 ? 'bg-blue-400' :
- index === 2 ? 'bg-blue-300' : 'bg-slate-400';
 
  return (
  <div key={cpt.code} className="group">
@@ -30,8 +29,8 @@ export function TopCPTCodesChart({ data }) {
  </div>
  <div className="relative w-full bg-th-surface-overlay h-8 rounded-lg overflow-hidden">
  <div
- className={`${revenueColor} h-full rounded-lg transition-all duration-500 flex items-center justify-between px-3 group-hover:opacity-90`}
- style={{ width: `${widthPercentage}%` }}
+ className="h-full rounded-lg transition-all duration-500 flex items-center justify-between px-3 group-hover:opacity-90"
+ style={{ width: `${widthPercentage}%`, backgroundColor: colors[Math.min(index, colors.length - 1)] }}
  >
  <span className="text-xs font-bold text-th-heading">
  {cpt.volume} claims

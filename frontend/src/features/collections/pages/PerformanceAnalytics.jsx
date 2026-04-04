@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../../services/api';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { getSeriesColors, getGridProps, getAxisProps, getTooltipStyle } from '../../../lib/chartTheme';
 
 export function PerformanceAnalytics() {
  const navigate = useNavigate();
@@ -56,8 +57,12 @@ export function PerformanceAnalytics() {
  });
  };
 
+ const colors = getSeriesColors();
+ const gridProps = getGridProps();
+ const axisProps = getAxisProps();
+ const tooltipStyle = getTooltipStyle();
+
  const getMetricColor = (index) => {
- const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
  return colors[index % colors.length];
  };
 
@@ -170,7 +175,7 @@ export function PerformanceAnalytics() {
 
  {/* Team Overview KPIs */}
  <div className="grid grid-cols-4 gap-4">
- <div className="bg-th-surface-raised rounded-xl border border-th-border p-6 border-l-[3px] border-l-blue-500 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div className="bg-th-surface-raised rounded-lg border border-th-border p-6 border-l-[3px] border-l-blue-500">
  <div className="flex items-center justify-between mb-2">
  <span className="text-xs font-semibold uppercase tracking-wider text-th-muted">Total Revenue</span>
  <span className="material-symbols-outlined text-green-400">trending_up</span>
@@ -178,7 +183,7 @@ export function PerformanceAnalytics() {
  <p className="text-2xl font-bold text-th-heading tabular-nums">{formatCurrency(teamMetrics?.overall.totalRevenue)}</p>
  <p className="text-xs text-green-400 mt-1 tabular-nums">{teamMetrics?.overall.totalRevenue ? 'Current period' : '--'}</p>
  </div>
- <div className="bg-th-surface-raised rounded-xl border border-th-border p-6 border-l-[3px] border-l-emerald-500 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div className="bg-th-surface-raised rounded-lg border border-th-border p-6 border-l-[3px] border-l-emerald-500">
  <div className="flex items-center justify-between mb-2">
  <span className="text-xs font-semibold uppercase tracking-wider text-th-muted">Accounts Resolved</span>
  <span className="material-symbols-outlined text-blue-400">check_circle</span>
@@ -186,7 +191,7 @@ export function PerformanceAnalytics() {
  <p className="text-2xl font-bold text-th-heading tabular-nums">{teamMetrics?.overall.totalAccountsResolved}</p>
  <p className="text-xs text-th-secondary mt-1 tabular-nums">of {teamMetrics?.overall.totalAccountsAssigned} assigned</p>
  </div>
- <div className="bg-th-surface-raised rounded-xl border border-th-border p-6 border-l-[3px] border-l-purple-500 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div className="bg-th-surface-raised rounded-lg border border-th-border p-6 border-l-[3px] border-l-purple-500">
  <div className="flex items-center justify-between mb-2">
  <span className="text-xs font-semibold uppercase tracking-wider text-th-muted">Avg Resolution Rate</span>
  <span className="material-symbols-outlined text-purple-400">speed</span>
@@ -194,7 +199,7 @@ export function PerformanceAnalytics() {
  <p className="text-2xl font-bold text-th-heading tabular-nums">{formatPercent(teamMetrics?.overall.avgResolutionRate)}</p>
  <p className="text-xs text-green-400 mt-1 tabular-nums">+3% improvement</p>
  </div>
- <div className="bg-th-surface-raised rounded-xl border border-th-border p-6 border-l-[3px] border-l-amber-500 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div className="bg-th-surface-raised rounded-lg border border-th-border p-6 border-l-[3px] border-l-amber-500">
  <div className="flex items-center justify-between mb-2">
  <span className="text-xs font-semibold uppercase tracking-wider text-th-muted">Total Contacts</span>
  <span className="material-symbols-outlined text-orange-400">call</span>
@@ -256,11 +261,11 @@ export function PerformanceAnalytics() {
  </div>
  <ResponsiveContainer width="100%" height={300}>
  <LineChart>
- <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
- <XAxis dataKey="week" stroke="#64748b" />
- <YAxis stroke="#64748b" tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`} />
+ <CartesianGrid {...gridProps} />
+ <XAxis dataKey="week" {...axisProps} />
+ <YAxis {...axisProps} tickFormatter={(value) => `$${(value / 1000).toFixed(0)}K`} />
  <Tooltip
- contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
+ contentStyle={tooltipStyle.contentStyle}
  formatter={(value) => formatCurrency(value)}
  />
  <Legend />
@@ -288,15 +293,15 @@ export function PerformanceAnalytics() {
  </div>
  <ResponsiveContainer width="100%" height={300}>
  <BarChart data={teamMetrics?.activityHeatmap || []}>
- <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
- <XAxis dataKey="hour" stroke="#64748b" />
- <YAxis stroke="#64748b" />
+ <CartesianGrid {...gridProps} />
+ <XAxis dataKey="hour" {...axisProps} />
+ <YAxis {...axisProps} />
  <Tooltip
- contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
+ contentStyle={tooltipStyle.contentStyle}
  />
  <Legend />
- <Bar dataKey="calls" fill="#3b82f6" name="Calls" />
- <Bar dataKey="emails" fill="#10b981" name="Emails" />
+ <Bar dataKey="calls" fill={colors[0]} name="Calls" />
+ <Bar dataKey="emails" fill={colors[1]} name="Emails" />
  </BarChart>
  </ResponsiveContainer>
  </div>
@@ -304,7 +309,7 @@ export function PerformanceAnalytics() {
  {/* Individual Metrics Grid */}
  <div className="grid grid-cols-2 gap-6">
  {users.map(user => (
- <div key={user.userId} className="bg-th-surface-raised rounded-xl border border-th-border p-6 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div key={user.userId} className="bg-th-surface-raised rounded-lg border border-th-border p-6">
  <div className="flex items-center gap-3 mb-4">
  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-blue-700 flex items-center justify-center text-th-heading font-bold">
  {user.avatar}
@@ -344,12 +349,12 @@ export function PerformanceAnalytics() {
  </div>
  <ResponsiveContainer width="100%" height={300}>
  <BarChart data={teamMetrics?.monthlyTrends || []}>
- <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
- <XAxis dataKey="month" stroke="#64748b" />
- <YAxis yAxisId="left" stroke="#64748b" tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`} />
- <YAxis yAxisId="right" orientation="right" stroke="#64748b" />
+ <CartesianGrid {...gridProps} />
+ <XAxis dataKey="month" {...axisProps} />
+ <YAxis yAxisId="left" {...axisProps} tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`} />
+ <YAxis yAxisId="right" orientation="right" {...axisProps} />
  <Tooltip
- contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
+ contentStyle={tooltipStyle.contentStyle}
  formatter={(value, name) => {
  if (name === 'Revenue') return formatCurrency(value);
  if (name === 'Avg Days') return `${value} days`;
@@ -357,9 +362,9 @@ export function PerformanceAnalytics() {
  }}
  />
  <Legend />
- <Bar yAxisId="left" dataKey="revenue" fill="#3b82f6" name="Revenue" />
- <Bar yAxisId="right" dataKey="accounts" fill="#10b981" name="Accounts" />
- <Line yAxisId="right" type="monotone" dataKey="avgDays" stroke="#f59e0b" name="Avg Days" strokeWidth={2} />
+ <Bar yAxisId="left" dataKey="revenue" fill={colors[0]} name="Revenue" />
+ <Bar yAxisId="right" dataKey="accounts" fill={colors[1]} name="Accounts" />
+ <Line yAxisId="right" type="monotone" dataKey="avgDays" stroke={colors[2]} name="Avg Days" strokeWidth={2} />
  </BarChart>
  </ResponsiveContainer>
  </div>

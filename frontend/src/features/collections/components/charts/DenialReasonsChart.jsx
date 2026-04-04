@@ -1,14 +1,21 @@
 import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { getSeriesColors, getGridProps, getAxisProps, getTooltipStyle, getChartTheme } from '../../../../lib/chartTheme';
 
 export function DenialReasonsChart({ data }) {
- const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#64748b'];
+ const colors = getSeriesColors();
+ const theme = getChartTheme();
+ const gridProps = getGridProps();
+ const axisProps = getAxisProps();
+ const tooltipStyle = getTooltipStyle();
+
+ const COLORS = getSeriesColors();
 
  const CustomTooltip = ({ active, payload }) => {
  if (active && payload && payload.length) {
  const data = payload[0].payload;
  return (
- <div className="bg-white border border-th-border rounded-lg p-4 shadow-xl">
+ <div className="bg-th-surface-raised border border-th-border rounded-lg p-4 shadow-xl">
  <p className="font-bold text-th-heading mb-2">{data.reason}</p>
  <div className="space-y-1">
  <p className="text-sm text-th-muted ">

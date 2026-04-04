@@ -9,6 +9,7 @@ import {
  Tooltip,
  ResponsiveContainer
 } from 'recharts';
+import { getSeriesColors, getGridProps, getAxisProps, getTooltipStyle } from '../../../lib/chartTheme';
 
 const defaultChartData = [
  { name: 'Mon', score: 82 },
@@ -77,6 +78,11 @@ export function AICodingCompliance() {
        score: Math.min(100, Math.round(80 + (m.usage_count / (totalModifierUsage || 1)) * 100)),
      }))
    : defaultChartData;
+
+ const colors = getSeriesColors();
+ const gridProps = getGridProps();
+ const axisProps = getAxisProps();
+ const tooltipStyle = getTooltipStyle();
 
  const tabs = [
  { id: 'overview', label: 'Overview', icon: 'dashboard' },
@@ -183,32 +189,28 @@ export function AICodingCompliance() {
  <AreaChart data={chartData}>
  <defs>
  <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
- <stop offset="5%" stopColor="#22c55e" stopOpacity={0.1} />
- <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+ <stop offset="5%" stopColor={colors[1]} stopOpacity={0.1} />
+ <stop offset="95%" stopColor={colors[1]} stopOpacity={0} />
  </linearGradient>
  </defs>
- <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
+ <CartesianGrid {...gridProps} />
  <XAxis
  dataKey="name"
- axisLine={false}
- tickLine={false}
- tick={{ fontSize: 12, fill: '#64748b' }}
+ {...axisProps}
  dy={10}
  />
  <YAxis
- axisLine={false}
- tickLine={false}
- tick={{ fontSize: 12, fill: '#64748b' }}
+ {...axisProps}
  domain={[60, 100]}
  />
  <Tooltip
- contentStyle={{ borderRadius: '8px', border: '1px solid #334155', backgroundColor: '#111827', color: '#fff' }}
- itemStyle={{ color: '#4ade80', fontWeight: 'bold' }}
+ contentStyle={tooltipStyle.contentStyle}
+ itemStyle={tooltipStyle.itemStyle}
  />
  <Area
  type="monotone"
  dataKey="score"
- stroke="#22c55e"
+ stroke={colors[1]}
  strokeWidth={3}
  fillOpacity={1}
  fill="url(#colorScore)"
@@ -220,7 +222,7 @@ export function AICodingCompliance() {
 
  {/* Recent Alerts */}
  <div className="col-span-4 flex flex-col gap-4">
- <div className="bg-red-500/10 border border-red-500/20 border-l-[3px] border-l-red-500 rounded-xl p-4 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div className="bg-[rgb(var(--color-danger))]/10 border border-[rgb(var(--color-danger))]/20 border-l-[3px] border-l-[rgb(var(--color-danger))] rounded-xl p-4 transition-all duration-200">
  <div className="flex items-start gap-3">
  <div className="size-8 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
  <span className="material-symbols-outlined text-red-400 text-[18px]">gavel</span>
@@ -233,7 +235,7 @@ export function AICodingCompliance() {
  </div>
  </div>
 
- <div className="bg-amber-500/10 border border-amber-500/20 border-l-[3px] border-l-amber-500 rounded-xl p-4 flex-1 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div className="bg-[rgb(var(--color-warning))]/10 border border-[rgb(var(--color-warning))]/20 border-l-[3px] border-l-[rgb(var(--color-warning))] rounded-xl p-4 flex-1 transition-all duration-200">
  <div className="flex items-start gap-3">
  <div className="size-8 rounded-full bg-amber-500/20 flex items-center justify-center shrink-0">
  <span className="material-symbols-outlined text-amber-400 text-[18px]">update</span>

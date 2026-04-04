@@ -1,8 +1,15 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { getSeriesColors, getGridProps, getAxisProps, getTooltipStyle, getChartTheme } from '../../../../lib/chartTheme';
 
 export function PayerPerformanceModal({ payer, onClose }) {
  if (!payer) return null;
+
+ const colors = getSeriesColors();
+ const theme = getChartTheme();
+ const gridProps = getGridProps();
+ const axisProps = getAxisProps();
+ const tooltipStyle = getTooltipStyle();
 
  // Mock trend data for the payer
  const trendData = [
@@ -17,11 +24,11 @@ export function PayerPerformanceModal({ payer, onClose }) {
  return (
  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
  <div
- className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+ className="bg-th-surface-raised rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
  onClick={(e) => e.stopPropagation()}
  >
  {/* Header */}
- <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-th-heading">
+ <div className="bg-[rgb(var(--color-primary))] p-6 text-th-heading">
  <div className="flex justify-between items-start">
  <div>
  <h2 className="text-2xl font-black mb-2">{payer.payer} Performance</h2>
@@ -65,22 +72,18 @@ export function PayerPerformanceModal({ payer, onClose }) {
  <h3 className="text-lg font-bold text-th-heading mb-4">Collection Velocity Trend</h3>
  <ResponsiveContainer width="100%" height={250}>
  <LineChart data={trendData}>
- <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
- <XAxis dataKey="month" tick={{ fill: '#64748b' }} />
- <YAxis tick={{ fill: '#64748b' }} label={{ value: 'Days', angle: -90, position: 'insideLeft' }} />
+ <CartesianGrid {...gridProps} />
+ <XAxis dataKey="month" tick={axisProps.tick} />
+ <YAxis tick={axisProps.tick} label={{ value: 'Days', angle: -90, position: 'insideLeft' }} />
  <Tooltip
- contentStyle={{
- backgroundColor: '#fff',
- border: '1px solid #e2e8f0',
- borderRadius: '8px'
- }}
+ contentStyle={tooltipStyle.contentStyle}
  />
  <Line
  type="monotone"
  dataKey="days"
- stroke="#8b5cf6"
+ stroke={colors[4]}
  strokeWidth={3}
- dot={{ fill: '#8b5cf6', r: 5 }}
+ dot={{ fill: colors[4], r: 5 }}
  />
  </LineChart>
  </ResponsiveContainer>
@@ -121,7 +124,7 @@ export function PayerPerformanceModal({ payer, onClose }) {
  </button>
  <button
  onClick={onClose}
- className="px-4 py-2 bg-purple-600 text-th-heading rounded-lg text-sm font-bold hover:bg-purple-700 transition-colors"
+ className="px-4 py-2 bg-[rgb(var(--color-primary))] text-th-heading rounded-lg text-sm font-bold hover:opacity-90 transition-colors"
  >
  Close
  </button>

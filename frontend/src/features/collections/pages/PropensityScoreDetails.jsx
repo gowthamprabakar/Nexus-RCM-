@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../../services/api';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getSeriesColors, getGridProps, getAxisProps, getTooltipStyle } from '../../../lib/chartTheme';
 
 export function PropensityScoreDetails() {
  const { accountId } = useParams();
@@ -23,6 +24,11 @@ export function PropensityScoreDetails() {
    fetchData();
    return () => { cancelled = true; };
  }, [accountId]);
+
+ const colors = getSeriesColors();
+ const gridProps = getGridProps();
+ const axisProps = getAxisProps();
+ const tooltipStyle = getTooltipStyle();
 
  const getStatusColor = (status) => {
  switch (status) {
@@ -112,9 +118,9 @@ export function PropensityScoreDetails() {
  <p className="text-sm text-th-muted uppercase tracking-wider mb-4">Score History</p>
  <ResponsiveContainer width="100%" height={120}>
  <LineChart data={details?.scoreHistory || []}>
- <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
- <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="#64748b" />
- <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="#64748b" />
+ <CartesianGrid {...gridProps} />
+ <XAxis dataKey="date" {...axisProps} tick={{ fontSize: 10, fill: axisProps.tick.fill }} />
+ <YAxis domain={[0, 100]} {...axisProps} tick={{ fontSize: 10, fill: axisProps.tick.fill }} />
  <Tooltip
  content={({ active, payload }) => {
  if (active && payload && payload.length) {
@@ -132,24 +138,24 @@ export function PropensityScoreDetails() {
  <Line
  type="monotone"
  dataKey="score"
- stroke="#3b82f6"
+ stroke={colors[0]}
  strokeWidth={3}
- dot={{ fill: '#3b82f6', r: 4 }}
+ dot={{ fill: colors[0], r: 4 }}
  />
  </LineChart>
  </ResponsiveContainer>
  </div>
  </div>
  <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t border-primary/20">
- <div className="hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 rounded-lg p-2">
+ <div className="transition-all duration-200 rounded-lg p-2">
  <p className="text-xs text-th-muted uppercase tracking-wider mb-1">Confidence Level</p>
  <p className="text-2xl font-black text-th-heading tabular-nums">{details?.confidence}%</p>
  </div>
- <div className="hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 rounded-lg p-2">
+ <div className="transition-all duration-200 rounded-lg p-2">
  <p className="text-xs text-th-muted uppercase tracking-wider mb-1">Model Version</p>
  <p className="text-2xl font-black text-th-heading tabular-nums">{details?.modelVersion}</p>
  </div>
- <div className="hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200 rounded-lg p-2">
+ <div className="transition-all duration-200 rounded-lg p-2">
  <p className="text-xs text-th-muted uppercase tracking-wider mb-1">Last Calculated</p>
  <p className="text-2xl font-black text-th-heading tabular-nums">
  {new Date(details?.calculatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -159,7 +165,7 @@ export function PropensityScoreDetails() {
  </div>
 
  {/* Feature Importance */}
- <div className="bg-white dark:bg-card-dark border border-th-border rounded-xl p-6 shadow-sm mb-8">
+ <div className="bg-th-surface-raised border border-th-border rounded-lg p-6 mb-8">
  <div className="flex items-center gap-2 mb-6">
  <span className="material-symbols-outlined text-primary text-2xl">analytics</span>
  <h3 className="text-lg font-black text-th-heading ">Feature Importance</h3>
@@ -170,7 +176,7 @@ export function PropensityScoreDetails() {
 
  <div className="space-y-4">
  {(details?.featureImportance || []).map((feature, idx) => (
- <div key={idx} className="bg-th-surface-overlay/30 /50 rounded-lg p-4 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div key={idx} className="bg-th-surface-overlay/30 /50 rounded-lg p-4 transition-all duration-200">
  <div className="flex items-start justify-between mb-3">
  <div className="flex-1">
  <div className="flex items-center gap-3 mb-1">
@@ -236,7 +242,7 @@ export function PropensityScoreDetails() {
  </div>
 
  {/* What-If Analysis */}
- <div className="bg-white dark:bg-card-dark border border-th-border rounded-xl p-6 shadow-sm mb-8">
+ <div className="bg-th-surface-raised border border-th-border rounded-lg p-6 mb-8">
  <div className="flex items-center gap-2 mb-6">
  <span className="material-symbols-outlined text-primary text-2xl">science</span>
  <h3 className="text-lg font-black text-th-heading ">What-If Analysis</h3>
@@ -298,28 +304,28 @@ export function PropensityScoreDetails() {
  {/* Model Performance */}
  <div className="grid grid-cols-2 gap-6 mb-8">
  {/* Overall Metrics */}
- <div className="bg-white dark:bg-card-dark border border-th-border rounded-xl p-6 shadow-sm">
+ <div className="bg-th-surface-raised border border-th-border rounded-lg p-6">
  <h3 className="text-lg font-black text-th-heading mb-4">Model Performance Metrics</h3>
  <div className="grid grid-cols-2 gap-4">
- <div className="bg-th-surface-overlay/30 /50 rounded-lg p-4 border-l-[3px] border-l-emerald-500 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div className="bg-th-surface-overlay/30 /50 rounded-lg p-4 border-l-[3px] border-l-emerald-500">
  <p className="text-xs text-th-muted uppercase tracking-wider mb-1">Overall Accuracy</p>
  <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
  {(details?.modelMetrics?.overallAccuracy * 100).toFixed(0)}%
  </p>
  </div>
- <div className="bg-th-surface-overlay/30 /50 rounded-lg p-4 border-l-[3px] border-l-blue-500 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div className="bg-th-surface-overlay/30 /50 rounded-lg p-4 border-l-[3px] border-l-blue-500">
  <p className="text-xs text-th-muted uppercase tracking-wider mb-1">Precision</p>
  <p className="text-2xl font-black text-blue-600 dark:text-blue-400 tabular-nums">
  {(details?.modelMetrics?.precision * 100).toFixed(0)}%
  </p>
  </div>
- <div className="bg-th-surface-overlay/30 /50 rounded-lg p-4 border-l-[3px] border-l-purple-500 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div className="bg-th-surface-overlay/30 /50 rounded-lg p-4 border-l-[3px] border-l-purple-500">
  <p className="text-xs text-th-muted uppercase tracking-wider mb-1">Recall</p>
  <p className="text-2xl font-black text-purple-600 dark:text-purple-400 tabular-nums">
  {(details?.modelMetrics?.recall * 100).toFixed(0)}%
  </p>
  </div>
- <div className="bg-th-surface-overlay/30 /50 rounded-lg p-4 border-l-[3px] border-l-amber-500 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div className="bg-th-surface-overlay/30 /50 rounded-lg p-4 border-l-[3px] border-l-amber-500">
  <p className="text-xs text-th-muted uppercase tracking-wider mb-1">AUC Score</p>
  <p className="text-2xl font-black text-amber-600 dark:text-amber-400 tabular-nums">
  {(details?.modelMetrics?.auc * 100).toFixed(0)}%
@@ -329,32 +335,32 @@ export function PropensityScoreDetails() {
  </div>
 
  {/* Performance by Score Range */}
- <div className="bg-white dark:bg-card-dark border border-th-border rounded-xl p-6 shadow-sm">
+ <div className="bg-th-surface-raised border border-th-border rounded-lg p-6">
  <h3 className="text-lg font-black text-th-heading mb-4">Performance by Score Range</h3>
  <ResponsiveContainer width="100%" height={200}>
  <BarChart data={details?.modelMetrics?.performanceByScoreRange || []}>
- <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
- <XAxis dataKey="range" tick={{ fontSize: 10 }} stroke="#64748b" />
- <YAxis domain={[0, 1]} tick={{ fontSize: 10 }} stroke="#64748b" />
+ <CartesianGrid {...gridProps} />
+ <XAxis dataKey="range" {...axisProps} tick={{ fontSize: 10, fill: axisProps.tick.fill }} />
+ <YAxis domain={[0, 1]} {...axisProps} tick={{ fontSize: 10, fill: axisProps.tick.fill }} />
  <Tooltip
  formatter={(value) => (value * 100).toFixed(0) + '%'}
- contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
+ contentStyle={tooltipStyle.contentStyle}
  />
  <Legend />
- <Bar dataKey="accuracy" fill="#10b981" name="Accuracy" />
- <Bar dataKey="precision" fill="#3b82f6" name="Precision" />
- <Bar dataKey="recall" fill="#8b5cf6" name="Recall" />
+ <Bar dataKey="accuracy" fill={colors[1]} name="Accuracy" />
+ <Bar dataKey="precision" fill={colors[0]} name="Precision" />
+ <Bar dataKey="recall" fill={colors[4]} name="Recall" />
  </BarChart>
  </ResponsiveContainer>
  </div>
  </div>
 
  {/* Historical Predictions */}
- <div className="bg-white dark:bg-card-dark border border-th-border rounded-xl p-6 shadow-sm mb-8">
+ <div className="bg-th-surface-raised border border-th-border rounded-lg p-6 mb-8">
  <h3 className="text-lg font-black text-th-heading mb-4">Historical Prediction Accuracy</h3>
  <div className="grid grid-cols-4 gap-4">
  {(details?.modelMetrics?.historicalPredictions || []).map((pred, idx) => (
- <div key={idx} className="bg-th-surface-overlay/30 /50 rounded-lg p-4 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div key={idx} className="bg-th-surface-overlay/30 /50 rounded-lg p-4 transition-all duration-200">
  <p className="text-xs text-th-muted uppercase tracking-wider mb-2">{pred.month}</p>
  <div className="flex items-baseline gap-2 mb-2">
  <span className="text-sm text-th-muted ">Predicted:</span>
@@ -379,7 +385,7 @@ export function PropensityScoreDetails() {
  </div>
 
  {/* Audit Trail */}
- <div className="bg-white dark:bg-card-dark border border-th-border rounded-xl p-6 shadow-sm">
+ <div className="bg-th-surface-raised border border-th-border rounded-lg p-6">
  <div className="flex items-center gap-2 mb-4">
  <span className="material-symbols-outlined text-primary">history</span>
  <h3 className="text-lg font-black text-th-heading ">Audit Trail</h3>

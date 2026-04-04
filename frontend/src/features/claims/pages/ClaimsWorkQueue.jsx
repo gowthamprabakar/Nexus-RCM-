@@ -3,6 +3,7 @@ import { api } from '../../../services/api';
 import { cn } from '../../../lib/utils';
 import { ClaimsFilterPanel } from '../components/ClaimsFilterPanel';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+import { getSeriesColors } from '../../../lib/chartTheme';
 import {
   AIInsightCard,
   DateRangePicker,
@@ -256,9 +257,9 @@ export function ClaimsWorkQueue() {
           </div>
         </div>
 
-        <KPISparkline label="Queue Size" value={claims.length?.toLocaleString() || '0'} trend="" color="#10b981" />
-        <KPISparkline label="CRS Pass Rate" value={crsSummary?.passRate ? `${crsSummary.passRate}%` : crsSummary?.pass_rate ? `${crsSummary.pass_rate}%` : '--'} trend="" color="#f59e0b" />
-        <KPISparkline label="Auto-Fix Rate" value={crsSummary?.autoFixRate ? `${crsSummary.autoFixRate}%` : crsSummary?.auto_fix_rate ? `${crsSummary.auto_fix_rate}%` : '--'} trend="" color="#3b82f6" />
+        <KPISparkline label="Queue Size" value={claims.length?.toLocaleString() || '0'} trend="" color={getSeriesColors()[1]} />
+        <KPISparkline label="CRS Pass Rate" value={crsSummary?.passRate ? `${crsSummary.passRate}%` : crsSummary?.pass_rate ? `${crsSummary.pass_rate}%` : '--'} trend="" color={getSeriesColors()[2]} />
+        <KPISparkline label="Auto-Fix Rate" value={crsSummary?.autoFixRate ? `${crsSummary.autoFixRate}%` : crsSummary?.auto_fix_rate ? `${crsSummary.auto_fix_rate}%` : '--'} trend="" color={getSeriesColors()[0]} />
       </div>
 
       {/* ── Enhanced Filter Bar ── */}
@@ -322,9 +323,9 @@ export function ClaimsWorkQueue() {
       {/* Tabs & Controls */}
       <div className="flex items-center justify-between border-b border-th-border mb-6 shrink-0 sticky top-0 z-20 backdrop-blur py-2">
         <div className="flex gap-8">
-          <TabButton isActive={activeTab === 'errors'} onClick={() => setActiveTab('errors')} icon="error" label="Errors" count={claims.filter(c => c.status === 'Denied').length} color="text-red-500" />
-          <TabButton isActive={activeTab === 'ai_review'} onClick={() => setActiveTab('ai_review')} icon="auto_awesome" label="AI Review" count={claims.filter(c => c.status === 'Submitted').length} color="text-amber-500" />
-          <TabButton isActive={activeTab === 'clean'} onClick={() => setActiveTab('clean')} icon="check_circle" label="Clean" count={claims.filter(c => c.status === 'Paid').length} color="text-emerald-500" />
+          <TabButton isActive={activeTab === 'errors'} onClick={() => setActiveTab('errors')} icon="error" label="Errors" count={claims.filter(c => c.status === 'Denied').length} color="text-[rgb(var(--color-danger))]" />
+          <TabButton isActive={activeTab === 'ai_review'} onClick={() => setActiveTab('ai_review')} icon="auto_awesome" label="AI Review" count={claims.filter(c => c.status === 'Submitted').length} color="text-[rgb(var(--color-warning))]" />
+          <TabButton isActive={activeTab === 'clean'} onClick={() => setActiveTab('clean')} icon="check_circle" label="Clean" count={claims.filter(c => c.status === 'Paid').length} color="text-[rgb(var(--color-success))]" />
         </div>
         <div className="flex gap-2 pb-3">
           <button

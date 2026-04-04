@@ -1,7 +1,14 @@
 import React from 'react';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { getSeriesColors, getGridProps, getAxisProps, getTooltipStyle, getChartTheme } from '../../../../lib/chartTheme';
 
 export function ARAgingChart({ data, onBucketClick }) {
+ const colors = getSeriesColors();
+ const theme = getChartTheme();
+ const gridProps = getGridProps();
+ const axisProps = getAxisProps();
+ const tooltipStyle = getTooltipStyle();
+
  const chartData = data.map(bucket => ({
  name: bucket.bucket,
  balance: bucket.balance / 1000000, // Convert to millions
@@ -14,7 +21,7 @@ export function ARAgingChart({ data, onBucketClick }) {
  if (active && payload && payload.length) {
  const data = payload[0].payload;
  return (
- <div className="bg-white border border-th-border rounded-lg p-4 shadow-xl">
+ <div className="bg-th-surface-raised border border-th-border rounded-lg p-4 shadow-xl">
  <p className="font-bold text-th-heading mb-2">{data.name}</p>
  <p className="text-sm text-th-muted ">
  Balance: <span className="font-bold">${(data.balance).toFixed(2)}M</span>
@@ -38,21 +45,21 @@ export function ARAgingChart({ data, onBucketClick }) {
  return (
  <ResponsiveContainer width="100%" height={300}>
  <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
- <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+ <CartesianGrid {...gridProps} />
  <XAxis
  dataKey="name"
- tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
+ tick={{ ...axisProps.tick, fontWeight: 600 }}
  />
  <YAxis
  yAxisId="left"
- tick={{ fill: '#64748b', fontSize: 12 }}
- label={{ value: 'Balance ($M)', angle: -90, position: 'insideLeft', fill: '#64748b' }}
+ tick={axisProps.tick}
+ label={{ value: 'Balance ($M)', angle: -90, position: 'insideLeft', fill: axisProps.tick.fill }}
  />
  <YAxis
  yAxisId="right"
  orientation="right"
- tick={{ fill: '#64748b', fontSize: 12 }}
- label={{ value: 'Collectability (%)', angle: 90, position: 'insideRight', fill: '#64748b' }}
+ tick={axisProps.tick}
+ label={{ value: 'Collectability (%)', angle: 90, position: 'insideRight', fill: axisProps.tick.fill }}
  domain={[0, 100]}
  />
  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }} />
@@ -77,9 +84,9 @@ export function ARAgingChart({ data, onBucketClick }) {
  type="monotone"
  dataKey="collectability"
  name="Collectability %"
- stroke="#135bec"
+ stroke={colors[0]}
  strokeWidth={3}
- dot={{ fill: '#135bec', r: 5 }}
+ dot={{ fill: colors[0], r: 5 }}
  activeDot={{ r: 7 }}
  />
  </ComposedChart>

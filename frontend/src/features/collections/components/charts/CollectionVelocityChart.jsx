@@ -1,16 +1,23 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { getSeriesColors, getGridProps, getAxisProps, getTooltipStyle, getChartTheme } from '../../../../lib/chartTheme';
 
 export function CollectionVelocityChart({ data, onPayerClick }) {
+ const colors = getSeriesColors();
+ const theme = getChartTheme();
+ const gridProps = getGridProps();
+ const axisProps = getAxisProps();
+ const tooltipStyle = getTooltipStyle();
+
  const getPerformanceColor = (performance) => {
- const colors = {
- 'excellent': '#10b981',
- 'good': '#10b981',
- 'fair': '#f59e0b',
- 'poor': '#f97316',
- 'critical': '#ef4444'
+ const performanceColors = {
+ 'excellent': colors[1],
+ 'good': colors[1],
+ 'fair': colors[2],
+ 'poor': colors[3],
+ 'critical': colors[3]
  };
- return colors[performance] || '#64748b';
+ return performanceColors[performance] || colors[5];
  };
 
  const chartData = data.map(item => ({
@@ -22,7 +29,7 @@ export function CollectionVelocityChart({ data, onPayerClick }) {
  if (active && payload && payload.length) {
  const data = payload[0].payload;
  return (
- <div className="bg-white border border-th-border rounded-lg p-4 shadow-xl min-w-[200px]">
+ <div className="bg-th-surface-raised border border-th-border rounded-lg p-4 shadow-xl min-w-[200px]">
  <p className="font-bold text-th-heading mb-2">{data.payer}</p>
  <div className="space-y-1">
  <p className="text-sm text-th-muted ">
@@ -55,16 +62,16 @@ export function CollectionVelocityChart({ data, onPayerClick }) {
  layout="vertical"
  margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
  >
- <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+ <CartesianGrid {...gridProps} />
  <XAxis
  type="number"
- tick={{ fill: '#64748b', fontSize: 12 }}
- label={{ value: 'Days to Settle', position: 'insideBottom', offset: -5, fill: '#64748b' }}
+ tick={axisProps.tick}
+ label={{ value: 'Days to Settle', position: 'insideBottom', offset: -5, fill: axisProps.tick.fill }}
  />
  <YAxis
  type="category"
  dataKey="payer"
- tick={{ fill: '#64748b', fontSize: 12, fontWeight: 600 }}
+ tick={{ ...axisProps.tick, fontWeight: 600 }}
  width={90}
  />
  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.1)' }} />

@@ -9,6 +9,7 @@ import {
  ResponsiveContainer,
  ReferenceArea
 } from 'recharts';
+import { getSeriesColors, getGridProps, getAxisProps, getTooltipStyle, getChartTheme } from '../../../lib/chartTheme';
 
 export function RetryBackoffChart({ strategy = 'exponential' }) {
  // Generate data based on strategy
@@ -38,8 +39,14 @@ export function RetryBackoffChart({ strategy = 'exponential' }) {
 
  const data = generateData();
 
+ const colors = getSeriesColors();
+ const gridProps = getGridProps();
+ const axisProps = getAxisProps();
+ const tooltipStyle = getTooltipStyle();
+ const theme = getChartTheme();
+
  return (
- <div className="h-64 w-full bg-white rounded-xl border border-th-border p-4 shadow-sm">
+ <div className="h-64 w-full bg-th-surface-raised rounded-lg border border-th-border p-4">
  <h4 className="text-sm font-bold text-th-primary mb-4 flex items-center justify-between">
  <span>Backoff Strategy Visualization</span>
  <span className="text-xs bg-th-surface-overlay px-2 py-1 rounded text-th-muted capitalize">{strategy}</span>
@@ -47,30 +54,26 @@ export function RetryBackoffChart({ strategy = 'exponential' }) {
 
  <ResponsiveContainer width="100%" height="100%" minHeight={200}>
  <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
- <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+ <CartesianGrid {...gridProps} />
  <XAxis
  dataKey="attempt"
- axisLine={false}
- tickLine={false}
- tick={{ fill: '#64748b', fontSize: 12 }}
+ {...axisProps}
  dy={10}
  />
  <YAxis
- label={{ value: 'Minutes', angle: -90, position: 'insideLeft', fill: '#94a3b8', fontSize: 10 }}
- axisLine={false}
- tickLine={false}
- tick={{ fill: '#94a3b8', fontSize: 10 }}
+ label={{ value: 'Minutes', angle: -90, position: 'insideLeft', fill: theme.axis, fontSize: 10 }}
+ {...axisProps}
  />
  <Tooltip
- contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
- itemStyle={{ color: '#2563eb', fontWeight: 600 }}
+ contentStyle={tooltipStyle.contentStyle}
+ itemStyle={tooltipStyle.itemStyle}
  />
  <Line
  type="stepAfter"
  dataKey="time"
- stroke="#8b5cf6"
+ stroke={colors[4]}
  strokeWidth={3}
- dot={{ r: 4, fill: '#8b5cf6', strokeWidth: 2, stroke: '#fff' }}
+ dot={{ r: 4, fill: colors[4], strokeWidth: 2, stroke: '#fff' }}
  activeDot={{ r: 6 }}
  />
  </LineChart>

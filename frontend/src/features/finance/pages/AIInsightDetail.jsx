@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { mockForecastingData } from '../../../data/synthetic/mockForecastingData';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { getSeriesColors, getGridProps, getAxisProps, getTooltipStyle } from '../../../lib/chartTheme';
 
 export function AIInsightDetail() {
  const { insightId } = useParams();
@@ -14,6 +15,10 @@ export function AIInsightDetail() {
 
  // Data for the "Factor Impact" chart
  const chartData = insight.contributing_factors || [];
+ const colors = getSeriesColors();
+ const gridProps = getGridProps();
+ const axisProps = getAxisProps();
+ const tooltipStyle = getTooltipStyle();
 
  return (
  <div className="flex flex-col font-sans bg-[#f6f6f8] dark:bg-[#101622] text-th-heading min-h-full">
@@ -40,7 +45,7 @@ export function AIInsightDetail() {
  <div className="max-w-5xl mx-auto space-y-8">
 
  {/* Top Narrative Card */}
- <div className="bg-white dark:bg-[#111318] rounded-xl border border-th-border dark:border-[#3b4354] p-8 shadow-sm relative overflow-hidden hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div className="bg-th-surface-raised rounded-lg border border-th-border p-8 relative overflow-hidden transition-all duration-200">
  <div className="absolute top-0 right-0 p-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
 
  <div className="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -70,7 +75,7 @@ export function AIInsightDetail() {
  </div>
 
  {/* Action Panel */}
- <div className="lg:col-span-1 bg-th-surface-overlay/30 dark:bg-[#1c222d]/50 rounded-xl p-6 border border-th-border-subtle dark:border-[#282e39]">
+ <div className="lg:col-span-1 bg-th-surface-overlay rounded-xl p-6 border border-th-border-subtle">
  <h3 className="text-sm font-bold uppercase text-th-muted mb-4">Recommended Actions</h3>
  <div className="space-y-3">
  {insight.recommended_actions?.map((action, idx) => (
@@ -91,21 +96,21 @@ export function AIInsightDetail() {
  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
  {/* Factor Impact Chart */}
- <div className="bg-white dark:bg-[#111318] rounded-xl border border-th-border dark:border-[#3b4354] border-l-[3px] border-l-red-500 p-6 shadow-sm hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div className="bg-th-surface-raised rounded-lg border border-th-border border-l-[3px] border-l-[rgb(var(--color-danger))] p-6 transition-all duration-200">
  <h3 className="text-lg font-bold mb-6">Contributing Factors</h3>
  <div className="h-64 w-full">
  <ResponsiveContainer width="100%" height="100%">
  <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
- <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+ <CartesianGrid {...gridProps} horizontal={false} vertical={true} />
  <XAxis type="number" hide />
- <YAxis dataKey="factor" type="category" width={150} tick={{ fontSize: 12, fill: '#64748b' }} />
+ <YAxis dataKey="factor" type="category" width={150} tick={axisProps.tick} />
  <Tooltip
  cursor={{ fill: 'transparent' }}
- contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
+ contentStyle={tooltipStyle.contentStyle}
  />
  <Bar dataKey="impact" barSize={20} radius={[0, 4, 4, 0]}>
  {chartData.map((entry, index) => (
- <Cell key={`cell-${index}`} fill={index === 0 ? '#ef4444' : '#3b82f6'} />
+ <Cell key={`cell-${index}`} fill={index === 0 ? colors[3] : colors[0]} />
  ))}
  </Bar>
  </BarChart>
@@ -114,7 +119,7 @@ export function AIInsightDetail() {
  </div>
 
  {/* Historical Context */}
- <div className="bg-white dark:bg-[#111318] rounded-xl border border-th-border dark:border-[#3b4354] border-l-[3px] border-l-amber-500 p-6 shadow-sm hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div className="bg-th-surface-raised rounded-lg border border-th-border border-l-[3px] border-l-[rgb(var(--color-warning))] p-6 transition-all duration-200">
  <h3 className="text-lg font-bold mb-6">Similar Historical Events</h3>
  {insight.history_link && insight.history_link.length > 0 ? (
  <div className="space-y-4">
@@ -137,7 +142,7 @@ export function AIInsightDetail() {
  </div>
 
  {/* Supporting Evidence (The "Foot") */}
- <div className="bg-white dark:bg-[#111318] rounded-xl border border-th-border dark:border-[#3b4354] overflow-hidden shadow-sm hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ <div className="bg-th-surface-raised rounded-lg border border-th-border overflow-hidden transition-all duration-200">
  <div className="px-6 py-5 border-b border-th-border dark:border-[#282e39] bg-th-surface-overlay/30 dark:bg-[#1c222d] flex justify-between items-center">
  <div>
  <h3 className="text-lg font-bold">Supporting Evidence</h3>

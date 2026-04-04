@@ -11,6 +11,9 @@ import {
  ReferenceLine,
  Legend
 } from 'recharts';
+import { getSeriesColors, getGridProps, getAxisProps, getChartTheme } from '../../../lib/chartTheme';
+
+const _colors = getSeriesColors();
 
 const CustomTooltip = ({ active, payload, label, aiInsights }) => {
  if (active && payload && payload.length) {
@@ -18,7 +21,7 @@ const CustomTooltip = ({ active, payload, label, aiInsights }) => {
  const insight = aiInsights.find(i => i.date === label);
 
  return (
- <div className="bg-white dark:bg-[#1c222d] p-4 rounded-xl border border-th-border dark:border-[#3b4354] shadow-xl z-50 max-w-xs animate-in fade-in zoom-in-95 duration-200">
+ <div className="bg-th-surface-raised p-4 rounded-xl border border-th-border shadow-xl z-50 max-w-xs animate-in fade-in zoom-in-95 duration-200">
  <p className="text-sm font-bold text-th-heading mb-2">{label}</p>
  <div className="space-y-1 mb-3">
  {payload.map((entry, index) => (
@@ -32,9 +35,9 @@ const CustomTooltip = ({ active, payload, label, aiInsights }) => {
  </div>
 
  {insight && (
- <div className={`mt-2 p-2 rounded-lg border text-xs ${insight.severity === 'high' ? 'bg-rose-50 border-rose-100 text-rose-700 dark:bg-rose-900/10 dark:border-rose-900/30 dark:text-rose-400' :
- insight.severity === 'medium' ? 'bg-amber-50 border-amber-100 text-amber-700 dark:bg-amber-900/10 dark:border-amber-900/30 dark:text-amber-400' :
- 'bg-blue-50 border-blue-100 text-blue-700 dark:bg-blue-900/10 dark:border-blue-900/30 dark:text-blue-400'
+ <div className={`mt-2 p-2 rounded-lg border text-xs ${insight.severity === 'high' ? 'bg-[rgb(var(--color-danger))]/10 border-[rgb(var(--color-danger))]/20 text-[rgb(var(--color-danger))]' :
+ insight.severity === 'medium' ? 'bg-[rgb(var(--color-warning))]/10 border-[rgb(var(--color-warning))]/20 text-[rgb(var(--color-warning))]' :
+ 'bg-[rgb(var(--color-info))]/10 border-[rgb(var(--color-info))]/20 text-[rgb(var(--color-info))]'
  }`}>
  <div className="flex items-center gap-1.5 font-bold mb-1">
  <span className="material-symbols-outlined !text-sm">auto_awesome</span>
@@ -50,6 +53,10 @@ const CustomTooltip = ({ active, payload, label, aiInsights }) => {
 };
 
 export function ForecastChart({ data, aiInsights, onDataClick, selectedDate }) {
+ const colors = getSeriesColors();
+ const gridProps = getGridProps();
+ const theme = getChartTheme();
+
  return (
  <div className="w-full h-80 relative select-none">
  <ResponsiveContainer width="100%" height="100%">
@@ -64,18 +71,18 @@ export function ForecastChart({ data, aiInsights, onDataClick, selectedDate }) {
  >
  <defs>
  <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
- <stop offset="5%" stopColor="#a855f7" stopOpacity={0.1} />
- <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+ <stop offset="5%" stopColor={colors[4]} stopOpacity={0.1} />
+ <stop offset="95%" stopColor={colors[4]} stopOpacity={0} />
  </linearGradient>
  <linearGradient id="colorPosted" x1="0" y1="0" x2="0" y2="1">
- <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.1} />
- <stop offset="95%" stopColor="#14b8a6" stopOpacity={0} />
+ <stop offset="5%" stopColor={colors[1]} stopOpacity={0.1} />
+ <stop offset="95%" stopColor={colors[1]} stopOpacity={0} />
  </linearGradient>
  </defs>
- <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" className="dark:stroke-slate-800" />
+ <CartesianGrid {...gridProps} />
  <XAxis
  dataKey="date"
- tick={{ fontSize: 10, fill: '#94a3b8' }}
+ tick={{ fontSize: 10, fill: theme.axis }}
  tickLine={false}
  axisLine={false}
  tickFormatter={(str) => {
@@ -84,17 +91,17 @@ export function ForecastChart({ data, aiInsights, onDataClick, selectedDate }) {
  }}
  />
  <YAxis
- tick={{ fontSize: 10, fill: '#94a3b8' }}
+ tick={{ fontSize: 10, fill: theme.axis }}
  tickLine={false}
  axisLine={false}
  tickFormatter={(val) => `$${val / 1000}k`}
  />
- <Tooltip content={<CustomTooltip aiInsights={aiInsights} />} cursor={{ stroke: '#64748b', strokeDasharray: '3 3' }} />
+ <Tooltip content={<CustomTooltip aiInsights={aiInsights} />} cursor={{ stroke: theme.axis, strokeDasharray: '3 3' }} />
  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
 
  {/* Reference Lines */}
  {selectedDate && (
- <ReferenceLine x={selectedDate} stroke="#3b82f6" strokeDasharray="3 3" />
+ <ReferenceLine x={selectedDate} stroke={colors[0]} strokeDasharray="3 3" />
  )}
 
  {/* Historical Areas */}
@@ -102,7 +109,7 @@ export function ForecastChart({ data, aiInsights, onDataClick, selectedDate }) {
  type="monotone"
  dataKey="forecasted"
  name="Forecasted Revenue"
- stroke="#a855f7"
+ stroke={colors[4]}
  fillOpacity={1}
  fill="url(#colorForecast)"
  strokeWidth={2}
@@ -111,7 +118,7 @@ export function ForecastChart({ data, aiInsights, onDataClick, selectedDate }) {
  type="monotone"
  dataKey="posted"
  name="EHR Posted"
- stroke="#14b8a6"
+ stroke={colors[1]}
  fillOpacity={1}
  fill="url(#colorPosted)"
  strokeWidth={2}
@@ -122,7 +129,7 @@ export function ForecastChart({ data, aiInsights, onDataClick, selectedDate }) {
  type="monotone"
  dataKey="predicted"
  name="AI Prediction (7 Days)"
- stroke="#6366f1"
+ stroke={colors[0]}
  strokeDasharray="5 5"
  dot={false}
  strokeWidth={2}
