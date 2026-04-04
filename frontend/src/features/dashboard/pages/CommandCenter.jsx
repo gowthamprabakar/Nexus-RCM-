@@ -88,7 +88,7 @@ function buildExecutiveData(pipeline, denials, crs, ar, payments, rootCauseRes, 
     daysInAR: {
       value: avgDays != null ? String(avgDays) : '38.2',
       trend: daysInARTrend.trend, trendLabel: daysInARTrend.trendLabel, isPositive: daysInARTrend.isPositive,
-      targetRoute: '/collections/hub', sparkline: [44,42,41,40,39,39,38], sentiment: daysInARTrend.isPositive ? 'positive' : 'negative',
+      targetRoute: '/work/collections/queue', sparkline: [44,42,41,40,39,39,38], sentiment: daysInARTrend.isPositive ? 'positive' : 'negative',
     },
     firstPassRate: {
       value: passRate != null ? `${Math.max(0, passRate - 7.7).toFixed(1)}%` : '87.4%',
@@ -137,9 +137,9 @@ function Sparkline({ data, color = 'text-emerald-400', width = 48, height = 16 }
  }).join(' ');
 
  const colorMap = {
- positive: 'stroke-emerald-400',
- negative: 'stroke-rose-400',
- neutral: 'stroke-blue-400',
+ positive: 'stroke-[rgb(var(--color-success))]',
+ negative: 'stroke-[rgb(var(--color-danger))]',
+ neutral: 'stroke-[rgb(var(--color-primary))]',
  };
  const strokeClass = colorMap[color] || colorMap.neutral;
 
@@ -160,10 +160,10 @@ function Sparkline({ data, color = 'text-emerald-400', width = 48, height = 16 }
 // --- AI Level Badge ---
 function AIBadge({ level }) {
  const config = {
- Descriptive: 'bg-ai-descriptive/15 text-blue-400 border-blue-500/20',
- Diagnostic: 'bg-ai-diagnostic/15 text-amber-400 border-amber-500/20',
- Predictive: 'bg-ai-predictive/15 text-purple-400 border-purple-500/20',
- Prescriptive: 'bg-ai-prescriptive/15 text-emerald-400 border-emerald-500/20',
+ Descriptive: 'bg-[rgb(var(--color-info))]/15 text-[rgb(var(--color-info))] border-[rgb(var(--color-info))]/20',
+ Diagnostic: 'bg-[rgb(var(--color-warning))]/15 text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning))]/20',
+ Predictive: 'bg-purple-500/15 text-purple-400 dark:text-purple-400 border-purple-500/20',
+ Prescriptive: 'bg-[rgb(var(--color-success))]/15 text-[rgb(var(--color-success))] border-[rgb(var(--color-success))]/20',
  };
  return (
  <span className={cn('px-1.5 py-0.5 rounded text-2xs font-semibold border', config[level] || config.Descriptive)}>
@@ -198,17 +198,17 @@ const AgentSwarmWidget = () => {
     : null;
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20 mb-4">
+    <div className="flex items-center gap-3 px-4 py-2 rounded-md bg-[rgb(var(--color-success-bg))] border border-[rgb(var(--color-success))]/20 mb-4">
       <span className="relative flex h-2.5 w-2.5">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[rgb(var(--color-success))] opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[rgb(var(--color-success))]"></span>
       </span>
-      <span className="text-sm text-emerald-400 font-medium">Agent Swarm Active</span>
+      <span className="text-sm text-[rgb(var(--color-success))] font-medium">Agent Swarm Active</span>
       <span className="text-xs th-muted">
         {status.simulation_run_count} runs completed
         {lastRun !== null && ` · Last: ${lastRun}m ago`}
       </span>
-      <a href="/intelligence/simulation" className="ml-auto text-xs text-violet-400 hover:text-violet-300">
+      <a href="/intelligence/simulation" className="ml-auto text-xs text-[rgb(var(--color-primary))] hover:text-[rgb(var(--color-primary-hover))]">
         View Simulation Engine →
       </a>
     </div>
@@ -346,7 +346,7 @@ export function CommandCenter() {
          <p className="text-th-secondary text-sm mb-6">{error}</p>
          <button
            onClick={() => window.location.reload()}
-           className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-th-heading text-sm font-semibold rounded-lg transition-colors inline-flex items-center gap-2"
+           className="px-5 py-2.5 bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-hover))] text-th-heading text-sm font-semibold rounded-lg transition-colors inline-flex items-center gap-2"
          >
            <span className="material-symbols-outlined text-lg">refresh</span>
            Retry
@@ -423,28 +423,28 @@ export function CommandCenter() {
  title="Pipeline Value"
  metric={data.executive.totalPipeline}
  icon="payments"
- accentColor="border-l-emerald-500"
+ accentColor="border-t-[rgb(var(--color-success))]"
  onInvestigate={() => openInvestigation('Pipeline Value', data.executive.totalPipeline.value, '$12.1M', data.executive.totalPipeline.trend, 'info')}
  />
  <PulseCard
  title="Clean Claim Rate"
  metric={data.executive.cleanClaimRatio}
  icon="fact_check"
- accentColor="border-l-emerald-500"
+ accentColor="border-t-[rgb(var(--color-success))]"
  onInvestigate={() => openInvestigation('Clean Claim Rate', data.executive.cleanClaimRatio.value, '96.0%', data.executive.cleanClaimRatio.trend, 'warning')}
  />
  <PulseCard
  title="Denial Rate"
  metric={data.executive.denialRate}
  icon="block"
- accentColor="border-l-emerald-500"
+ accentColor="border-t-[rgb(var(--color-success))]"
  onInvestigate={() => openInvestigation('Denial Rate', data.executive.denialRate.value, '11.3%', data.executive.denialRate.trend, 'critical')}
  />
  <PulseCard
  title="Days in A/R"
  metric={data.executive.daysInAR}
  icon="schedule"
- accentColor="border-l-emerald-500"
+ accentColor="border-t-[rgb(var(--color-success))]"
  onInvestigate={() => openInvestigation('Days in A/R', data.executive.daysInAR.value, '32', data.executive.daysInAR.trend, 'warning')}
  />
  </div>
@@ -453,28 +453,28 @@ export function CommandCenter() {
  title="First Pass Rate"
  metric={data.executive.firstPassRate}
  icon="verified"
- accentColor="border-l-emerald-500"
+ accentColor="border-t-[rgb(var(--color-success))]"
  onInvestigate={() => openInvestigation('First Pass Rate', data.executive.firstPassRate.value, '92.0%', data.executive.firstPassRate.trend, 'warning')}
  />
  <PulseCard
  title="Net Collection Rate"
  metric={data.executive.netCollectionRate}
  icon="account_balance"
- accentColor="border-l-emerald-500"
+ accentColor="border-t-[rgb(var(--color-success))]"
  onInvestigate={() => openInvestigation('Net Collection Rate', data.executive.netCollectionRate.value, '95.0%', data.executive.netCollectionRate.trend, 'info')}
  />
  <PulseCard
  title="Revenue At Risk"
  metric={data.executive.revenueAtRisk}
  icon="warning"
- accentColor="border-l-rose-500"
+ accentColor="border-t-[rgb(var(--color-danger))]"
  onInvestigate={() => openInvestigation('Revenue At Risk', data.executive.revenueAtRisk.value, '$800K', data.executive.revenueAtRisk.trend, 'critical')}
  />
  <PulseCard
  title="System Health"
  metric={data.executive.systemHealth}
  icon="memory"
- accentColor="border-l-blue-500"
+ accentColor="border-t-[rgb(var(--color-primary))]"
  />
  </div>
 
@@ -482,13 +482,13 @@ export function CommandCenter() {
  <div className="flex flex-wrap items-center gap-3 mt-3">
    {/* Revenue Forecast Mini Strip */}
    <button
-     onClick={() => navigate('/analytics/revenue-forecast')}
-     className="flex items-center gap-2 px-4 py-2 bg-th-surface-raised border border-th-border rounded-lg hover:border-blue-500/40 transition-all group"
+     onClick={() => navigate('/intelligence/forecast')}
+     className="flex items-center gap-2 px-4 py-2 bg-th-surface-raised border border-th-border rounded-lg hover:border-[rgb(var(--color-primary))]/40 transition-all group"
    >
-     <span className="material-symbols-outlined text-sm text-blue-400">trending_up</span>
+     <span className="material-symbols-outlined text-sm text-[rgb(var(--color-primary))]">trending_up</span>
      <span className="text-xs text-th-secondary">
        <strong className="text-th-heading">4-Week Forecast:</strong>{' '}
-       <span className="tabular-nums font-bold text-blue-400">
+       <span className="tabular-nums font-bold text-[rgb(var(--color-primary))]">
          {forecastData?.total_forecast?.length > 0
            ? `$${(forecastData.total_forecast.reduce((s, w) => s + (w.predicted || 0), 0) / 1e6).toFixed(1)}M`
            : '$106.1M'}
@@ -496,26 +496,26 @@ export function CommandCenter() {
        <span className="mx-1.5 text-th-muted">|</span>
        Model: <strong className="text-th-heading">{forecastData?.model_backend || forecastData?.model || 'Prophet'}</strong>
        <span className="mx-1.5 text-th-muted">|</span>
-       Accuracy: <strong className="text-emerald-400">{forecastAccuracy?.overall_metrics?.mape != null ? `${(100 - forecastAccuracy.overall_metrics.mape).toFixed(1)}%` : 'N/A'}</strong>
+       Accuracy: <strong className="text-[rgb(var(--color-success))]">{forecastAccuracy?.overall_metrics?.mape != null ? `${(100 - forecastAccuracy.overall_metrics.mape).toFixed(1)}%` : 'N/A'}</strong>
      </span>
      <span className="material-symbols-outlined text-xs text-th-muted opacity-0 group-hover:opacity-100 transition-opacity">arrow_forward</span>
    </button>
 
    {/* Collections Queue Count */}
    <button
-     onClick={() => navigate('/collections/hub')}
-     className="flex items-center gap-2 px-4 py-2 bg-th-surface-raised border border-th-border rounded-lg hover:border-emerald-500/40 transition-all group"
+     onClick={() => navigate('/work/collections/queue')}
+     className="flex items-center gap-2 px-4 py-2 bg-th-surface-raised border border-th-border rounded-lg hover:border-[rgb(var(--color-success))]/40 transition-all group"
    >
-     <span className="material-symbols-outlined text-sm text-emerald-400">assignment</span>
+     <span className="material-symbols-outlined text-sm text-[rgb(var(--color-success))]">assignment</span>
      <span className="text-xs text-th-secondary">
        <strong className="text-th-heading">Collections:</strong>{' '}
-       <span className="tabular-nums font-bold text-emerald-400">
+       <span className="tabular-nums font-bold text-[rgb(var(--color-success))]">
          {collectionsSummary?.total_tasks != null
            ? collectionsSummary.total_tasks.toLocaleString()
            : '4,773'} tasks
        </span>
        <span className="mx-1.5 text-th-muted">|</span>
-       <span className="tabular-nums font-bold text-emerald-400">
+       <span className="tabular-nums font-bold text-[rgb(var(--color-success))]">
          {collectionsSummary?.total_collectible != null
            ? formatCompact(collectionsSummary.total_collectible)
            : '$205M'} collectible
@@ -527,7 +527,7 @@ export function CommandCenter() {
    {/* MiroFish Quick-Run Simulate Button */}
    <button
      onClick={() => navigate('/intelligence/simulation')}
-     className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-lg hover:bg-purple-500/15 hover:border-purple-500/40 transition-all text-purple-400"
+     className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-lg hover:bg-purple-500/15 hover:border-purple-500/40 transition-all text-purple-400 dark:text-purple-400"
    >
      <span className="material-symbols-outlined text-sm">science</span>
      <span className="text-xs font-semibold">Simulate</span>
@@ -556,17 +556,17 @@ export function CommandCenter() {
      UNKNOWN: { icon: 'help', color: 'gray' },
    };
    const top3 = byRC.slice(0, 3);
-   const dotColors = ['bg-rose-500', 'bg-amber-500', 'bg-emerald-500'];
+   const dotColors = ['bg-[rgb(var(--color-danger))]', 'bg-[rgb(var(--color-warning))]', 'bg-[rgb(var(--color-success))]'];
 
    return (
-   <section className="bg-th-surface-raised rounded-xl border border-th-border p-4">
+   <section className="bg-th-surface-raised rounded-lg border border-th-border p-4">
      <div className="flex items-center justify-between mb-3">
        <h2 className="text-xs font-semibold uppercase tracking-widest text-th-muted flex items-center gap-2">
          <span className="material-symbols-outlined text-sm">hub</span>
          Root Cause Intelligence
        </h2>
        <div className="flex items-center gap-2">
-         <span className="text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Zero-Prior</span>
+         <span className="text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider">Zero-Prior</span>
          <span className="text-2xs text-th-muted tabular-nums">{rootCauseSummary.total_analyses?.toLocaleString() || byRC.reduce((s, r) => s + (r.count || 0), 0).toLocaleString()} denials analyzed</span>
        </div>
      </div>
@@ -632,13 +632,13 @@ export function CommandCenter() {
  <h2 className="text-xs font-semibold uppercase tracking-widest text-th-muted flex items-center gap-2">
  <span className="material-symbols-outlined text-sm">schema</span>
  7-Stage RCM Pipeline
- {pipelineData && <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ml-1">Live</span>}
+ {pipelineData && <span className="text-[10px] bg-[rgb(var(--color-success))]/10 text-[rgb(var(--color-success))] border border-[rgb(var(--color-success))]/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider ml-1">Live</span>}
  </h2>
  <div className="flex items-center gap-3">
  {pipelineStats && (
    <>
-   <span className="text-xs text-th-muted">Denial Rate: <span className="font-bold text-rose-400">{pipelineStats.denial_rate}%</span></span>
-   <span className="text-xs text-th-muted">Collection Rate: <span className="font-bold text-emerald-400">{pipelineStats.collection_rate}%</span></span>
+   <span className="text-xs text-th-muted">Denial Rate: <span className="font-bold text-[rgb(var(--color-danger))]">{pipelineStats.denial_rate}%</span></span>
+   <span className="text-xs text-th-muted">Collection Rate: <span className="font-bold text-[rgb(var(--color-success))]">{pipelineStats.collection_rate}%</span></span>
    </>
  )}
  <AIBadge level="Predictive" />
@@ -687,7 +687,7 @@ export function CommandCenter() {
  </div>
  <div>
  <p className="text-2xs text-th-muted uppercase font-semibold mb-1">Avg Dwell Time</p>
- <p className={cn("text-lg font-bold font-mono", selectedStageData.status === 'critical' ? "text-rose-400" : "text-emerald-400")}>
+ <p className={cn("text-lg font-bold font-mono", selectedStageData.status === 'critical' ? "text-[rgb(var(--color-danger))]" : "text-[rgb(var(--color-success))]")}>
  {selectedStageData.avgDwell}
  </p>
  </div>
@@ -698,11 +698,11 @@ export function CommandCenter() {
  <div>
  <p className="text-2xs text-th-muted uppercase font-semibold mb-1">Status</p>
  <span className={cn(
- "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold capitalize",
- selectedStageData.status === 'healthy' && "bg-emerald-500/10 text-emerald-400",
- selectedStageData.status === 'warning' && "bg-amber-500/10 text-amber-400",
- selectedStageData.status === 'critical' && "bg-rose-500/10 text-rose-400",
- selectedStageData.status === 'stable' && "bg-blue-500/10 text-blue-400",
+ "inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold capitalize",
+ selectedStageData.status === 'healthy' && "bg-[rgb(var(--color-success))]/10 text-[rgb(var(--color-success))]",
+ selectedStageData.status === 'warning' && "bg-[rgb(var(--color-warning))]/10 text-[rgb(var(--color-warning))]",
+ selectedStageData.status === 'critical' && "bg-[rgb(var(--color-danger))]/10 text-[rgb(var(--color-danger))]",
+ selectedStageData.status === 'stable' && "bg-[rgb(var(--color-primary))]/10 text-[rgb(var(--color-primary))]",
  )}>
  {selectedStageData.status}
  </span>
@@ -766,8 +766,8 @@ export function CommandCenter() {
      {i + 1}
     </span>
     <span className={cn("px-2 py-0.5 rounded text-2xs font-bold uppercase shrink-0",
-     (b.type === 'PAYER' || b.type === 'Payer') && "bg-rose-500/10 text-rose-400",
-     (b.type === 'PROCESS' || b.type === 'Process') && "bg-amber-500/10 text-amber-400",
+     (b.type === 'PAYER' || b.type === 'Payer') && "bg-[rgb(var(--color-danger))]/10 text-[rgb(var(--color-danger))]",
+     (b.type === 'PROCESS' || b.type === 'Process') && "bg-[rgb(var(--color-warning))]/10 text-[rgb(var(--color-warning))]",
      (b.type === 'TEAM' || b.type === 'Team') && "bg-purple-500/10 text-purple-400",
     )}>{b.type}</span>
     <div className="flex-1 min-w-0">
@@ -775,7 +775,7 @@ export function CommandCenter() {
      <p className="text-xs text-th-secondary truncate">{b.description}</p>
     </div>
     <div className="text-right shrink-0">
-     <p className="text-sm font-bold text-rose-400" style={{ fontVariantNumeric: 'tabular-nums' }}>{b.impact}</p>
+     <p className="text-sm font-bold text-[rgb(var(--color-danger))]" style={{ fontVariantNumeric: 'tabular-nums' }}>{b.impact}</p>
      <p className="text-2xs text-th-muted">{b.delay || b.avgDelay} avg delay</p>
     </div>
     <span className="material-symbols-outlined text-sm text-th-muted">chevron_right</span>
@@ -789,9 +789,9 @@ export function CommandCenter() {
      {data.bottlenecks.length + i + 1}
     </span>
     <span className={cn("px-2 py-0.5 rounded text-2xs font-bold uppercase shrink-0",
-     ticket.severity === 'CRITICAL' && "bg-rose-500/10 text-rose-400",
-     ticket.severity === 'HIGH' && "bg-amber-500/10 text-amber-400",
-     ticket.severity === 'MEDIUM' && "bg-blue-500/10 text-blue-400",
+     ticket.severity === 'CRITICAL' && "bg-[rgb(var(--color-danger))]/10 text-[rgb(var(--color-danger))]",
+     ticket.severity === 'HIGH' && "bg-[rgb(var(--color-warning))]/10 text-[rgb(var(--color-warning))]",
+     ticket.severity === 'MEDIUM' && "bg-[rgb(var(--color-info))]/10 text-[rgb(var(--color-info))]",
     )}>{ticket.severity}</span>
     <div className="flex-1 min-w-0">
      <p className="text-sm font-semibold text-th-heading truncate">{ticket.title}</p>
@@ -806,10 +806,10 @@ export function CommandCenter() {
  {ccAiInsights.length > 0 && (
   <div className="px-6 py-4 border-t border-th-border">
     <div className="flex items-center gap-2 mb-3">
-      <span className="material-symbols-outlined text-sm text-amber-400">auto_awesome</span>
+      <span className="material-symbols-outlined text-sm text-[rgb(var(--color-warning))]">auto_awesome</span>
       <h3 className="text-xs font-semibold uppercase tracking-widest text-th-muted">AI Intelligence</h3>
-      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[rgb(var(--color-success))]/10 text-[rgb(var(--color-success))] border border-[rgb(var(--color-success))]/20 flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-[rgb(var(--color-success))] animate-pulse" />
         Live
       </span>
     </div>
@@ -834,13 +834,13 @@ export function CommandCenter() {
  <div className="px-6 py-3 border-t border-th-border bg-th-surface-overlay/20 flex items-center justify-between">
   <div className="flex items-center gap-4">
    <div className="flex items-center gap-1.5">
-    <span className="material-symbols-outlined text-sm text-emerald-400">auto_fix_high</span>
+    <span className="material-symbols-outlined text-sm text-[rgb(var(--color-success))]">auto_fix_high</span>
     <span className="text-xs text-th-secondary">Auto-fix: <strong className="text-th-heading">{data.performance.automation.autoFixRate}</strong></span>
    </div>
    {data.performance.team.map((team, i) => (
     <div key={i} className="flex items-center gap-1">
      <span className="text-2xs font-bold text-th-muted">{team.avatar}</span>
-     <span className={cn("text-2xs font-semibold", team.status === 'healthy' ? "text-emerald-400" : "text-amber-400")}>{team.efficiency}</span>
+     <span className={cn("text-2xs font-semibold", team.status === 'healthy' ? "text-[rgb(var(--color-success))]" : "text-[rgb(var(--color-warning))]")}>{team.efficiency}</span>
     </div>
    ))}
   </div>
@@ -871,24 +871,24 @@ function PulseCard({ title, metric, icon, accentColor, onInvestigate }) {
 
  // Determine accent border color based on sentiment
  const borderColor = metric.sentiment === 'negative'
- ? 'border-l-rose-500'
+ ? 'border-t-[rgb(var(--color-danger))]'
  : metric.sentiment === 'neutral'
- ? 'border-l-blue-500'
- : 'border-l-emerald-500';
+ ? 'border-t-[rgb(var(--color-primary))]'
+ : 'border-t-[rgb(var(--color-success))]';
  const finalAccent = accentColor || borderColor;
 
  const iconColor = metric.sentiment === 'negative'
- ? 'text-rose-400'
+ ? 'text-[rgb(var(--color-danger))]'
  : metric.sentiment === 'neutral'
- ? 'text-blue-400'
- : 'text-emerald-400';
+ ? 'text-[rgb(var(--color-primary))]'
+ : 'text-[rgb(var(--color-success))]';
 
  return (
  <div
  onClick={() => metric.targetRoute && navigate(metric.targetRoute)}
  className={cn(
- "bg-th-surface-raised p-5 rounded-xl border border-th-border border-l-[3px] cursor-pointer relative overflow-hidden group",
- "transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5",
+ "bg-th-surface-raised p-4 rounded-lg border border-th-border border-t-2 cursor-pointer relative overflow-hidden group",
+ "transition-all duration-200",
  finalAccent
  )}
  >
@@ -917,7 +917,7 @@ function PulseCard({ title, metric, icon, accentColor, onInvestigate }) {
  </div>
  <div className="flex items-center justify-between mt-2">
  <div className="flex items-center gap-1">
- <span className={cn("text-2xs font-semibold flex items-center", metric.isPositive ? "text-emerald-400" : "text-rose-400")}>
+ <span className={cn("text-2xs font-semibold flex items-center", metric.isPositive ? "text-[rgb(var(--color-success))]" : "text-[rgb(var(--color-danger))]")}>
  {metric.isPositive ? '\u2191' : '\u2193'} {metric.trend}
  </span>
  <span className="text-2xs text-th-muted ml-1">{metric.trendLabel}</span>
@@ -937,18 +937,18 @@ function LifecycleNode({ stage, index, total, isSelected, onSelect }) {
  const navigate = useNavigate();
 
  const statusColors = {
- healthy: "bg-emerald-500",
- warning: "bg-amber-500",
- critical: "bg-rose-500",
- stable: "bg-blue-500"
+ healthy: "bg-[rgb(var(--color-success))]",
+ warning: "bg-[rgb(var(--color-warning))]",
+ critical: "bg-[rgb(var(--color-danger))]",
+ stable: "bg-[rgb(var(--color-primary))]"
  };
 
  return (
  <div
  onClick={onSelect}
  className={cn(
- "bg-th-surface-raised p-3 rounded-xl border relative cursor-pointer z-10 group",
- "transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5",
+ "bg-th-surface-raised p-3 rounded-lg border relative cursor-pointer z-10 group",
+ "transition-all duration-200",
  isSelected
  ? "border-th-primary/50 ring-1 ring-th-primary/30 shadow-lg"
  : "border-th-border hover:border-th-border-subtle"
@@ -973,7 +973,7 @@ function LifecycleNode({ stage, index, total, isSelected, onSelect }) {
  </div>
  <div className="flex justify-between text-xs pt-1.5 border-t border-th-border mt-1.5">
  <span className="text-th-muted">Dwell</span>
- <span className={cn("font-mono font-semibold text-xs", stage.status === 'critical' ? "text-rose-400" : "text-emerald-400")} style={{ fontVariantNumeric: 'tabular-nums' }}>
+ <span className={cn("font-mono font-semibold text-xs", stage.status === 'critical' ? "text-[rgb(var(--color-danger))]" : "text-[rgb(var(--color-success))]")} style={{ fontVariantNumeric: 'tabular-nums' }}>
  {stage.avgDwell}
  </span>
  </div>
@@ -985,15 +985,15 @@ function LifecycleNode({ stage, index, total, isSelected, onSelect }) {
 function BottleneckCard({ data }) {
  const navigate = useNavigate();
  const typeStyles = {
- Payer: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+ Payer: "bg-[rgb(var(--color-primary))]/10 text-[rgb(var(--color-primary))] border-[rgb(var(--color-primary))]/20",
  Process: "bg-purple-500/10 text-purple-400 border-purple-500/20",
- Team: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+ Team: "bg-[rgb(var(--color-warning))]/10 text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning))]/20",
  };
 
  return (
  <div
  onClick={() => data.targetRoute && navigate(data.targetRoute)}
- className="bg-th-surface-raised p-5 rounded-xl border border-th-border group cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-rose-900/60"
+ className="bg-th-surface-raised p-5 rounded-lg border border-th-border group cursor-pointer transition-all duration-200 hover:border-rose-900/60"
  >
  <div className="flex justify-between items-start mb-3">
  <span className={cn("px-2 py-0.5 rounded text-2xs font-semibold uppercase border", typeStyles[data.type] || typeStyles.Process)}>
@@ -1006,7 +1006,7 @@ function BottleneckCard({ data }) {
  <div className="grid grid-cols-2 gap-2 pt-3 border-t border-th-border">
  <div>
  <p className="text-2xs text-th-muted uppercase font-semibold">Fin. Impact</p>
- <p className="text-sm font-bold text-rose-400" style={{ fontVariantNumeric: 'tabular-nums' }}>{data.impact}</p>
+ <p className="text-sm font-bold text-[rgb(var(--color-danger))]" style={{ fontVariantNumeric: 'tabular-nums' }}>{data.impact}</p>
  </div>
  <div>
  <p className="text-2xs text-th-muted uppercase font-semibold">Avg Delay</p>
@@ -1021,7 +1021,7 @@ function AIIntelligenceWidget({ trends }) {
  const [activeTab, setActiveTab] = useState('situational');
 
  return (
- <div className="col-span-1 md:col-span-2 bg-th-surface-raised rounded-xl border border-th-border p-5 relative overflow-hidden transition-all duration-200 hover:shadow-lg">
+ <div className="col-span-1 md:col-span-2 bg-th-surface-raised rounded-xl border border-th-border p-5 relative overflow-hidden transition-all duration-200">
  {/* Background Decoration */}
  <div className="absolute top-0 right-0 p-8 opacity-[0.03]">
  <span className="material-symbols-outlined text-8xl text-th-heading">psychology</span>
@@ -1029,7 +1029,7 @@ function AIIntelligenceWidget({ trends }) {
 
  <div className="flex items-center justify-between mb-4 relative z-10">
  <div className="flex items-center gap-2">
- <span className="material-symbols-outlined text-amber-400 text-base">auto_awesome</span>
+ <span className="material-symbols-outlined text-[rgb(var(--color-warning))] text-base">auto_awesome</span>
  <h3 className="text-sm font-semibold text-th-heading tracking-wide">AI Usage Intelligence</h3>
  </div>
  <div className="flex gap-0.5 bg-th-surface-overlay p-0.5 rounded-lg border border-th-border">
@@ -1067,9 +1067,9 @@ function AIIntelligenceWidget({ trends }) {
 
 function TicketCompact({ ticket }) {
  const priorityColors = {
- "Critical": "text-rose-400 bg-rose-500/10 border-rose-500/20",
- "High": "text-amber-400 bg-amber-500/10 border-amber-500/20",
- "Medium": "text-blue-400 bg-blue-500/10 border-blue-500/20"
+ "Critical": "text-[rgb(var(--color-danger))] bg-[rgb(var(--color-danger))]/10 border-[rgb(var(--color-danger))]/20",
+ "High": "text-[rgb(var(--color-warning))] bg-[rgb(var(--color-warning))]/10 border-[rgb(var(--color-warning))]/20",
+ "Medium": "text-[rgb(var(--color-info))] bg-[rgb(var(--color-info))]/10 border-[rgb(var(--color-info))]/20"
  };
 
  return (
