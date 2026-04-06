@@ -93,6 +93,19 @@ function DonutChart({ data, size = 180, stroke = 28 }) {
 
 const PAGE_SIZE = 5;
 
+// Wireframe fallback data — shown when backend is offline
+const FALLBACK_CLAIMS = [
+  { id:'CLM-9041', claim_id:'CLM-9041', payer_id:'BCBS TX',      payer:'BCBS TX',      amount:12400, carc:'CO-4',  mf:'disputed',  mf_verdict:'disputed',  urg:'CRIT', urg_level:'CRIT', urgScore:96, denial_category:'Coding',         cat:'Coding',         appealSuccess:34, appealDrafted:false, patient_name:'Michael Chen',    days_remaining:107 },
+  { id:'CLM-8821', claim_id:'CLM-8821', payer_id:'Medicare',     payer:'Medicare',     amount:4200,  carc:'CO-16', mf:'confirmed', mf_verdict:'confirmed', urg:'HIGH', urg_level:'HIGH', urgScore:84, denial_category:'Administrative', cat:'Administrative', appealSuccess:87, appealDrafted:true,  patient_name:'Sarah Johnson',   days_remaining:102 },
+  { id:'CLM-5510', claim_id:'CLM-5510', payer_id:'Medicare',     payer:'Medicare',     amount:6100,  carc:'CO-4',  mf:'disputed',  mf_verdict:'disputed',  urg:'HIGH', urg_level:'HIGH', urgScore:81, denial_category:'Coding',         cat:'Coding',         appealSuccess:28, appealDrafted:false, patient_name:'Lisa Martinez',   days_remaining:112 },
+  { id:'CLM-7788', claim_id:'CLM-7788', payer_id:'Aetna',        payer:'Aetna',        amount:8400,  carc:'CO-97', mf:'confirmed', mf_verdict:'confirmed', urg:'HIGH', urg_level:'HIGH', urgScore:78, denial_category:'Administrative', cat:'Administrative', appealSuccess:74, appealDrafted:true,  patient_name:'David Park',      days_remaining:119 },
+  { id:'CLM-7204', claim_id:'CLM-7204', payer_id:'UnitedHealth', payer:'UnitedHealth', amount:2800,  carc:'PR-50', mf:'pending',   mf_verdict:'pending',   urg:'HIGH', urg_level:'HIGH', urgScore:75, denial_category:'Clinical',       cat:'Clinical',       appealSuccess:52, appealDrafted:false, patient_name:'Emily Davis',     days_remaining:128 },
+  { id:'CLM-6632', claim_id:'CLM-6632', payer_id:'Cigna',        payer:'Cigna',        amount:3900,  carc:'CO-16', mf:'confirmed', mf_verdict:'confirmed', urg:'MED',  urg_level:'MED',  urgScore:68, denial_category:'Administrative', cat:'Administrative', appealSuccess:81, appealDrafted:true,  patient_name:'James Wilson',    days_remaining:133 },
+  { id:'CLM-4821', claim_id:'CLM-4821', payer_id:'BCBS TX',      payer:'BCBS TX',      amount:4800,  carc:'CO-4',  mf:'confirmed', mf_verdict:'confirmed', urg:'MED',  urg_level:'MED',  urgScore:62, denial_category:'Coding',         cat:'Coding',         appealSuccess:71, appealDrafted:true,  patient_name:'Dr Kim Patient',  days_remaining:123 },
+  { id:'CLM-3301', claim_id:'CLM-3301', payer_id:'Humana',       payer:'Humana',       amount:9800,  carc:'CO-29', mf:'disputed',  mf_verdict:'disputed',  urg:'MED',  urg_level:'MED',  urgScore:58, denial_category:'Administrative', cat:'Administrative', appealSuccess:22, appealDrafted:false, patient_name:'Robert Kim',      days_remaining:27  },
+  { id:'CLM-2910', claim_id:'CLM-2910', payer_id:'Medicare',     payer:'Medicare',     amount:1200,  carc:'CO-11', mf:'confirmed', mf_verdict:'confirmed', urg:'MED',  urg_level:'MED',  urgScore:44, denial_category:'Clinical',       cat:'Clinical',       appealSuccess:79, appealDrafted:false, patient_name:'Anna Thompson',   days_remaining:136 },
+];
+
 export function DenialManagement() {
  const navigate = useNavigate();
  const [searchParams, setSearchParams] = useSearchParams();
@@ -230,15 +243,24 @@ export function DenialManagement() {
 
  // Filtered appeals
  const filteredAppeals = useMemo(() => {
- let result = appeals;
- if (payerFilter) result = result.filter(a => a.payer_id === payerFilter);
- if (categoryFilter) result = result.filter(a => a.denial_category === categoryFilter);
+ let result = appeals.length > 0 ? appeals : FALLBACK_CLAIMS;
+ // Payer filter
+ if (payerFilter) result = result.filter(a => (a.payer_id || a.payer) === payerFilter);
+ // Category filter
+ if (categoryFilter) result = result.filter(a => (a.denial_category || a.cat) === categoryFilter);
+ // Status filter
  if (statusFilter) result = result.filter(a => a.status === statusFilter);
+ // MiroFish verdict filter
+ if (mfFilter) result = result.filter(a => (a.mf_verdict || a.mf) === mfFilter);
+ // Urgency filter
+ if (urgFilter) result = result.filter(a => (a.urg_level || a.urg) === urgFilter);
+ // CARC code filter
+ if (carcFilter) result = result.filter(a => (a.carc || a.carc_code) === carcFilter);
  // URL-based filters from AR Aging drill-down
- if (urlRootCause) result = result.filter(a => a.root_cause === urlRootCause || a.denial_category === urlRootCause.replace('_MISMATCH','').replace('_LAPSE','').replace('_MISS','').replace('_MISSING',''));
+ if (urlRootCause) result = result.filter(a => a.root_cause === urlRootCause || (a.denial_category || a.cat) === urlRootCause.replace('_MISMATCH','').replace('_LAPSE','').replace('_MISS','').replace('_MISSING',''));
  if (urlStatus) result = result.filter(a => a.status === urlStatus);
  return result;
- }, [appeals, payerFilter, categoryFilter, statusFilter, urlRootCause, urlStatus]);
+ }, [appeals, payerFilter, categoryFilter, statusFilter, mfFilter, urgFilter, carcFilter, urlRootCause, urlStatus]);
 
  const totalPages = Math.max(1, Math.ceil(filteredAppeals.length / PAGE_SIZE));
  const paginatedAppeals = filteredAppeals.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -506,7 +528,93 @@ export function DenialManagement() {
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto">
-                <p className="p-4 text-[10px] text-th-muted italic">Denial list rows — DW-4</p>
+                {filteredAppeals.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-32 text-th-muted">
+                    <span className="material-symbols-outlined text-2xl mb-2">search_off</span>
+                    <p className="text-[11px]">No denials match current filters</p>
+                  </div>
+                ) : (
+                  filteredAppeals.map((denial) => {
+                    const claimId   = denial.claim_id || denial.id;
+                    const payer     = denial.payer_id || denial.payer || '—';
+                    const carc      = denial.carc || denial.carc_code || '—';
+                    const mf        = denial.mf_verdict || denial.mf || 'pending';
+                    const urg       = denial.urg_level  || denial.urg || 'MED';
+                    const urgScore  = denial.urgScore || (urg === 'CRIT' ? 90 : urg === 'HIGH' ? 75 : 50);
+                    const winPct    = denial.appealSuccess || denial.ai_confidence || 0;
+                    const drafted   = denial.appealDrafted || false;
+                    const patient   = denial.patient_name || '—';
+                    const amt       = denial.amount || 0;
+                    const isSelected = selectedClaim === claimId;
+
+                    const rowBorder =
+                      mf === 'confirmed' ? 'border-l-[rgb(var(--color-success))]' :
+                      mf === 'disputed'  ? 'border-l-[rgb(var(--color-danger))]'  :
+                                           'border-l-transparent';
+                    const rowBg = isSelected
+                      ? mf === 'confirmed' ? 'bg-[rgb(var(--color-success-bg))]'
+                      : mf === 'disputed'  ? 'bg-[rgb(var(--color-danger-bg))]'
+                      :                      'bg-[rgb(var(--color-primary-bg))]'
+                      : 'hover:bg-th-surface-overlay';
+
+                    const mfBadge =
+                      mf === 'confirmed'
+                        ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold font-mono bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border border-[rgb(var(--color-success)/0.3)]">✓ CONFIRMED</span>
+                        : mf === 'disputed'
+                        ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold font-mono bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border border-[rgb(var(--color-danger)/0.3)]">✗ DISPUTED</span>
+                        : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold font-mono bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border border-[rgb(var(--color-warning)/0.3)]">⏳ Pending</span>;
+
+                    const urgColor =
+                      urg === 'CRIT' ? 'text-[rgb(var(--color-danger))]' :
+                      urg === 'HIGH' ? 'text-[rgb(var(--color-warning))]' :
+                                       'text-th-muted';
+
+                    const winBadge = winPct > 0 && (
+                      <span className={cn(
+                        'px-1.5 py-0.5 rounded text-[9px] font-bold font-mono border',
+                        winPct >= 75 ? 'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]' :
+                        winPct >= 50 ? 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]' :
+                                       'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger)/0.3)]'
+                      )}>{winPct}% win</span>
+                    );
+
+                    return (
+                      <div
+                        key={claimId}
+                        onClick={() => setSelectedClaim(claimId)}
+                        className={cn(
+                          'relative px-3 py-2.5 border-b border-th-border cursor-pointer transition-colors border-l-2',
+                          rowBorder, rowBg
+                        )}
+                      >
+                        <span className={cn('absolute right-2.5 top-2.5 text-[8.5px] font-bold font-mono', urgColor)}>
+                          {urg} {urgScore}
+                        </span>
+
+                        <div className="flex items-center justify-between mb-1 pr-14">
+                          <span className="text-[10px] font-bold font-mono text-[rgb(var(--color-info))]">{claimId}</span>
+                          <span className="text-[11px] font-bold font-mono text-th-heading">${amt.toLocaleString()}</span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                          <span className="text-[10px] text-th-secondary">{payer}</span>
+                          <span className="font-mono text-[8.5px] text-[rgb(var(--color-danger))] bg-[rgb(var(--color-danger-bg))] px-1.5 py-0.5 rounded border border-[rgb(var(--color-danger)/0.2)]">{carc}</span>
+                          <span className="text-[9.5px] text-th-muted">{patient}</span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {mfBadge}
+                          {winBadge}
+                          {drafted && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))] border border-[rgb(var(--color-info)/0.3)]">
+                              AI appeal drafted
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
