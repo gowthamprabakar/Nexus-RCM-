@@ -93,6 +93,136 @@ function DonutChart({ data, size = 180, stroke = 28 }) {
 
 const PAGE_SIZE = 5;
 
+// Per-claim AI intelligence data — matches wireframe cfNodes + rcCallout per claim
+const CLAIM_DETAIL = {
+  'CLM-8821': {
+    dos:'2024-01-15', denied:'2024-01-22', daysOut:72, daysLeft:102,
+    rcCallout:'Root cause: Prior auth PA-2024-8821 exists and is valid but was not electronically attached at submission. Highly recoverable — administrative error, not clinical.',
+    rcSentiment:'warn',
+    cfNodes:[
+      {type:'ok',   icon:'👤', name:'Patient Access', status:'✓ Elig OK'},
+      {type:'warn', icon:'🔑', name:'Prior Auth',     status:'⚠ Skipped!'},
+      {type:'ok',   icon:'🔍', name:'CRS Scrub',      status:'✓ Score: 78'},
+      {type:'ok',   icon:'📤', name:'Submitted',      status:'✓ Cleared'},
+      {type:'fail', icon:'❌', name:'DENIED',          status:'CO-16'},
+      {type:'act',  icon:'🌊', name:'MiroFish',       status:'✓ CONF 87%'},
+      {type:'ok',   icon:'📄', name:'AI Appeal',      status:'87% win'},
+    ],
+  },
+  'CLM-9041': {
+    dos:'2024-01-20', denied:'2024-01-28', daysOut:65, daysLeft:107,
+    rcCallout:'Root cause: CPT 99215 does not match diagnosis M54.5 under BCBS TX coding policy. This is a genuine coding error — correct before submitting.',
+    rcSentiment:'danger',
+    cfNodes:[
+      {type:'ok',   icon:'👤', name:'Patient Access', status:'✓ Elig OK'},
+      {type:'ok',   icon:'🔑', name:'Prior Auth',     status:'✓ Not needed'},
+      {type:'fail', icon:'🔍', name:'CRS Scrub',      status:'⚠ Score: 54'},
+      {type:'ok',   icon:'📤', name:'Submitted',      status:'✓ Cleared'},
+      {type:'fail', icon:'❌', name:'DENIED',          status:'CO-4'},
+      {type:'act',  icon:'🌊', name:'MiroFish',       status:'✗ DISP 61%'},
+      {type:'neutral',icon:'📝',name:'Code Review',  status:'Needed'},
+    ],
+  },
+  'CLM-7788': {
+    dos:'2024-02-01', denied:'2024-02-09', daysOut:58, daysLeft:119,
+    rcCallout:'Root cause: Billing system migration Jan 2024 triggered duplicate submission pathway. System error — original claim was paid. Recoverable via appeal.',
+    rcSentiment:'warn',
+    cfNodes:[
+      {type:'ok',   icon:'👤', name:'Patient Access', status:'✓ Elig OK'},
+      {type:'ok',   icon:'🔑', name:'Prior Auth',     status:'✓ Not needed'},
+      {type:'ok',   icon:'🔍', name:'CRS Scrub',      status:'✓ Score: 74'},
+      {type:'warn', icon:'📤', name:'Submitted',      status:'⚠ 2x sent!'},
+      {type:'fail', icon:'❌', name:'DENIED',          status:'CO-97 Dup'},
+      {type:'act',  icon:'🌊', name:'MiroFish',       status:'✓ CONF 74%'},
+      {type:'ok',   icon:'📄', name:'AI Appeal',      status:'74% win'},
+    ],
+  },
+  'CLM-7204': {
+    dos:'2024-02-10', denied:'2024-02-20', daysOut:50, daysLeft:128,
+    rcCallout:'Root cause: Modifier -GP missing from CPT 97110 under UHC policy. Coding fix + documentation may resolve. Await MiroFish for final recommendation.',
+    rcSentiment:'warn',
+    cfNodes:[
+      {type:'ok',     icon:'👤', name:'Patient Access', status:'✓ Elig OK'},
+      {type:'ok',     icon:'🔑', name:'Prior Auth',     status:'✓ On file'},
+      {type:'warn',   icon:'🔍', name:'CRS Scrub',      status:'⚠ Score: 71'},
+      {type:'ok',     icon:'📤', name:'Submitted',      status:'✓ Cleared'},
+      {type:'fail',   icon:'❌', name:'DENIED',          status:'PR-50'},
+      {type:'neutral',icon:'⏳', name:'MiroFish',       status:'Running...'},
+      {type:'neutral',icon:'📝', name:'Pending',        status:'Await result'},
+    ],
+  },
+  'CLM-6632': {
+    dos:'2024-02-15', denied:'2024-02-23', daysOut:44, daysLeft:133,
+    rcCallout:'Root cause: Prior auth PA-2024-0112 expired 5 days before DOS. Renewal was requested but not confirmed. Retroactive auth appeal — 81% success rate under Cigna policy.',
+    rcSentiment:'warn',
+    cfNodes:[
+      {type:'ok',   icon:'👤', name:'Patient Access', status:'✓ Elig OK'},
+      {type:'warn', icon:'🔑', name:'Prior Auth',     status:'⚠ Expired!'},
+      {type:'ok',   icon:'🔍', name:'CRS Scrub',      status:'✓ Score: 74'},
+      {type:'ok',   icon:'📤', name:'Submitted',      status:'✓ Cleared'},
+      {type:'fail', icon:'❌', name:'DENIED',          status:'CO-16'},
+      {type:'act',  icon:'🌊', name:'MiroFish',       status:'✓ CONF 81%'},
+      {type:'ok',   icon:'📄', name:'AI Appeal',      status:'81% win'},
+    ],
+  },
+  'CLM-5510': {
+    dos:'2024-01-25', denied:'2024-02-01', daysOut:68, daysLeft:112,
+    rcCallout:'Root cause: CPT 99215 requires 5-component exam — only 3 documented. Same provider pattern as CLM-9041. Downcode to 99214 and resubmit rather than appeal.',
+    rcSentiment:'danger',
+    cfNodes:[
+      {type:'ok',  icon:'👤', name:'Patient Access', status:'✓ Elig OK'},
+      {type:'ok',  icon:'🔑', name:'Prior Auth',     status:'✓ Not needed'},
+      {type:'warn',icon:'🔍', name:'CRS Scrub',      status:'⚠ Score: 62'},
+      {type:'ok',  icon:'📤', name:'Submitted',      status:'✓ Cleared'},
+      {type:'fail',icon:'❌', name:'DENIED',          status:'CO-4'},
+      {type:'act', icon:'🌊', name:'MiroFish',       status:'✗ DISP 68%'},
+      {type:'neutral',icon:'📝',name:'Recode',       status:'99214 rec.'},
+    ],
+  },
+  'CLM-4821': {
+    dos:'2024-02-05', denied:'2024-02-14', daysOut:55, daysLeft:123,
+    rcCallout:'Root cause: Modifier-25 missing from same-day E&M under BCBS TX policy. Correctable via appeal with modifier added — 71% success rate.',
+    rcSentiment:'warn',
+    cfNodes:[
+      {type:'ok',  icon:'👤', name:'Patient Access', status:'✓ Elig OK'},
+      {type:'ok',  icon:'🔑', name:'Prior Auth',     status:'✓ Not needed'},
+      {type:'warn',icon:'🔍', name:'CRS Scrub',      status:'⚠ Score: 66'},
+      {type:'ok',  icon:'📤', name:'Submitted',      status:'✓ Cleared'},
+      {type:'fail',icon:'❌', name:'DENIED',          status:'CO-4'},
+      {type:'act', icon:'🌊', name:'MiroFish',       status:'✓ CONF 71%'},
+      {type:'ok',  icon:'📄', name:'Appeal',         status:'71% win'},
+    ],
+  },
+  'CLM-3301': {
+    dos:'2023-11-01', denied:'2024-02-15', daysOut:124, daysLeft:27,
+    rcCallout:'Root cause: Timely filing exceeded by 17 days with no documented extension reason. Only 22% appeal success. Decide now — 27 days remaining.',
+    rcSentiment:'danger',
+    cfNodes:[
+      {type:'ok',   icon:'👤', name:'Patient Access', status:'✓ Elig OK'},
+      {type:'ok',   icon:'🔑', name:'Prior Auth',     status:'✓ On file'},
+      {type:'ok',   icon:'🔍', name:'CRS Scrub',      status:'✓ Score: 74'},
+      {type:'fail', icon:'📤', name:'Filed Late',     status:'107 days!'},
+      {type:'fail', icon:'❌', name:'DENIED',          status:'CO-29'},
+      {type:'act',  icon:'🌊', name:'MiroFish',       status:'✗ DISP 61%'},
+      {type:'neutral',icon:'⚠️',name:'27d Left',     status:'Decide now'},
+    ],
+  },
+  'CLM-2910': {
+    dos:'2024-02-18', denied:'2024-02-28', daysOut:35, daysLeft:136,
+    rcCallout:'Root cause: CPT 99213 does not pair with Z12.11 screening diagnosis. Resubmit with G0202 — 79% success. Quick win.',
+    rcSentiment:'warn',
+    cfNodes:[
+      {type:'ok',  icon:'👤', name:'Patient Access', status:'✓ Elig OK'},
+      {type:'ok',  icon:'🔑', name:'Prior Auth',     status:'✓ Not needed'},
+      {type:'ok',  icon:'🔍', name:'CRS Scrub',      status:'✓ Score: 72'},
+      {type:'ok',  icon:'📤', name:'Submitted',      status:'✓ Cleared'},
+      {type:'fail',icon:'❌', name:'DENIED',          status:'CO-11'},
+      {type:'act', icon:'🌊', name:'MiroFish',       status:'✓ CONF 79%'},
+      {type:'ok',  icon:'📄', name:'Recode',         status:'G0202 rec.'},
+    ],
+  },
+};
+
 // Wireframe fallback data — shown when backend is offline
 const FALLBACK_CLAIMS = [
   { id:'CLM-9041', claim_id:'CLM-9041', payer_id:'BCBS TX',      payer:'BCBS TX',      amount:12400, carc:'CO-4',  mf:'disputed',  mf_verdict:'disputed',  urg:'CRIT', urg_level:'CRIT', urgScore:96, denial_category:'Coding',         cat:'Coding',         appealSuccess:34, appealDrafted:false, patient_name:'Michael Chen',    days_remaining:107 },
@@ -628,8 +758,156 @@ export function DenialManagement() {
                 <button onClick={() => navigate('/work/denials/appeals')}
                   className="text-[10px] text-th-muted hover:text-th-heading px-2 py-0.5 rounded border border-th-border bg-th-surface-raised transition-colors">Full RCA →</button>
               </div>
-              <div className="flex-1 overflow-y-auto p-3">
-                <p className="text-[10px] text-th-muted italic">AI panel — DW-5 + DW-6</p>
+              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                {(() => {
+                  const claimId = selectedClaim || 'CLM-8821';
+                  const detail  = CLAIM_DETAIL[claimId];
+                  const fallback = (appeals.length > 0 ? appeals : FALLBACK_CLAIMS).find(
+                    a => (a.claim_id || a.id) === claimId
+                  );
+                  if (!detail && !fallback) return (
+                    <p className="text-[11px] text-th-muted italic text-center pt-8">
+                      Click a denial row to load AI intelligence
+                    </p>
+                  );
+
+                  const dos      = detail?.dos       || fallback?.created_at  || '—';
+                  const denied   = detail?.denied    || '—';
+                  const daysOut  = detail?.daysOut   || fallback?.days_remaining || '—';
+                  const daysLeft = detail?.daysLeft  || fallback?.days_remaining || '—';
+                  const cfNodes  = detail?.cfNodes   || [];
+                  const rcCallout= detail?.rcCallout || '';
+                  const rcSent   = detail?.rcSentiment || 'warn';
+
+                  const dlColor = typeof daysLeft === 'number'
+                    ? daysLeft < 30 ? 'text-[rgb(var(--color-danger))]'
+                    : daysLeft < 90 ? 'text-[rgb(var(--color-warning))]'
+                    :                 'text-[rgb(var(--color-success))]'
+                    : 'text-th-muted';
+
+                  const tlItems = [
+                    { label:'DOS',      val: dos,                 type: 'ok'   },
+                    { label:'Denied',   val: denied,              type: 'fail' },
+                    { label:'Days Out', val: `${daysOut}d`,       type: 'warn' },
+                    { label:'Deadline', val: `${daysLeft}d left`, type: typeof daysLeft === 'number' && daysLeft < 30 ? 'fail' : typeof daysLeft === 'number' && daysLeft < 90 ? 'warn' : 'ok' },
+                  ];
+
+                  const tlDot = {
+                    ok:      'bg-[rgb(var(--color-success))] border-[rgb(var(--color-success))]',
+                    fail:    'bg-[rgb(var(--color-danger))] border-[rgb(var(--color-danger))]',
+                    warn:    'bg-[rgb(var(--color-warning))] border-[rgb(var(--color-warning))]',
+                    neutral: 'bg-th-muted border-th-muted',
+                  };
+
+                  const cfColors = {
+                    ok:      { circle:'bg-[rgb(var(--color-success-bg))] border-[rgb(var(--color-success))] text-[rgb(var(--color-success))]', name:'text-[rgb(var(--color-success))]', status:'text-[rgb(var(--color-success))]' },
+                    warn:    { circle:'bg-[rgb(var(--color-warning-bg))] border-[rgb(var(--color-warning))] text-[rgb(var(--color-warning))]', name:'text-[rgb(var(--color-warning))]', status:'text-[rgb(var(--color-warning))]' },
+                    fail:    { circle:'bg-[rgb(var(--color-danger-bg))] border-[rgb(var(--color-danger))] text-[rgb(var(--color-danger))]',   name:'text-[rgb(var(--color-danger))]',   status:'text-[rgb(var(--color-danger))]' },
+                    act:     { circle:'bg-[rgb(var(--color-primary-bg))] border-[rgb(var(--color-info))] text-[rgb(var(--color-info))]',      name:'text-[rgb(var(--color-info))]',     status:'text-[rgb(var(--color-info))]' },
+                    neutral: { circle:'bg-th-surface-overlay border-th-border text-th-muted',                                                 name:'text-th-muted',                     status:'text-th-muted' },
+                  };
+
+                  return (
+                    <>
+                      {/* ── CLAIM TIMELINE ── */}
+                      <div>
+                        <p className="text-[8px] font-bold uppercase tracking-widest text-th-muted font-mono mb-2">
+                          Claim Timeline
+                        </p>
+                        <div className="flex border border-th-border rounded-lg overflow-hidden">
+                          {tlItems.map((item, i) => (
+                            <div key={i} className={cn(
+                              'flex-1 text-center py-2 px-1 border-r border-th-border last:border-r-0',
+                              i % 2 === 0 ? 'bg-th-surface-overlay' : 'bg-th-surface-raised'
+                            )}>
+                              <div className={cn(
+                                'size-2 rounded-full mx-auto mb-1 border-[1.5px]',
+                                tlDot[item.type] || tlDot.neutral
+                              )} />
+                              <p className="text-[7.5px] text-th-muted font-mono uppercase tracking-wider">{item.label}</p>
+                              <p className={cn(
+                                'text-[8.5px] font-semibold mt-0.5',
+                                item.label === 'Deadline' ? dlColor : 'text-th-heading'
+                              )}>{item.val}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* ── CONNECTING FACTORS ── */}
+                      <div>
+                        <p className="text-[8px] font-bold uppercase tracking-widest text-th-muted font-mono mb-2 pt-2 border-t border-th-border">
+                          ⛓ Connecting Factors
+                        </p>
+                        <div className="overflow-x-auto pb-1">
+                          <div className="flex items-center" style={{minWidth:'max-content',gap:0}}>
+                            {cfNodes.map((node, i) => {
+                              const colors = cfColors[node.type] || cfColors.neutral;
+                              const nodeClick =
+                                node.type === 'ok' && node.icon === '📄'
+                                  ? () => navigate('/work/denials/appeals')
+                                  : node.type === 'act' && node.icon === '🌊'
+                                  ? () => navigate('/intelligence/simulation')
+                                  : (node.icon === '👤' || node.icon === '🔑' || node.icon === '🔍')
+                                  ? () => navigate('/analytics/prevention')
+                                  : undefined;
+                              return (
+                                <React.Fragment key={i}>
+                                  <div
+                                    onClick={nodeClick}
+                                    className={cn(
+                                      'flex flex-col items-center gap-1 px-1.5 py-1.5 rounded-md transition-colors',
+                                      nodeClick ? 'cursor-pointer hover:bg-th-surface-overlay' : ''
+                                    )}
+                                    style={{minWidth:'58px'}}
+                                  >
+                                    <div className={cn(
+                                      'size-9 rounded-full flex items-center justify-center text-[15px] border-[1.5px] transition-transform hover:scale-110',
+                                      colors.circle
+                                    )}>
+                                      {node.icon}
+                                    </div>
+                                    <p className={cn('text-[8px] font-bold text-center leading-tight', colors.name)}>
+                                      {node.name}
+                                    </p>
+                                    <p className={cn('text-[7px] font-mono text-center', colors.status)}>
+                                      {node.status}
+                                    </p>
+                                  </div>
+                                  {i < cfNodes.length - 1 && (
+                                    <span className="text-th-muted text-[10px] shrink-0 mb-4 px-0.5">›</span>
+                                  )}
+                                </React.Fragment>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Root Cause Callout */}
+                        {rcCallout && (
+                          <div className={cn(
+                            'mt-2 px-3 py-2 rounded-md text-[10px] leading-relaxed border',
+                            rcSent === 'danger'
+                              ? 'bg-[rgb(var(--color-danger-bg))] border-[rgb(var(--color-danger)/0.3)] text-th-secondary'
+                              : 'bg-[rgb(var(--color-warning-bg))] border-[rgb(var(--color-warning)/0.3)] text-th-secondary'
+                          )}>
+                            {rcCallout}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* ── 5-LAYER RCA PLACEHOLDER ── */}
+                      <div className="pt-2 border-t border-th-border">
+                        <p className="text-[8px] font-bold uppercase tracking-widest text-th-muted font-mono mb-2">
+                          🧠 5-Layer AI Intelligence
+                        </p>
+                        <p className="text-[10px] text-th-muted italic">
+                          RCA accordion — DW-5
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 
