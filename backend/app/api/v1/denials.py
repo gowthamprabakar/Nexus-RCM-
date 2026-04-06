@@ -10,6 +10,7 @@ from app.models.denial import Denial, Appeal
 from app.models.claim import Claim
 from app.models.payer import Payer
 from app.models.patient import Patient
+from app.models.root_cause import RootCauseAnalysis
 from app.schemas.denial import (
     DenialCreate, DenialOut, DenialOutEnriched, PaginatedDenials,
     AppealCreate, AppealOut, AppealUpdate,
@@ -37,6 +38,16 @@ async def list_denials(
     payer_id: Optional[str] = None,
     search: Optional[str] = None,
 ) -> Any:
+    # Subquery: latest RCA per denial (max rca_id as tie-breaker)
+    latest_rca = (
+        select(
+            RootCauseAnalysis.denial_id,
+            func.max(RootCauseAnalysis.rca_id).label("max_rca_id"),
+        )
+        .group_by(RootCauseAnalysis.denial_id)
+        .subquery("latest_rca")
+    )
+
     q = (
         select(
             Denial,
@@ -45,10 +56,24 @@ async def list_denials(
             Patient.first_name,
             Patient.last_name,
             Payer.payer_name,
+            RootCauseAnalysis.ml_denial_probability,
+            RootCauseAnalysis.ml_write_off_probability,
+            RootCauseAnalysis.confidence_score,
+            RootCauseAnalysis.primary_root_cause,
+            RootCauseAnalysis.resolution_path,
         )
-        .join(Claim,  Claim.claim_id  == Denial.claim_id,  isouter=True)
-        .join(Patient, Patient.patient_id == Claim.patient_id, isouter=True)
-        .join(Payer,  Payer.payer_id   == Claim.payer_id,   isouter=True)
+        .join(Claim,   Claim.claim_id   == Denial.claim_id,   isouter=True)
+        .join(Patient,  Patient.patient_id == Claim.patient_id, isouter=True)
+        .join(Payer,   Payer.payer_id    == Claim.payer_id,    isouter=True)
+        .join(latest_rca, latest_rca.c.denial_id == Denial.denial_id, isouter=True)
+        .join(
+            RootCauseAnalysis,
+            and_(
+                RootCauseAnalysis.denial_id == Denial.denial_id,
+                RootCauseAnalysis.rca_id == latest_rca.c.max_rca_id,
+            ),
+            isouter=True,
+        )
     )
     if denial_category:
         q = q.where(Denial.denial_category == denial_category)
@@ -72,10 +97,63 @@ async def list_denials(
     result = await db.execute(q)
     rows = result.all()
 
+    # Bulk-fetch appeal_drafted (ai_generated = true) for all denial_ids in page
+    denial_ids = [r.Denial.denial_id for r in rows]
+    drafted_set: set = set()
+    if denial_ids:
+        drafted_q = (
+            select(Appeal.denial_id)
+            .where(and_(Appeal.denial_id.in_(denial_ids), Appeal.ai_generated == True))  # noqa: E712
+        )
+        drafted_rows = await db.execute(drafted_q)
+        drafted_set = {r[0] for r in drafted_rows.all()}
+
     items = []
     for row in rows:
         d = row.Denial
         patient_name = f"{row.first_name or ''} {row.last_name or ''}".strip() or "Unknown Patient"
+
+        denial_prob = row.ml_denial_probability
+        write_off   = row.ml_write_off_probability
+        confidence  = row.confidence_score
+        days_rem    = _days_remaining(d.appeal_deadline)
+
+        # MiroFish verdict derived from denial probability
+        if denial_prob is not None:
+            if denial_prob <= 0.45:
+                mf_verdict = "confirmed"
+            elif denial_prob >= 0.70:
+                mf_verdict = "disputed"
+            else:
+                mf_verdict = "pending"
+        else:
+            mf_verdict = None
+
+        # Urgency score: denial_prob * write_off * days_factor (0-100)
+        if denial_prob is not None and write_off is not None and days_rem is not None:
+            days_factor = max(0, min(1, 1 - (days_rem / 180)))
+            urg_score = int(min(100, (denial_prob * 40) + (write_off * 30) + (days_factor * 30)))
+        else:
+            urg_score = None
+
+        if urg_score is not None:
+            if urg_score >= 85:
+                urg_level = "CRIT"
+            elif urg_score >= 65:
+                urg_level = "HIGH"
+            elif urg_score >= 40:
+                urg_level = "MED"
+            else:
+                urg_level = "LOW"
+        else:
+            urg_level = None
+
+        # Appeal probability: (1 - denial_prob) * (confidence / 100)
+        if denial_prob is not None and confidence is not None:
+            appeal_prob = round((1 - denial_prob) * (confidence / 100), 4)
+        else:
+            appeal_prob = None
+
         items.append({
             "denial_id":         d.denial_id,
             "claim_id":          d.claim_id,
@@ -87,13 +165,24 @@ async def list_denials(
             "denial_date":       d.denial_date,
             "denial_source":     d.denial_source,
             "appeal_deadline":   d.appeal_deadline,
-            "days_remaining":    _days_remaining(d.appeal_deadline),
+            "days_remaining":    days_rem,
             "recommended_action": d.recommended_action or get_recommended_action(d.carc_code, d.denial_category),
             "similar_denial_30d": d.similar_denial_30d or 0,
             "patient_name":      patient_name,
             "payer_name":        row.payer_name or d.claim_id,
             "date_of_service":   str(row.date_of_service) if row.date_of_service else None,
             "created_at":        d.created_at,
+            # ML + MiroFish enrichment
+            "mf_verdict":        mf_verdict,
+            "mf_confidence":     confidence,
+            "urg_level":         urg_level,
+            "urg_score":         urg_score,
+            "denial_probability": round(denial_prob, 4) if denial_prob is not None else None,
+            "appeal_probability": appeal_prob,
+            "appeal_drafted":    d.denial_id in drafted_set,
+            "write_off_risk":    round(write_off, 4) if write_off is not None else None,
+            "primary_root_cause": row.primary_root_cause,
+            "resolution_path":   row.resolution_path,
         })
 
     return {"items": items, "total": total or 0, "page": page, "size": size}
@@ -145,6 +234,27 @@ async def get_denials_summary(db: AsyncSession = Depends(get_db)) -> Any:
     # AI prevention impact = projected recovery × 0.35 (claims fixed pre-submission)
     ai_impact = round(total_at_risk * 0.35, 2)
 
+    # MiroFish verdict counts (derived from ml_denial_probability thresholds)
+    mf_confirmed = await db.scalar(
+        select(func.count(RootCauseAnalysis.rca_id))
+        .where(RootCauseAnalysis.ml_denial_probability <= 0.45)
+    ) or 0
+    mf_disputed = await db.scalar(
+        select(func.count(RootCauseAnalysis.rca_id))
+        .where(RootCauseAnalysis.ml_denial_probability >= 0.70)
+    ) or 0
+
+    # Average RCA confidence
+    avg_confidence = await db.scalar(
+        select(func.avg(RootCauseAnalysis.confidence_score))
+    )
+    rca_confidence = round(float(avg_confidence), 1) if avg_confidence is not None else 0
+
+    # Appeals in flight (PENDING outcome)
+    appeals_in_flight = await db.scalar(
+        select(func.count(Appeal.appeal_id)).where(Appeal.outcome.in_(["PENDING"]))
+    ) or 0
+
     return {
         "total_denials":            count,
         "denied_revenue_at_risk":   round(float(total_at_risk), 2),
@@ -154,6 +264,10 @@ async def get_denials_summary(db: AsyncSession = Depends(get_db)) -> Any:
         "open_appeals":             open_appeals,
         "total_recovered":          round(float(recovered), 2),
         "top_categories":           top_categories,
+        "mirofish_confirmed":       mf_confirmed,
+        "mirofish_disputed":        mf_disputed,
+        "rca_confidence":           rca_confidence,
+        "appeals_in_flight":        appeals_in_flight,
     }
 
 

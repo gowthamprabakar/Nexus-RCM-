@@ -449,6 +449,21 @@ export function DenialManagement() {
    patient_name:     d.patient_name,
    days_remaining:   d.days_remaining,
    recommended_action: d.recommended_action,
+   // ML + MiroFish enrichment from RCA JOIN
+   mf_verdict:       d.mf_verdict,
+   mf:               d.mf_verdict,
+   mf_confidence:    d.mf_confidence,
+   urg_level:        d.urg_level,
+   urg:              d.urg_level,
+   urgScore:         d.urg_score,
+   denial_probability: d.denial_probability,
+   appealSuccess:    d.appeal_probability != null ? Math.round(d.appeal_probability * 100) : null,
+   appeal_probability: d.appeal_probability,
+   appealDrafted:    d.appeal_drafted ?? false,
+   appeal_drafted:   d.appeal_drafted ?? false,
+   write_off_risk:   d.write_off_risk,
+   primary_root_cause: d.primary_root_cause,
+   resolution_path:  d.resolution_path,
  }));
  setAppeals(items);
  } catch (err) {
@@ -568,11 +583,11 @@ export function DenialManagement() {
         {[
           { val: summary.total_denials || 47,  label: 'Total Denials',       sub: '↑ +3 overnight',          valColor: 'text-[rgb(var(--color-danger))]',   subColor: 'text-[rgb(var(--color-danger))]' },
           { val: `$${((summary.denied_revenue_at_risk || 384000)/1000).toFixed(0)}K`, label: 'Revenue at Risk', sub: 'Action needed', valColor: 'text-[rgb(var(--color-warning))]', subColor: 'text-[rgb(var(--color-warning))]' },
-          { val: summary.mirofish_confirmed || 18, label: 'MiroFish Confirmed', sub: 'Appeal recommended',     valColor: 'text-[rgb(var(--color-success))]',  subColor: 'text-[rgb(var(--color-success))]' },
-          { val: summary.mirofish_disputed  || 9,  label: 'MiroFish Disputed',  sub: 'Coding review needed',   valColor: 'text-[rgb(var(--color-danger))]',   subColor: 'text-[rgb(var(--color-danger))]' },
-          { val: `${summary.successful_appeal_rate || 78}%`, label: 'Appeal Win Rate', sub: '↑ +6% AI-assisted', valColor: 'text-[rgb(var(--color-success))]', subColor: 'text-[rgb(var(--color-success))]' },
-          { val: summary.appeals_in_flight  || 9,  label: 'Appeals In-Flight',  sub: '$82K recovery',          valColor: 'text-purple-600 dark:text-purple-400', subColor: 'text-th-muted' },
-          { val: `${summary.rca_confidence  || 91}%`, label: 'RCA Confidence',   sub: 'Neo4j + ML',             valColor: 'text-[rgb(var(--color-info))]',     subColor: 'text-[rgb(var(--color-success))]' },
+          { val: summary.mirofish_confirmed ?? 18, label: 'MiroFish Confirmed', sub: 'Appeal recommended',     valColor: 'text-[rgb(var(--color-success))]',  subColor: 'text-[rgb(var(--color-success))]' },
+          { val: summary.mirofish_disputed  ?? 9,  label: 'MiroFish Disputed',  sub: 'Coding review needed',   valColor: 'text-[rgb(var(--color-danger))]',   subColor: 'text-[rgb(var(--color-danger))]' },
+          { val: `${summary.successful_appeal_rate ?? 78}%`, label: 'Appeal Win Rate', sub: '↑ +6% AI-assisted', valColor: 'text-[rgb(var(--color-success))]', subColor: 'text-[rgb(var(--color-success))]' },
+          { val: summary.appeals_in_flight  ?? 9,  label: 'Appeals In-Flight',  sub: '$82K recovery',          valColor: 'text-purple-600 dark:text-purple-400', subColor: 'text-th-muted' },
+          { val: `${summary.rca_confidence  ?? 91}%`, label: 'RCA Confidence',   sub: 'Neo4j + ML',             valColor: 'text-[rgb(var(--color-info))]',     subColor: 'text-[rgb(var(--color-success))]' },
         ].map((s, i) => (
           <div key={i} className="flex-1 px-3 py-2 text-center border-r border-th-border last:border-r-0">
             <p className={cn('text-[18px] font-black leading-none tabular-nums', s.valColor)}>{s.val}</p>
@@ -585,8 +600,8 @@ export function DenialManagement() {
       {/* ── TAB BAR ── */}
       <div className="flex items-center bg-th-surface-raised border-b border-th-border px-4 shrink-0 overflow-x-auto">
         {[
-          { id: 'queue',  label: 'Denial Queue',           count: summary.total_denials || 47 },
-          { id: 'appeal', label: 'Appeal Workbench',       count: summary.appeals_in_flight || 9 },
+          { id: 'queue',  label: 'Denial Queue',           count: summary.total_denials ?? 47 },
+          { id: 'appeal', label: 'Appeal Workbench',       count: summary.appeals_in_flight ?? 9 },
           { id: 'risk',   label: 'High Risk Claims',       count: 31 },
           { id: 'payer',  label: 'Payer Patterns + Heatmap', count: null },
           { id: 'rca',    label: 'RCA Tree',               count: 'Neo4j' },

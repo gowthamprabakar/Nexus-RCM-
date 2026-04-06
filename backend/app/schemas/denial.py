@@ -85,6 +85,18 @@ class DenialOutEnriched(BaseModel):
     date_of_service:    Optional[str]   = None
     created_at:         Optional[datetime] = None
 
+    # ── ML + MiroFish enrichment fields (from root_cause_analysis JOIN) ──
+    mf_verdict:         Optional[str]   = None
+    mf_confidence:      Optional[int]   = None
+    urg_level:          Optional[str]   = None
+    urg_score:          Optional[int]   = None
+    denial_probability: Optional[float] = None
+    appeal_probability: Optional[float] = None
+    appeal_drafted:     Optional[bool]  = False
+    write_off_risk:     Optional[float] = None
+    primary_root_cause: Optional[str]   = None
+    resolution_path:    Optional[str]   = None
+
     class Config:
         from_attributes = True
 
