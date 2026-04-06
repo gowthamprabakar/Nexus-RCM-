@@ -374,7 +374,123 @@ export function DenialManagement() {
                   className="text-[10px] text-th-muted hover:text-th-heading transition-colors px-2 py-0.5 rounded border border-th-border bg-th-surface-raised">Reset</button>
               </div>
               <div className="flex-1 overflow-y-auto p-3 space-y-4">
-                <p className="text-[10px] text-th-muted italic">Filter panel — DW-3</p>
+
+                {/* MiroFish Verdict */}
+                <div>
+                  <p className="text-[8.5px] font-semibold uppercase tracking-widest text-th-muted font-mono mb-2 pb-1.5 border-b border-th-border">MiroFish Verdict</p>
+                  {[
+                    { val: 'confirmed', label: '✓ CONFIRMED', count: 18, color: 'success' },
+                    { val: 'disputed',  label: '✗ DISPUTED',  count: 9,  color: 'danger'  },
+                    { val: 'pending',   label: '⏳ Pending',   count: 20, color: 'warning' },
+                  ].map(f => (
+                    <button key={f.val} onClick={() => setMfFilter(mfFilter === f.val ? '' : f.val)}
+                      className={cn(
+                        'w-full flex items-center justify-between px-2 py-1.5 rounded text-[10px] mb-1 border-l-2 transition-colors',
+                        mfFilter === f.val
+                          ? f.color === 'success'
+                            ? 'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success))]'
+                            : f.color === 'danger'
+                            ? 'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger))]'
+                            : 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning))]'
+                          : 'text-th-secondary border-transparent hover:bg-th-surface-overlay hover:text-th-heading'
+                      )}>
+                      <span>{f.label}</span>
+                      <span className="font-mono text-[9px] text-th-muted">{f.count}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* AI Urgency */}
+                <div>
+                  <p className="text-[8.5px] font-semibold uppercase tracking-widest text-th-muted font-mono mb-2 pb-1.5 border-b border-th-border">AI Urgency</p>
+                  {[
+                    { val: 'CRIT', label: '🔥 Critical >85', count: 8  },
+                    { val: 'HIGH', label: '⚠ High 60–85',    count: 14 },
+                    { val: 'MED',  label: '● Medium <60',    count: 25 },
+                  ].map(f => (
+                    <button key={f.val} onClick={() => setUrgFilter(urgFilter === f.val ? '' : f.val)}
+                      className={cn(
+                        'w-full flex items-center justify-between px-2 py-1.5 rounded text-[10px] mb-1 border-l-2 transition-colors',
+                        urgFilter === f.val
+                          ? 'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger))]'
+                          : 'text-th-secondary border-transparent hover:bg-th-surface-overlay hover:text-th-heading'
+                      )}>
+                      <span>{f.label}</span>
+                      <span className="font-mono text-[9px] text-th-muted">{f.count}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Payer */}
+                <div>
+                  <p className="text-[8.5px] font-semibold uppercase tracking-widest text-th-muted font-mono mb-2 pb-1.5 border-b border-th-border">Payer</p>
+                  {[
+                    { val: 'Medicare',     count: 12 },
+                    { val: 'BCBS TX',      count: 9  },
+                    { val: 'Aetna',        count: 8  },
+                    { val: 'UnitedHealth', count: 7  },
+                    { val: 'Cigna',        count: 5  },
+                    { val: 'Humana',       count: 4  },
+                  ].map(f => (
+                    <button key={f.val} onClick={() => setPayerFilter(payerFilter === f.val ? '' : f.val)}
+                      className={cn(
+                        'w-full flex items-center justify-between px-2 py-1.5 rounded text-[10px] mb-1 border-l-2 transition-colors',
+                        payerFilter === f.val
+                          ? 'bg-[rgb(var(--color-primary-bg))] text-[rgb(var(--color-primary))] border-[rgb(var(--color-primary))]'
+                          : 'text-th-secondary border-transparent hover:bg-th-surface-overlay hover:text-th-heading'
+                      )}>
+                      <span>{f.val}</span>
+                      <span className="font-mono text-[9px] text-th-muted">{f.count}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* CARC Code */}
+                <div>
+                  <p className="text-[8.5px] font-semibold uppercase tracking-widest text-th-muted font-mono mb-2 pb-1.5 border-b border-th-border">CARC Code</p>
+                  {[
+                    { val: 'CO-16', label: 'CO-16 Auth',      count: 11 },
+                    { val: 'CO-4',  label: 'CO-4 Coding',     count: 9  },
+                    { val: 'CO-97', label: 'CO-97 Duplicate', count: 7  },
+                    { val: 'PR-50', label: 'PR-50 Med Nec',   count: 6  },
+                    { val: 'CO-11', label: 'CO-11 Diagnosis',  count: 5  },
+                    { val: 'CO-29', label: 'CO-29 Timely',    count: 4  },
+                  ].map(f => (
+                    <button key={f.val} onClick={() => setCarcFilter(carcFilter === f.val ? '' : f.val)}
+                      className={cn(
+                        'w-full flex items-center justify-between px-2 py-1.5 rounded text-[10px] mb-1 border-l-2 transition-colors',
+                        carcFilter === f.val
+                          ? 'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger))]'
+                          : 'text-th-secondary border-transparent hover:bg-th-surface-overlay hover:text-th-heading'
+                      )}>
+                      <span className="font-mono">{f.label}</span>
+                      <span className="font-mono text-[9px] text-th-muted">{f.count}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Denial Category */}
+                <div>
+                  <p className="text-[8.5px] font-semibold uppercase tracking-widest text-th-muted font-mono mb-2 pb-1.5 border-b border-th-border">Denial Category</p>
+                  {[
+                    { val: 'Administrative', count: 18 },
+                    { val: 'Clinical',       count: 14 },
+                    { val: 'Coding',         label: 'Billing/Coding', count: 11 },
+                    { val: 'Contractual',    count: 4  },
+                  ].map(f => (
+                    <button key={f.val} onClick={() => setCategoryFilter(categoryFilter === f.val ? '' : f.val)}
+                      className={cn(
+                        'w-full flex items-center justify-between px-2 py-1.5 rounded text-[10px] mb-1 border-l-2 transition-colors',
+                        categoryFilter === f.val
+                          ? 'bg-[rgb(var(--color-primary-bg))] text-[rgb(var(--color-primary))] border-[rgb(var(--color-primary))]'
+                          : 'text-th-secondary border-transparent hover:bg-th-surface-overlay hover:text-th-heading'
+                      )}>
+                      <span>{f.label || f.val}</span>
+                      <span className="font-mono text-[9px] text-th-muted">{f.count}</span>
+                    </button>
+                  ))}
+                </div>
+
               </div>
             </div>
 
