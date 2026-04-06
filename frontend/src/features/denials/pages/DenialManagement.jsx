@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../../services/api';
 import { AIInsightCard, ConfidenceBar, DateRangePicker, FilterChip, FilterChipGroup, RootCauseInvestigationPanel } from '../../../components/ui';
 import { AppealSuccessBadge } from '../../../components/predictions';
+import AppealWorkbench from './AppealPipelineTracker';
 import { cn } from '../../../lib/utils';
 
 // ── Shared currency formatter ───────────────────────────────────────────────
@@ -1069,9 +1070,7 @@ export function DenialManagement() {
 
         {/* TAB 2: APPEAL WORKBENCH */}
         {activeTab === 'appeal' && (
-          <div className="flex-1 flex items-center justify-center h-full text-th-muted text-sm">
-            Appeal Workbench — AppealPipelineTracker.jsx
-          </div>
+          <AppealWorkbench />
         )}
 
         {/* TAB 3: HIGH RISK CLAIMS */}

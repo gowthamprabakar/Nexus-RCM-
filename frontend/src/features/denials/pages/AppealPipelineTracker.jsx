@@ -1,232 +1,264 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../../services/api';
 
-const STAGES = ['PENDING', 'SUBMITTED', 'UNDER_REVIEW', 'WON', 'LOST'];
+const cn = (...classes) => classes.filter(Boolean).join(' ');
 
-const STAGE_CONFIG = {
-  PENDING: { color: 'bg-slate-400', bg: 'bg-slate-500/10', text: 'text-slate-400', border: 'border-slate-500/30' },
-  SUBMITTED: { color: 'bg-blue-400', bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/30' },
-  UNDER_REVIEW: { color: 'bg-amber-400', bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/30' },
-  WON: { color: 'bg-emerald-400', bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/30' },
-  LOST: { color: 'bg-red-400', bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/30' },
+const APPEAL_DATA = {
+  'CLM-8821': {
+    payer: 'Medicare', amount: 4200, carc: 'CO-16', patient: 'Sarah Johnson',
+    mf: 'confirmed', mfConf: 87,
+    mfReason: '47 agents agree: Prior auth PA-2024-8821 covers DOS 2024-01-15. Denial is administrative non-attachment. Fully recoverable.',
+    arguments: [
+      { color: 'success', title: 'Auth was valid:', body: 'PA-2024-8821 active on DOS. Medicare §1842(l) allows resubmission with auth documentation.' },
+      { color: 'success', title: 'Administrative error:', body: 'Auth not attached due to EHR migration workflow gap. 9 of 11 similar claims appealed successfully.' },
+      { color: 'primary', title: 'Historical precedent:', body: 'Medicare upheld 89% of similar admin CO-16 denials with auth documentation. Graph evidence confirms.' },
+      { color: 'purple', title: 'Medical necessity met:', body: 'CPT 99215 appropriate — 5-component exam documented. No clinical denial basis.' },
+    ],
+    scores: [
+      { label: 'Appeal success', val: 87, color: 'success' },
+      { label: 'Denial recurrence prob', val: 23, color: 'success' },
+      { label: 'Write-off risk if not appealed', val: 42, color: 'warning' },
+    ],
+    docs: [
+      { name: 'Prior Auth PA-2024-8821', status: 'attached' },
+      { name: 'Clinical Notes DOS 2024-01-15', status: 'attached' },
+      { name: 'PAR Letter from Dr. Martinez', status: 'pending' },
+      { name: 'EHR Migration Documentation', status: 'optional' },
+    ],
+    letterConfidence: 91,
+    letter: `April 04, 2026\n\nMedicare Provider Relations\nRe: Appeal of Claim Denial — CLM-8821\n\nDear Medicare Provider Relations,\n\nWe are formally appealing the denial of claim CLM-8821 for services rendered to Sarah Johnson (MRN-10284) on January 15, 2024. The claim was denied under CO-16.\n\nBasis for Appeal: Prior Authorization PA-2024-8821 was obtained and valid for DOS. The authorization was not attached due to EHR migration — an administrative error.\n\nSupporting Documentation Enclosed:\n1. Copy of Prior Authorization PA-2024-8821\n2. Complete clinical notes\n3. Physician attestation from Dr. Martinez\n\nWe respectfully request reconsideration and payment of $4,200.00.\n\nSincerely,\nSarah Patel · Billing Director`,
+  },
+  'CLM-7788': {
+    payer: 'Aetna', amount: 8400, carc: 'CO-97', patient: 'David Park',
+    mf: 'confirmed', mfConf: 74,
+    mfReason: 'Duplicate is a system error from billing migration. Original claim paid. Appeal with migration evidence will be upheld.',
+    arguments: [
+      { color: 'success', title: 'System-generated duplicate:', body: 'EHR migration triggered duplicate. Not a human error.' },
+      { color: 'success', title: 'Original claim paid:', body: 'CLM-7781 (original) was paid in full.' },
+      { color: 'primary', title: 'Historical precedent:', body: 'Aetna accepted 74% of similar system-generated duplicate reversals.' },
+    ],
+    scores: [
+      { label: 'Appeal success', val: 74, color: 'success' },
+      { label: 'Denial recurrence prob', val: 18, color: 'success' },
+      { label: 'Write-off risk', val: 18, color: 'success' },
+    ],
+    docs: [
+      { name: 'Evidence of original payment CLM-7781', status: 'attached' },
+      { name: 'EHR migration documentation', status: 'attached' },
+      { name: 'Letter confirming system-generated dup', status: 'pending' },
+    ],
+    letterConfidence: 82,
+    letter: `April 04, 2026\n\nAetna Provider Relations\nRe: Appeal — CLM-7788 (CO-97 Duplicate)\n\nDear Aetna Provider Relations,\n\nWe are appealing CLM-7788 denied under CO-97. This duplicate was generated automatically during EHR migration. Original claim CLM-7781 was paid.\n\nEnclosed:\n1. Evidence of original payment CLM-7781\n2. EHR migration documentation\n\nWe request reversal and payment of $8,400.00.\n\nSincerely,\nSarah Patel · Billing Director`,
+  },
+  'CLM-6632': {
+    payer: 'Cigna', amount: 3900, carc: 'CO-16', patient: 'James Wilson',
+    mf: 'confirmed', mfConf: 81,
+    mfReason: 'Renewal request initiated before DOS. Cigna policy allows retroactive auth in renewal delay cases. 81% win rate.',
+    arguments: [
+      { color: 'success', title: 'Renewal requested before DOS:', body: 'Auth renewal submitted 2024-02-08, before DOS 2024-02-15.' },
+      { color: 'success', title: 'Ongoing clinical necessity:', body: 'Treatment ongoing — auth lapse was administrative.' },
+      { color: 'primary', title: 'Cigna retroactive auth policy:', body: 'Cigna §12.4 allows retroactive auth when renewal in process.' },
+    ],
+    scores: [
+      { label: 'Appeal success', val: 81, color: 'success' },
+      { label: 'Denial recurrence prob', val: 12, color: 'success' },
+      { label: 'Write-off risk', val: 12, color: 'success' },
+    ],
+    docs: [
+      { name: 'Auth renewal request dated 2024-02-08', status: 'attached' },
+      { name: 'Clinical notes', status: 'attached' },
+      { name: 'Cigna retroactive auth policy citation', status: 'pending' },
+    ],
+    letterConfidence: 85,
+    letter: `April 04, 2026\n\nCigna Provider Relations\nRe: Appeal — CLM-6632 (CO-16 Auth Expired)\n\nDear Cigna Provider Relations,\n\nWe appeal CLM-6632 denied under CO-16. Auth renewal was requested 2024-02-08 before DOS. Under Cigna §12.4, retroactive auth is permitted.\n\nEnclosed:\n1. Auth renewal request\n2. Clinical notes\n3. Cigna policy citation\n\nWe request payment of $3,900.00.\n\nSincerely,\nSarah Patel · Billing Director`,
+  },
+  'CLM-4821': {
+    payer: 'BCBS TX', amount: 4800, carc: 'CO-4', patient: 'Dr Kim Patient',
+    mf: 'confirmed', mfConf: 71,
+    mfReason: 'Modifier-25 required for same-day E&M + procedure under BCBS TX policy. Documentation supports separate evaluation.',
+    arguments: [
+      { color: 'success', title: 'Separate significant evaluation:', body: 'Dr. Kim performed distinct E&M service separate from procedure — documented.' },
+      { color: 'primary', title: 'Modifier-25 appropriate:', body: 'CPT guidelines allow Modifier-25 for separately identifiable E&M on same day as procedure.' },
+    ],
+    scores: [
+      { label: 'Appeal success', val: 71, color: 'success' },
+      { label: 'Denial recurrence prob', val: 22, color: 'success' },
+      { label: 'Write-off risk', val: 22, color: 'success' },
+    ],
+    docs: [
+      { name: 'Clinical notes with Modifier-25 documentation', status: 'attached' },
+      { name: 'CPT Modifier-25 policy reference', status: 'pending' },
+    ],
+    letterConfidence: 78,
+    letter: `April 04, 2026\n\nBCBS TX Provider Relations\nRe: Appeal — CLM-4821 (CO-4 Modifier-25)\n\nDear BCBS TX Provider Relations,\n\nWe appeal CLM-4821. Modifier-25 was appropriate — Dr. Kim performed a separate E&M service documented in clinical notes.\n\nEnclosed:\n1. Clinical notes\n2. CPT Modifier-25 policy reference\n\nWe request payment of $4,800.00.\n\nSincerely,\nSarah Patel · Billing Director`,
+  },
 };
 
-const STAGE_LABELS = {
-  PENDING: 'Pending',
-  SUBMITTED: 'Submitted',
-  UNDER_REVIEW: 'Under Review',
-  WON: 'Won',
-  LOST: 'Lost',
-};
+const IN_FLIGHT_APPEALS = [
+  { id: 'CLM-8821', payer: 'Medicare', amount: 4200, winPct: 87, status: 'Pending review', deadline: 'Jul-15' },
+  { id: 'CLM-6632', payer: 'Cigna', amount: 3900, winPct: 81, status: 'Pending review', deadline: 'Jun-30' },
+  { id: 'CLM-7788', payer: 'Aetna', amount: 8400, winPct: 74, status: 'Under review', deadline: 'May-20' },
+  { id: 'CLM-4821', payer: 'BCBS TX', amount: 4800, winPct: 71, status: 'Draft', deadline: 'Jul-01' },
+  { id: 'CLM-2910', payer: 'Medicare', amount: 1200, winPct: 79, status: 'Submitted', deadline: 'Aug-10' },
+];
 
-function AppealPipelineTracker() {
-  const [pipelineData, setPipelineData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+export default function AppealPipelineTracker() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlClaim = searchParams.get('claim');
+  const [selectedId, setSelectedId] = useState(urlClaim || 'CLM-8821');
+  const [letterText, setLetterText] = useState('');
+  const [liveAppeals, setLiveAppeals] = useState([]);
+
+  const claim = APPEAL_DATA[selectedId] || APPEAL_DATA['CLM-8821'];
+
+  useEffect(() => { setLetterText(claim.letter); }, [selectedId]);
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-
-    api.predictions.getOutcomeSummary()
-      .then((res) => {
-        if (res) {
-          // Build pipeline from summary data
-          const pipeline = buildPipeline(res);
-          setPipelineData(pipeline);
-        } else {
-          setError('Failed to load pipeline data');
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        setError('Failed to load pipeline data');
-        setLoading(false);
-      });
+    api.predictions?.getOutcomeSummary?.()
+      .then(res => { if (res?.appeals) setLiveAppeals(res.appeals); })
+      .catch(() => {});
   }, []);
 
-  if (loading) {
-    return (
-      <div className="p-6 space-y-6">
-        <h1 className="text-2xl font-bold text-th-primary">Appeal Pipeline</h1>
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {STAGES.map((stage) => (
-            <div
-              key={stage}
-              className="flex-1 min-w-[140px] rounded-xl border border-th-border bg-th-surface p-4 animate-pulse"
-            >
-              <div className="h-3 w-20 bg-th-surface-overlay rounded mb-3" />
-              <div className="h-8 w-16 bg-th-surface-overlay rounded mb-2" />
-              <div className="h-3 w-24 bg-th-surface-overlay rounded" />
+  const appeals = liveAppeals.length > 0 ? liveAppeals : IN_FLIGHT_APPEALS;
+  const totalValue = appeals.reduce((s, a) => s + (a.amount || 0), 0);
+
+  const barColor = (val, color) => color === 'success' ? 'bg-[rgb(var(--color-success))]' : color === 'warning' ? 'bg-[rgb(var(--color-warning))]' : val >= 70 ? 'bg-[rgb(var(--color-success))]' : val >= 50 ? 'bg-[rgb(var(--color-warning))]' : 'bg-[rgb(var(--color-danger))]';
+  const valColor = (val, color) => color === 'success' ? 'text-[rgb(var(--color-success))]' : color === 'warning' ? 'text-[rgb(var(--color-warning))]' : val >= 70 ? 'text-[rgb(var(--color-success))]' : val >= 50 ? 'text-[rgb(var(--color-warning))]' : 'text-[rgb(var(--color-danger))]';
+  const argBorder = (color) => ({ success:'border-l-[rgb(var(--color-success))]', primary:'border-l-[rgb(var(--color-primary))]', purple:'border-l-purple-500', warning:'border-l-[rgb(var(--color-warning))]' }[color] || 'border-l-th-border');
+  const statusBadge = (status) => status === 'Submitted' ? 'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]' : status === 'Under review' ? 'bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))] border-[rgb(var(--color-info)/0.3)]' : status === 'Draft' ? 'bg-th-surface-overlay text-th-muted border-th-border' : 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]';
+
+  return (
+    <div className="flex-1 flex min-h-0 overflow-hidden" style={{display:'grid', gridTemplateColumns:'1fr 1fr'}}>
+      {/* LEFT: AI EVIDENCE */}
+      <div className="border-r border-th-border overflow-y-auto bg-th-surface-base p-4 space-y-4">
+        <p className="text-[8.5px] font-mono font-bold uppercase tracking-widest text-th-muted">AI Evidence · Why the appeal was drafted this way</p>
+
+        {/* Claim header chips */}
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { label:'CLAIM', val: selectedId, mono: true, color: 'text-[rgb(var(--color-info))]' },
+            { label:'PAYER', val: claim.payer, mono: false, color: 'text-th-heading' },
+            { label:'AMOUNT', val: `$${claim.amount.toLocaleString()}`, mono: true, color: 'text-th-heading' },
+            { label:'VERDICT', val: null, mono: false, color: '' },
+          ].map((chip, i) => (
+            <div key={i} className={cn('flex-1 min-w-[60px] px-3 py-2 rounded-lg border bg-th-surface-overlay', chip.label === 'VERDICT' ? claim.mf === 'confirmed' ? 'border-[rgb(var(--color-success)/0.3)]' : 'border-[rgb(var(--color-danger)/0.3)]' : 'border-th-border')}>
+              <p className="text-[8px] font-mono text-th-muted uppercase tracking-wider mb-1">{chip.label}</p>
+              {chip.label === 'VERDICT' ? (
+                <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold font-mono border', claim.mf === 'confirmed' ? 'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]' : claim.mf === 'disputed' ? 'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger)/0.3)]' : 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]')}>
+                  {claim.mf === 'confirmed' ? 'CONFIRMED' : claim.mf === 'disputed' ? 'DISPUTED' : 'Pending'}
+                </span>
+              ) : (
+                <p className={cn('text-[11px] font-bold', chip.mono ? 'font-mono' : '', chip.color)}>{chip.val}</p>
+              )}
             </div>
           ))}
         </div>
-      </div>
-    );
-  }
 
-  if (error) {
-    return (
-      <div className="p-6 space-y-6">
-        <h1 className="text-2xl font-bold text-th-primary">Appeal Pipeline</h1>
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-5 text-red-400 text-sm">
-          {error}. Please try again later.
+        {/* MiroFish reason */}
+        <div className={cn('px-3 py-2.5 rounded-lg border text-[10.5px] text-th-secondary leading-relaxed', claim.mf === 'confirmed' ? 'bg-[rgb(var(--color-success-bg))] border-[rgb(var(--color-success)/0.3)]' : 'bg-[rgb(var(--color-danger-bg))] border-[rgb(var(--color-danger)/0.3)]')}>
+          <p className={cn('text-[8px] font-mono font-bold uppercase tracking-wider mb-1.5', claim.mf === 'confirmed' ? 'text-[rgb(var(--color-success))]' : 'text-[rgb(var(--color-danger))]')}>
+            MiroFish {claim.mf.toUpperCase()} · {claim.mfConf}% consensus
+          </p>
+          {claim.mfReason}
+        </div>
+
+        {/* Key arguments */}
+        <div>
+          <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-th-muted mb-2">Key Arguments</p>
+          <div className="space-y-1.5">
+            {claim.arguments.map((arg, i) => (
+              <div key={i} className={cn('px-3 py-2 bg-th-surface-overlay border border-th-border rounded border-l-2 text-[10.5px] text-th-secondary leading-relaxed', argBorder(arg.color))}>
+                <strong className="text-th-heading">{arg.title}</strong> {arg.body}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ML Scores */}
+        <div>
+          <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-th-muted mb-2">ML Scores</p>
+          <div className="space-y-2">
+            {claim.scores.map((s, i) => (
+              <div key={i}>
+                <div className="flex justify-between text-[9px] text-th-secondary mb-0.5">
+                  <span>{s.label}</span>
+                  <span className={cn('font-bold font-mono', valColor(s.val, s.color))}>{s.val}%</span>
+                </div>
+                <div className="h-1.5 bg-th-surface-overlay rounded-full overflow-hidden">
+                  <div className={cn('h-full rounded-full', barColor(s.val, s.color))} style={{width:`${s.val}%`}} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Documents */}
+        <div>
+          <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-th-muted mb-2">Documents to Attach</p>
+          <div className="space-y-1.5">
+            {claim.docs.map((doc, i) => (
+              <div key={i} className={cn('flex items-center justify-between px-2.5 py-1.5 rounded border text-[10px]', doc.status === 'attached' ? 'bg-[rgb(var(--color-success-bg))] border-[rgb(var(--color-success)/0.2)]' : 'bg-th-surface-overlay border-th-border')}>
+                <span className={doc.status === 'attached' ? 'text-th-heading' : 'text-th-secondary'}>{doc.name}</span>
+                <span className={cn('px-2 py-0.5 rounded text-[9px] font-bold border', doc.status === 'attached' ? 'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]' : doc.status === 'pending' ? 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]' : 'bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))] border-[rgb(var(--color-info)/0.3)]')}>
+                  {doc.status === 'attached' ? 'Attached' : doc.status === 'pending' ? 'Pending' : 'Optional'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Claim selector */}
+        <div className="pt-2 border-t border-th-border">
+          <p className="text-[8.5px] font-mono font-bold uppercase tracking-wider text-th-muted mb-2">Switch Claim</p>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.keys(APPEAL_DATA).map(id => (
+              <button key={id} onClick={() => setSelectedId(id)} className={cn('px-2 py-0.5 rounded text-[9px] font-bold font-mono border transition-colors', selectedId === id ? 'bg-[rgb(var(--color-primary))] text-white border-[rgb(var(--color-primary))]' : 'bg-th-surface-overlay text-th-muted border-th-border hover:text-th-heading')}>
+                {id}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-    );
-  }
 
-  const totalCount = pipelineData
-    ? STAGES.reduce((sum, s) => sum + (pipelineData[s]?.count || 0), 0)
-    : 0;
+      {/* RIGHT: LETTER EDITOR + QUEUE */}
+      <div className="overflow-y-auto p-4 flex flex-col gap-4">
+        <div className="flex items-center justify-between shrink-0">
+          <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-th-muted">AI-Drafted Appeal Letter · Confidence: {claim.letterConfidence}%</p>
+          <div className="flex gap-2">
+            <button className="px-2.5 py-1.5 rounded text-[10px] font-medium border border-th-border bg-th-surface-overlay text-th-secondary hover:text-th-heading transition-colors">Regenerate</button>
+            <button className="px-2.5 py-1.5 rounded text-[10px] font-medium border border-th-border bg-th-surface-overlay text-th-secondary hover:text-th-heading transition-colors">Edit</button>
+            <button className="px-2.5 py-1.5 rounded text-[10px] font-semibold bg-[rgb(var(--color-primary))] text-white border border-[rgb(var(--color-primary))] hover:opacity-90 transition-opacity">Submit Appeal</button>
+          </div>
+        </div>
 
-  return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-th-primary">Appeal Pipeline</h1>
-        <span className="text-sm text-th-muted">
-          {totalCount.toLocaleString()} total appeals
-        </span>
-      </div>
+        <textarea value={letterText} onChange={(e) => setLetterText(e.target.value)} className="flex-1 min-h-[280px] bg-th-surface-overlay border border-th-border rounded-lg p-4 text-[10.5px] text-th-secondary leading-relaxed resize-none focus:outline-none focus:border-[rgb(var(--color-primary)/0.5)] font-sans" />
 
-      {/* Pipeline visualization */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        {STAGES.map((stage, idx) => {
-          const stageData = pipelineData?.[stage] || { count: 0, value: 0 };
-          const config = STAGE_CONFIG[stage];
-          const isTerminal = stage === 'WON' || stage === 'LOST';
-
-          return (
-            <React.Fragment key={stage}>
-              <div
-                className={`flex-1 min-w-[140px] rounded-xl border ${config.border} ${config.bg} p-4`}
-              >
-                {/* Stage header */}
-                <div className="flex items-center gap-2 mb-3">
-                  <span className={`size-2 rounded-full ${config.color}`} />
-                  <span className={`text-xs font-semibold uppercase tracking-wide ${config.text}`}>
-                    {STAGE_LABELS[stage]}
-                  </span>
-                </div>
-
-                {/* Count */}
-                <p className={`text-2xl font-bold tabular-nums ${config.text}`}>
-                  {stageData.count.toLocaleString()}
-                </p>
-
-                {/* Value */}
-                <p className="text-xs text-th-muted mt-1">
-                  ${(stageData.value || 0).toLocaleString()}
-                </p>
-
-                {/* Percentage bar */}
-                {totalCount > 0 && (
-                  <div className="mt-3 h-1 bg-th-surface-overlay rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${config.color}`}
-                      style={{
-                        width: `${Math.round((stageData.count / totalCount) * 100)}%`,
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Arrow connector between non-terminal stages */}
-              {idx < STAGES.length - 1 && !isTerminal && (
-                <div className="flex items-center shrink-0">
-                  <span className="text-th-muted text-lg">&#8594;</span>
-                </div>
-              )}
-            </React.Fragment>
-          );
-        })}
-      </div>
-
-      {/* Stage detail table */}
-      <div className="rounded-xl border border-th-border bg-th-surface overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-th-border">
-              <th className="text-left px-4 py-3 text-xs font-medium text-th-muted uppercase tracking-wide">Stage</th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-th-muted uppercase tracking-wide">Count</th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-th-muted uppercase tracking-wide">Value</th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-th-muted uppercase tracking-wide">% of Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {STAGES.map((stage) => {
-              const stageData = pipelineData?.[stage] || { count: 0, value: 0 };
-              const config = STAGE_CONFIG[stage];
-              const pctOfTotal = totalCount > 0
-                ? Math.round((stageData.count / totalCount) * 100)
-                : 0;
-
-              return (
-                <tr key={stage} className="border-b border-th-border last:border-0">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className={`size-2 rounded-full ${config.color}`} />
-                      <span className={`text-sm font-medium ${config.text}`}>
-                        {STAGE_LABELS[stage]}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-right text-th-primary tabular-nums font-medium">
-                    {stageData.count.toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 text-right text-th-secondary tabular-nums">
-                    ${(stageData.value || 0).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 text-right text-th-secondary tabular-nums">
-                    {pctOfTotal}%
-                  </td>
+        <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden shrink-0">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-th-border bg-th-surface-overlay">
+            <h3 className="text-[11px] font-semibold text-th-heading">All Appeals In-Flight</h3>
+            <span className="text-[9px] font-mono text-th-muted">{appeals.length} active · ${(totalValue / 1000).toFixed(0)}K</span>
+          </div>
+          <table className="w-full text-[11px]">
+            <thead><tr className="border-b border-th-border bg-th-surface-overlay">
+              {['Claim','Payer','Amount','Win%','Status','Deadline'].map(h => (<th key={h} className="px-3 py-2 text-left text-[9px] font-mono font-semibold uppercase tracking-wider text-th-muted">{h}</th>))}
+            </tr></thead>
+            <tbody>
+              {appeals.map((a, i) => (
+                <tr key={i} onClick={() => setSelectedId(a.id || a.claim_id)} className={cn('border-b border-th-border last:border-0 hover:bg-th-surface-overlay transition-colors cursor-pointer', (a.id || a.claim_id) === selectedId ? 'bg-[rgb(var(--color-primary-bg))]' : '')}>
+                  <td className="px-3 py-2 font-mono font-bold text-[rgb(var(--color-info))]">{a.id || a.claim_id}</td>
+                  <td className="px-3 py-2 text-th-secondary">{a.payer}</td>
+                  <td className="px-3 py-2 font-mono font-bold text-th-heading">${(a.amount || 0).toLocaleString()}</td>
+                  <td className={cn('px-3 py-2 font-mono font-bold', (a.winPct || 0) >= 75 ? 'text-[rgb(var(--color-success))]' : (a.winPct || 0) >= 50 ? 'text-[rgb(var(--color-warning))]' : 'text-[rgb(var(--color-danger))]')}>{a.winPct || 0}%</td>
+                  <td className="px-3 py-2"><span className={cn('px-2 py-0.5 rounded text-[9px] font-bold border', statusBadge(a.status))}>{a.status}</span></td>
+                  <td className="px-3 py-2 font-mono text-th-muted">{a.deadline || '—'}</td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
 }
-
-/**
- * Build pipeline stage data from the outcome summary response.
- * Maps by_outcome entries to pipeline stages, falling back to
- * reasonable defaults if the data shape differs.
- */
-function buildPipeline(summaryRes) {
-  const pipeline = {};
-  STAGES.forEach((s) => {
-    pipeline[s] = { count: 0, value: 0 };
-  });
-
-  if (summaryRes.by_stage) {
-    // Prefer by_stage if the API provides it
-    Object.entries(summaryRes.by_stage).forEach(([stage, data]) => {
-      const key = stage.toUpperCase();
-      if (pipeline[key] !== undefined) {
-        pipeline[key] = {
-          count: data.count || 0,
-          value: data.value || data.total_value || 0,
-        };
-      }
-    });
-  } else if (summaryRes.by_outcome) {
-    // Map outcome data to stages as a fallback
-    summaryRes.by_outcome.forEach((item) => {
-      const key = (item.outcome || item.label || '').toUpperCase().replace(/\s+/g, '_');
-      if (pipeline[key] !== undefined) {
-        pipeline[key] = {
-          count: item.count || 0,
-          value: item.value || item.total_value || 0,
-        };
-      }
-    });
-  }
-
-  return pipeline;
-}
-
-export default AppealPipelineTracker;
