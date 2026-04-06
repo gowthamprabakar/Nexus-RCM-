@@ -221,7 +221,7 @@ async def payer_performance(
             SELECT
                 ep.payer_id,
                 AVG(
-                    EXTRACT(EPOCH FROM (ep.payment_date::timestamp - c.service_date::timestamp)) / 86400
+                    EXTRACT(EPOCH FROM (ep.payment_date::timestamp - c.date_of_service::timestamp)) / 86400
                 ) as avg_days
             FROM era_payments ep
             JOIN claims c ON ep.claim_id = c.claim_id
