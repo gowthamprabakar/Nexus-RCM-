@@ -4,7 +4,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
 // Reusable Link Item — left-border accent style (Atlassian pattern)
-const SidebarLink = ({ to, icon, label, badge, isNew }) => {
+const SidebarLink = ({ to, icon, label, badge, isNew, badgeDanger, badgeAmber, badgePurple, badgeCyan }) => {
     return (
         <NavLink
             to={to}
@@ -27,7 +27,14 @@ const SidebarLink = ({ to, icon, label, badge, isNew }) => {
                     <span className="text-[9px] px-1.5 py-0.5 rounded bg-th-primary/10 text-th-primary font-bold uppercase">New</span>
                 )}
                 {badge && (
-                    <span className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))]">{badge}</span>
+                    <span className={cn(
+                        "px-1.5 py-0.5 text-[9px] font-bold rounded",
+                        badgeAmber  ? "bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))]" :
+                        badgePurple ? "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400" :
+                        badgeCyan   ? "bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))]" :
+                        badgeDanger ? "bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))]" :
+                                      "bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))]"
+                    )}>{badge}</span>
                 )}
             </div>
         </NavLink>
@@ -42,10 +49,11 @@ const SectionHeader = ({ label }) => (
 export function Sidebar() {
     return (
         <aside className="w-[240px] bg-th-surface-sidebar border-r border-th-border flex flex-col h-screen shrink-0 font-sans z-20 transition-colors duration-200">
+
             {/* Brand Header */}
-            <div className="h-[52px] flex items-center px-4 border-b border-th-border">
+            <div className="h-[52px] flex items-center px-4 border-b border-th-border shrink-0">
                 <div className="flex items-center gap-3">
-                    <div className="size-8 rounded-lg bg-[rgb(var(--color-primary))] flex items-center justify-center text-white text-xs font-bold">
+                    <div className="size-8 rounded-lg bg-[rgb(var(--color-primary))] flex items-center justify-center text-white text-xs font-bold shrink-0">
                         NX
                     </div>
                     <div>
@@ -56,64 +64,76 @@ export function Sidebar() {
             </div>
 
             {/* Scrollable Nav */}
-            <div className="flex-1 overflow-y-auto py-3 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto py-2 custom-scrollbar">
 
-                {/* Command Center */}
-                <div className="mb-1">
-                    <SidebarLink to="/" icon="hub" label="Command Center" />
+                {/* ── COMMAND ── */}
+                <SectionHeader label="Command" />
+                <div className="space-y-0.5 mb-1">
+                    <SidebarLink to="/" icon="hub" label="Command Center" badge="23" />
                 </div>
 
-                {/* -- ANALYTICS -- */}
-                <SectionHeader label="Analytics" />
-                <div className="space-y-0.5">
-                    <SidebarLink to="/analytics/revenue" icon="monitoring" label="Revenue Analytics" />
-                    <SidebarLink to="/analytics/denials" icon="shield" label="Denial Analytics" />
-                    <SidebarLink to="/analytics/payments" icon="payments" label="Payment Intelligence" />
-                    <SidebarLink to="/analytics/prevention" icon="health_and_safety" label="Prevention" isNew />
-                    <SidebarLink to="/analytics/claims" icon="receipt_long" label="Claims Pipeline" />
-                    <SidebarLink to="/analytics/graph-explorer" icon="hub" label="Graph Explorer" isNew />
-                    <SidebarLink to="/analytics/compliance" icon="verified_user" label="Compliance Risk" isNew />
-                    <SidebarLink to="/analytics/payer-health" icon="vital_signs" label="Payer Health" isNew />
-                    <SidebarLink to="/analytics/provider-leaderboard" icon="leaderboard" label="Provider Leaderboard" isNew />
-                    <SidebarLink to="/payments/contract-variance" icon="difference" label="Contract Variance" isNew />
+                <div className="mx-3 my-2 h-px bg-th-border" />
+
+                {/* ── PREVENT ── */}
+                <SectionHeader label="🛡 Prevent" />
+                <div className="space-y-0.5 mb-1">
+                    <SidebarLink to="/analytics/claims"       icon="fact_check"     label="Claim Readiness"    badge="8" />
+                    <SidebarLink to="/analytics/prevention"   icon="health_and_safety" label="Prevention Engine" badge="12" />
+                    <SidebarLink to="/specialty/patient-access" icon="person_check"  label="Patient Access" />
+                    <SidebarLink to="/specialty/coding"        icon="code"           label="Coding Optimizer"   isNew />
+                    <SidebarLink to="/work/automation"         icon="smart_toy"      label="Automation Rules"   badge="14" />
                 </div>
 
-                {/* -- WORK -- */}
-                <SectionHeader label="Work" />
-                <div className="space-y-0.5">
-                    <SidebarLink to="/work/claims" icon="edit_note" label="Claims Work Center" />
-                    <SidebarLink to="/work/denials" icon="gavel" label="Denial Work Center" badge="12" />
-                    <SidebarLink to="/work/collections" icon="call" label="Collections Work Center" />
-                    <SidebarLink to="/work/payments" icon="account_balance" label="Payment Work Center" />
-                    <SidebarLink to="/work/automation" icon="smart_toy" label="Automation Dashboard" isNew />
+                <div className="mx-3 my-2 h-px bg-th-border" />
+
+                {/* ── DETECT ── */}
+                <SectionHeader label="⚡ Detect" />
+                <div className="space-y-0.5 mb-1">
+                    <SidebarLink to="/work/denials"           icon="bolt"           label="Denial Command"     badge="47" badgeDanger />
+                    <SidebarLink to="/analytics/denials"      icon="psychology"     label="Denial Intelligence" isNew />
+                    <SidebarLink to="/work/denials/appeals"   icon="description"    label="Appeal Workbench"   badge="9" />
+                    <SidebarLink to="/work/denials/high-risk" icon="local_fire_department" label="High Risk Claims" badge="31" badgeDanger />
+                    <SidebarLink to="/analytics/payer-health" icon="bar_chart"      label="Payer Patterns" />
+                    <SidebarLink to="/analytics/root-cause"   icon="hub"            label="RCA Tree"           isNew />
                 </div>
 
-                {/* -- INTELLIGENCE -- */}
-                <SectionHeader label="Intelligence" />
-                <div className="space-y-0.5">
-                    <SidebarLink to="/intelligence/lida" icon="auto_awesome" label="LIDA AI" />
-                    <SidebarLink to="/intelligence/forecast" icon="trending_up" label="Revenue Forecast" />
-                    <SidebarLink to="/intelligence/simulation" icon="science" label="Simulation Engine" isNew />
+                <div className="mx-3 my-2 h-px bg-th-border" />
+
+                {/* ── RECOVER ── */}
+                <SectionHeader label="💰 Recover" />
+                <div className="space-y-0.5 mb-1">
+                    <SidebarLink to="/work/collections"       icon="call"           label="Collections Hub"    badge="$2.4M" badgeAmber />
+                    <SidebarLink to="/analytics/ar-aging"     icon="hourglass_bottom" label="AR Aging" />
+                    <SidebarLink to="/analytics/cash-flow"    icon="account_balance_wallet" label="Cash Flow" />
+                    <SidebarLink to="/payments/era"           icon="receipt"        label="ERA Processing" />
                 </div>
 
-                {/* -- SPECIALTY -- */}
-                <SectionHeader label="Specialty" />
-                <div className="space-y-0.5">
-                    <SidebarLink to="/specialty/patient-access" icon="person_check" label="Patient Access" />
-                    <SidebarLink to="/specialty/coding" icon="code" label="Coding & Charge" />
-                    <SidebarLink to="/specialty/evv" icon="home_health" label="EVV Home Health" />
+                <div className="mx-3 my-2 h-px bg-th-border" />
+
+                {/* ── PREDICT ── */}
+                <SectionHeader label="🧠 Predict" />
+                <div className="space-y-0.5 mb-1">
+                    <SidebarLink to="/intelligence/forecast"   icon="trending_up"   label="Revenue Forecast"   badge="90d" badgePurple />
+                    <SidebarLink to="/intelligence/simulation" icon="science"        label="Payer Simulation"   isNew />
+                    <SidebarLink to="/analytics/graph-explorer" icon="hub"          label="Graph Explorer"     badgeCyan />
+                    <SidebarLink to="/intelligence/lida"       icon="auto_awesome"  label="LIDA AI"            isNew />
                 </div>
 
-                {/* -- SETTINGS -- */}
+                <div className="mx-3 my-2 h-px bg-th-border" />
+
+                {/* ── SETTINGS ── */}
                 <SectionHeader label="Settings" />
-                <div className="space-y-0.5">
-                    <SidebarLink to="/settings" icon="settings" label="Settings" />
+                <div className="space-y-0.5 mb-1">
+                    <SidebarLink to="/analytics/compliance"   icon="verified_user"  label="Compliance Risk"    isNew />
+                    <SidebarLink to="/analytics/provider-leaderboard" icon="leaderboard" label="Provider Leaderboard" isNew />
+                    <SidebarLink to="/payments/contract-variance" icon="difference" label="Contract Variance"  isNew />
+                    <SidebarLink to="/settings"               icon="settings"       label="Settings" />
                 </div>
 
             </div>
 
             {/* System Status Footer */}
-            <div className="px-4 py-3 border-t border-th-border bg-th-surface-base/50">
+            <div className="px-4 py-3 border-t border-th-border bg-th-surface-base/50 shrink-0">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <span className="size-1.5 rounded-full bg-[rgb(var(--color-success))]"></span>
@@ -122,6 +142,7 @@ export function Sidebar() {
                     <span className="text-[10px] text-th-muted">v5.0</span>
                 </div>
             </div>
+
         </aside>
     );
 }
