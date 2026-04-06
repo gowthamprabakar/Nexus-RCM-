@@ -29,7 +29,7 @@ def _gen_trend_id() -> str:
 
 
 async def compute_rolling_adtp(db: AsyncSession, payer_id: str,
-                                lookback_days: int = 90) -> dict:
+                                lookback_days: int = 365) -> dict:
     """
     Compute rolling ADTP for a payer over the lookback window.
     Measures inter-payment gaps (days between consecutive payment_date values).
@@ -148,6 +148,7 @@ async def compute_rolling_adtp(db: AsyncSession, payer_id: str,
             "deviation": round(deviation, 2),
             "deviation_pct": round(deviation / max(expected_adtp, 1) * 100, 2),
             "z_score": round(z_score, 3),
+            "anomaly_score": min(100, round(abs(z_score) * 25, 1)),
             "is_anomaly": is_anomaly,
             "anomaly_type": anomaly_type,
             "payment_count": len(rows),

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
+import { api } from '../../services/api';
 
 // Comprehensive route-to-title + breadcrumb mapping
 const ROUTE_META = {
@@ -122,6 +123,26 @@ export function Header() {
     const navigate = useNavigate();
     const { theme, toggleTheme, isDark } = useTheme();
     const [searchQuery, setSearchQuery] = useState('');
+    const [liveTime, setLiveTime] = useState(new Date());
+    const [mfStatus, setMfStatus] = useState('offline');
+    const [hitlCount, setHitlCount] = useState(0);
+
+    const isCommandCenter = ['/', '/command-center'].includes(location.pathname);
+
+    // Live clock
+    useEffect(() => {
+        const t = setInterval(() => setLiveTime(new Date()), 30000);
+        return () => clearInterval(t);
+    }, []);
+
+    // MiroFish + HITL status (only on Command Center)
+    useEffect(() => {
+        if (!isCommandCenter) return;
+        api.mirofish?.getStatus?.().then(d => { if (d?.status) setMfStatus(d.status); }).catch(() => {});
+        fetch('/api/v1/automation/pending').then(r => r.ok ? r.json() : null)
+            .then(d => { const items = d?.items || (Array.isArray(d) ? d : []); setHitlCount(items.length); })
+            .catch(() => {});
+    }, [isCommandCenter]);
 
     const getRouteMeta = () => {
         const path = location.pathname;
@@ -160,8 +181,56 @@ export function Header() {
                 )}
             </div>
 
+            {/* Center: Status Pills (Command Center only) */}
+            {isCommandCenter && (
+                <div className="flex items-center gap-2">
+                    {/* LIVE pill */}
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[rgb(var(--color-success))]/10 border border-[rgb(var(--color-success))]/20">
+                        <span className="relative flex size-[5px]">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[rgb(var(--color-success))] opacity-75"></span>
+                            <span className="relative inline-flex rounded-full size-[5px] bg-[rgb(var(--color-success))]"></span>
+                        </span>
+                        <span className="font-mono text-[9.5px] font-bold text-[rgb(var(--color-success))]">LIVE · {liveTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    {/* MiroFish pill */}
+                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded border ${mfStatus === 'healthy' ? 'bg-purple-500/10 border-purple-500/20' : mfStatus === 'degraded' ? 'bg-amber-500/10 border-amber-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+                        <span className="relative flex size-[5px]">
+                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${mfStatus === 'healthy' ? 'bg-purple-400' : mfStatus === 'degraded' ? 'bg-amber-400' : 'bg-red-400'}`}></span>
+                            <span className={`relative inline-flex rounded-full size-[5px] ${mfStatus === 'healthy' ? 'bg-purple-400' : mfStatus === 'degraded' ? 'bg-amber-400' : 'bg-red-400'}`}></span>
+                        </span>
+                        <span className={`font-mono text-[9.5px] font-bold ${mfStatus === 'healthy' ? 'text-purple-400' : mfStatus === 'degraded' ? 'text-amber-400' : 'text-red-400'}`}>MiroFish {mfStatus === 'healthy' ? 'ONLINE' : mfStatus === 'degraded' ? 'DEGRADED' : 'OFFLINE'}</span>
+                    </div>
+                    {/* Neo4j pill */}
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-cyan-500/10 border border-cyan-500/20">
+                        <span className="relative flex size-[5px]"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" style={{animationDelay:'.5s'}}></span><span className="relative inline-flex rounded-full size-[5px] bg-cyan-400"></span></span>
+                        <span className="font-mono text-[9.5px] font-bold text-cyan-400">Neo4j CONNECTED</span>
+                    </div>
+                    {/* LIDA pill */}
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[rgb(var(--color-primary))]/10 border border-[rgb(var(--color-primary))]/20">
+                        <span className="relative flex size-[5px]"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[rgb(var(--color-primary))] opacity-75" style={{animationDelay:'1s'}}></span><span className="relative inline-flex rounded-full size-[5px] bg-[rgb(var(--color-primary))]"></span></span>
+                        <span className="font-mono text-[9.5px] font-bold text-[rgb(var(--color-primary))]">LIDA READY</span>
+                    </div>
+                </div>
+            )}
+
             {/* Right: Actions */}
             <div className="flex items-center gap-2">
+                {/* Command Center Action Buttons */}
+                {isCommandCenter && (
+                    <>
+                        <button onClick={() => navigate('/intelligence/lida/chat')} className="flex items-center gap-1 px-2.5 py-1 rounded text-[10.5px] font-medium text-th-secondary bg-th-surface-overlay border border-th-border hover:border-[rgb(var(--color-primary))] hover:text-[rgb(var(--color-primary))] transition-all">
+                            💬 Ask LIDA
+                        </button>
+                        <button onClick={() => window.dispatchEvent(new CustomEvent('open-hitl-modal'))} className="flex items-center gap-1 px-2.5 py-1 rounded text-[10.5px] font-medium text-th-secondary bg-th-surface-overlay border border-th-border hover:border-[rgb(var(--color-primary))] hover:text-[rgb(var(--color-primary))] transition-all">
+                            ⚡ HITL Queue {hitlCount > 0 && <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500 text-black min-w-[16px] text-center">{hitlCount}</span>}
+                        </button>
+                        <button onClick={() => navigate('/intelligence/simulation')} className="flex items-center gap-1 px-2.5 py-1 rounded text-[10.5px] font-semibold text-white bg-[rgb(var(--color-primary))] hover:bg-[rgb(var(--color-primary-hover))] transition-all">
+                            🌊 Run Simulation
+                        </button>
+                        <div className="h-4 w-px bg-th-border"></div>
+                    </>
+                )}
+
                 {/* Date */}
                 <span className="text-[11px] text-th-secondary">{formatCurrentDate()}</span>
 

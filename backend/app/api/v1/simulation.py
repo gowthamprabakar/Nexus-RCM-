@@ -452,6 +452,76 @@ async def interview_payer_agent(
         )
 
 
+# ── GET /simulation/mirofish/status ─────────────────────────────────────────
+@router.get("/mirofish/status")
+async def mirofish_status():
+    """Health-check endpoint for MiroFish engine and Qwen3 model availability."""
+    import httpx
+    import os
+
+    mirofish_url = "http://localhost:5001"
+    ollama_url = "http://localhost:11434"
+    model = os.environ.get("OLLAMA_MODEL", "qwen3:4b")
+
+    mirofish_available = False
+    qwen_available = False
+    avg_response_ms = 0
+    agent_count = 0
+
+    # ── 1. Check MiroFish reachability ──────────────────────────────────────
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            start = time.time()
+            resp = await client.get(f"{mirofish_url}/health")
+            elapsed_ms = int((time.time() - start) * 1000)
+            mirofish_available = resp.status_code < 500
+            avg_response_ms = elapsed_ms
+            # Try to extract agent count from health response
+            try:
+                health_data = resp.json()
+                agent_count = health_data.get("agent_count", 6)
+            except Exception:
+                agent_count = 6
+    except Exception:
+        mirofish_available = False
+
+    # ── 2. Check Ollama / Qwen availability ─────────────────────────────────
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            resp = await client.get(f"{ollama_url}/api/tags")
+            if resp.status_code == 200:
+                data = resp.json()
+                models = data.get("models", [])
+                model_base = model.split(":")[0].lower()
+                qwen_available = any(
+                    model_base in m.get("name", "").lower() for m in models
+                )
+    except Exception:
+        qwen_available = False
+
+    # ── 3. Determine overall status ─────────────────────────────────────────
+    if mirofish_available and qwen_available:
+        status = "healthy"
+    elif mirofish_available and not qwen_available:
+        status = "degraded"
+    else:
+        status = "offline"
+
+    return {
+        "status": status,
+        "last_check": datetime.now(timezone.utc).isoformat(),
+        "mirofish_available": mirofish_available,
+        "qwen_available": qwen_available,
+        "avg_response_ms": avg_response_ms,
+        "agent_count": agent_count,
+        "details": {
+            "mirofish_url": mirofish_url,
+            "ollama_url": ollama_url,
+            "model": model,
+        },
+    }
+
+
 # ── GET /simulation/{simulation_id}/status ───────────────────────────────────
 # NOTE: Wildcard routes MUST be registered after all static routes above
 @router.get("/{simulation_id}/status")

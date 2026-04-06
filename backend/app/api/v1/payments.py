@@ -337,7 +337,7 @@ async def get_payer_triangulation(
 @router.get("/adtp")
 async def get_adtp(
     payer_id: str = Query(None, description="Payer ID (optional, returns all payers if omitted)"),
-    lookback_days: int = Query(90, ge=7, le=365),
+    lookback_days: int = Query(365, ge=7, le=730),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """Compute rolling Average Days To Pay for payer(s)."""

@@ -105,7 +105,39 @@ export const api = {
                     { month: 'Sep', actual: 3.5, predicted: 3.4 },
                     { month: 'Oct', actual: null, predicted: 3.8 } // Prediction only
                 ];
-            }, { period })
+            }, { period }),
+        getBriefing: async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/dashboard/command-center-briefing`);
+                if (!res.ok) throw new Error('briefing failed');
+                return await res.json();
+            } catch (err) { console.error('Briefing error:', err); return null; }
+        },
+        getPayerPerformance: async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/dashboard/payer-performance`);
+                if (!res.ok) throw new Error('payer performance failed');
+                return await res.json();
+            } catch (err) { console.error('Payer performance error:', err); return null; }
+        },
+        getMirofishROI: async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/dashboard/mirofish-roi`);
+                if (!res.ok) throw new Error('mirofish ROI failed');
+                return await res.json();
+            } catch (err) { console.error('MiroFish ROI error:', err); return null; }
+        },
+    },
+
+    // MiroFish
+    mirofish: {
+        getStatus: async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/simulation/mirofish/status`);
+                if (!res.ok) throw new Error('mirofish status failed');
+                return await res.json();
+            } catch (err) { console.error('MiroFish status error:', err); return { status: 'offline', mirofish_available: false, qwen_available: false }; }
+        },
     },
 
     // ------------------------------------------------------------------------
@@ -1069,6 +1101,13 @@ export const api = {
                 if (!res.ok) throw new Error('model governance failed');
                 return await res.json();
             } catch (err) { console.error('Model governance error:', err); return null; }
+        },
+        getModelPerformance: async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/predictions/models/performance`);
+                if (!res.ok) throw new Error('model performance failed');
+                return await res.json();
+            } catch (err) { console.error('Model performance error:', err); return null; }
         },
     },
 
