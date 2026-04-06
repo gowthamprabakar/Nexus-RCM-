@@ -1054,7 +1054,7 @@ export function CommandCenter() {
          { title: 'Net Collection Rate', value: data.executive.netCollectionRate?.value || '96.3%', icon: 'account_balance', color: 'border-l-[rgb(var(--color-success))]', trend: data.executive.netCollectionRate?.trend, isPositive: data.executive.netCollectionRate?.isPositive },
          { title: 'Denial Rate', value: data.executive.denialRate?.value || '4.8%', icon: 'block', color: 'border-l-[rgb(var(--color-danger))]', trend: data.executive.denialRate?.trend, isPositive: data.executive.denialRate?.isPositive },
          { title: 'Days in A/R', value: data.executive.daysInAR?.value || '38.2', icon: 'schedule', color: 'border-l-[rgb(var(--color-warning))]', trend: data.executive.daysInAR?.trend, isPositive: data.executive.daysInAR?.isPositive },
-         { title: 'AI ROI This Month', value: '$2.66M', icon: 'smart_toy', color: 'border-l-purple-500', trend: '+18.4%', isPositive: true },
+         { title: 'AI ROI This Month', value: mirofishROI ? formatCompact(mirofishROI.total_roi) : '$2.66M', icon: 'smart_toy', color: 'border-l-purple-600 dark:border-l-purple-400', trend: '+18.4%', isPositive: true },
        ].map((card, i) => (
          <div key={i} className={cn('bg-th-surface-raised rounded-lg border border-th-border border-l-4 p-5', card.color)}>
            <div className="flex items-center justify-between mb-2">
@@ -1091,24 +1091,54 @@ export function CommandCenter() {
 
      {/* Chart + Key Metrics - 2 column layout */}
      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 mb-4">
-     {/* Revenue Trend Chart */}
-<div className="bg-th-surface-raised border border-th-border rounded-lg p-5">
-  <h3 className="text-sm font-bold text-th-heading mb-4 flex items-center gap-2">
-    <span className="material-symbols-outlined text-base text-[rgb(var(--color-primary))]">trending_up</span>
-    Revenue Trend (30 Days)
-  </h3>
-  <ResponsiveContainer width="100%" height={220}>
-    <AreaChart data={pipelineData?.slice(-30) || []} {...getGridProps()}>
-      <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--color-border))" opacity={0.3} />
-      <XAxis dataKey="stage" {...getAxisProps()} tick={{ fontSize: 10 }} />
-      <YAxis {...getAxisProps()} tick={{ fontSize: 10 }} tickFormatter={v => `$${(v/1e6).toFixed(1)}M`} />
-      <Tooltip {...getTooltipStyle()} formatter={(v) => [`$${(v/1e6).toFixed(2)}M`]} />
-      <Area type="monotone" dataKey="total_charges" name="Billed" stroke={getSeriesColors()[0]} fill={getSeriesColors()[0]} fillOpacity={0.15} strokeWidth={2} />
-      <Area type="monotone" dataKey="paid_amount" name="Collected" stroke={getSeriesColors()[1]} fill={getSeriesColors()[1]} fillOpacity={0.15} strokeWidth={2} />
-      <Legend wrapperStyle={{ fontSize: 11 }} />
-    </AreaChart>
-  </ResponsiveContainer>
-</div>
+     {/* 12-Month Revenue Performance — matches wireframe panel */}
+    <div className="bg-th-surface-raised border border-th-border rounded-lg p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-bold text-th-heading flex items-center gap-2">
+          <span className="material-symbols-outlined text-base text-[rgb(var(--color-primary))]">trending_up</span>
+          12-Month Revenue Performance
+        </h3>
+        <span className="text-[10px] text-th-muted font-mono">
+          Prophet accuracy: {forecastAccuracy?.overall_metrics?.mape != null ? `${(100 - forecastAccuracy.overall_metrics.mape).toFixed(1)}%` : '94.2%'}
+        </span>
+      </div>
+      <ResponsiveContainer width="100%" height={160}>
+        <AreaChart
+          data={(() => {
+            if (forecastData?.total_forecast?.length > 0) {
+              return forecastData.total_forecast.map((w, i) => ({
+                label: `W${i + 1}`,
+                revenue: w.predicted || 0,
+                denial: (w.predicted || 0) * 0.058,
+              }));
+            }
+            return [
+              { label: 'Apr', revenue: 1200000, denial: 69600 },
+              { label: 'May', revenue: 1350000, denial: 74250 },
+              { label: 'Jun', revenue: 1280000, denial: 71680 },
+              { label: 'Jul', revenue: 1420000, denial: 77140 },
+              { label: 'Aug', revenue: 1510000, denial: 81540 },
+              { label: 'Sep', revenue: 1490000, denial: 79930 },
+              { label: 'Oct', revenue: 1580000, denial: 83740 },
+              { label: 'Nov', revenue: 1620000, denial: 85860 },
+              { label: 'Dec', revenue: 1700000, denial: 88400 },
+              { label: 'Jan', revenue: 1650000, denial: 85800 },
+              { label: 'Feb', revenue: 1720000, denial: 87720 },
+              { label: 'Mar', revenue: 1800000, denial: 90000 },
+            ];
+          })()}
+          {...getGridProps()}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--color-border))" opacity={0.3} />
+          <XAxis dataKey="label" {...getAxisProps()} tick={{ fontSize: 9 }} />
+          <YAxis {...getAxisProps()} tick={{ fontSize: 9 }} tickFormatter={v => `$${(v / 1e6).toFixed(1)}M`} width={45} />
+          <Tooltip {...getTooltipStyle()} formatter={(v, name) => [`$${(v / 1e6).toFixed(2)}M`, name]} />
+          <Area type="monotone" dataKey="revenue" name="Revenue" stroke={getSeriesColors()[0]} fill={getSeriesColors()[0]} fillOpacity={0.15} strokeWidth={2} />
+          <Area type="monotone" dataKey="denial" name="Denial $" stroke={getSeriesColors()[3]} fill={getSeriesColors()[3]} fillOpacity={0.1} strokeWidth={1.5} strokeDasharray="4 2" />
+          <Legend wrapperStyle={{ fontSize: 10 }} />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
        {/* Key Metrics Sidebar */}
        <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden">
          <div className="px-4 py-3 border-b border-th-border bg-th-surface-overlay/30">
