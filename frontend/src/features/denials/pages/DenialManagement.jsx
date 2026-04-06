@@ -1074,24 +1074,227 @@ export function DenialManagement() {
           </div>
         )}
 
-        {/* TAB 3: HIGH RISK */}
+        {/* TAB 3: HIGH RISK CLAIMS */}
         {activeTab === 'risk' && (
-          <div className="flex-1 flex items-center justify-center h-full text-th-muted text-sm">
-            High Risk Claims — HighRiskClaims.jsx
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                { label:'High Risk (>70% denial)', val:31, sub:'$248K at risk', note:'Action needed today', accent:'border-t-[rgb(var(--color-danger))]', valColor:'text-[rgb(var(--color-danger))]' },
+                { label:'CRS Below 60', val:8, sub:'AUTO-006 holds active', note:'Review before submission', accent:'border-t-[rgb(var(--color-warning))]', valColor:'text-[rgb(var(--color-warning))]' },
+                { label:'Write-off Risk >50%', val:12, sub:'$89K exposure', note:'Pre-write-off queue', accent:'border-t-[rgb(var(--color-warning))]', valColor:'text-[rgb(var(--color-warning))]' },
+                { label:'Preventable (MiroFish)', val:18, sub:'Appeal recommended', note:'$147K recovery est.', accent:'border-t-[rgb(var(--color-success))]', valColor:'text-[rgb(var(--color-success))]' },
+              ].map((k, i) => (
+                <div key={i} className={cn('bg-th-surface-raised border border-th-border border-t-2 rounded-lg p-4', k.accent)}>
+                  <p className="text-[9px] font-mono uppercase tracking-wider text-th-muted mb-2">{k.label}</p>
+                  <p className={cn('text-[28px] font-black leading-none tabular-nums', k.valColor)}>{k.val}</p>
+                  <p className="text-[10px] text-th-muted mt-1">{k.sub}</p>
+                  <p className={cn('text-[9px] font-semibold mt-1', k.valColor)}>{k.note}</p>
+                </div>
+              ))}
+            </div>
+            <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-th-border bg-th-surface-overlay">
+                <h3 className="text-[11px] font-semibold text-th-heading">🔥 High Risk Claims · ML Composite Risk Score</h3>
+                <button onClick={() => navigate('/intelligence/lida/chat')} className="text-[10px] text-[rgb(var(--color-primary))] hover:underline">Ask LIDA →</button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px]">
+                  <thead><tr className="border-b border-th-border bg-th-surface-overlay">
+                    {['Claim','Payer','Amount','Denial Prob','Write-off','CRS','MF','CARC','Action'].map(h => (
+                      <th key={h} className="px-3 py-2 text-left text-[9px] font-mono font-semibold uppercase tracking-wider text-th-muted whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {[
+                      { id:'CLM-9041', payer:'BCBS TX', amt:12400, dp:91, wo:67, crs:'54 HOLD', mf:'disputed', carc:'CO-4', action:'Review' },
+                      { id:'CLM-5510', payer:'Medicare', amt:6100, dp:84, wo:41, crs:'62', mf:'disputed', carc:'CO-4', action:'Review' },
+                      { id:'CLM-3301', payer:'Humana', amt:9800, dp:78, wo:72, crs:'48 HOLD', mf:'disputed', carc:'CO-29', action:'Urgent' },
+                      { id:'CLM-7204', payer:'UHC', amt:2800, dp:78, wo:35, crs:'71', mf:'pending', carc:'PR-50', action:'Simulate' },
+                      { id:'CLM-7788', payer:'Aetna', amt:8400, dp:62, wo:18, crs:'74', mf:'confirmed', carc:'CO-97', action:'Appeal' },
+                    ].map((row, i) => (
+                      <tr key={i} onClick={() => { setSelectedClaim(row.id); setActiveTab('queue'); }} className="border-b border-th-border last:border-0 hover:bg-th-surface-overlay transition-colors cursor-pointer">
+                        <td className="px-3 py-2.5 font-mono font-bold text-[rgb(var(--color-info))]">{row.id}</td>
+                        <td className="px-3 py-2.5 text-th-secondary">{row.payer}</td>
+                        <td className="px-3 py-2.5 font-mono font-bold text-th-heading">${row.amt.toLocaleString()}</td>
+                        <td className="px-3 py-2.5"><div className="flex items-center gap-2"><div className="w-16 h-1.5 bg-th-surface-overlay rounded-full overflow-hidden"><div className={cn('h-full rounded-full', row.dp >= 80 ? 'bg-[rgb(var(--color-danger))]' : 'bg-[rgb(var(--color-warning))]')} style={{width:`${row.dp}%`}} /></div><span className={cn('font-mono text-[9px] font-bold', row.dp >= 80 ? 'text-[rgb(var(--color-danger))]' : 'text-[rgb(var(--color-warning))]')}>{row.dp}%</span></div></td>
+                        <td className={cn('px-3 py-2.5 font-mono font-bold', row.wo >= 60 ? 'text-[rgb(var(--color-danger))]' : row.wo >= 30 ? 'text-[rgb(var(--color-warning))]' : 'text-[rgb(var(--color-success))]')}>{row.wo}%</td>
+                        <td className="px-3 py-2.5"><span className={cn('px-2 py-0.5 rounded text-[9px] font-bold font-mono border', row.crs.includes('HOLD') ? 'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger)/0.3)]' : Number(row.crs) >= 70 ? 'bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))] border-[rgb(var(--color-info)/0.3)]' : 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]')}>{row.crs}</span></td>
+                        <td className="px-3 py-2.5">{row.mf === 'confirmed' ? <span className="text-[rgb(var(--color-success))] font-bold text-[10px]">✓</span> : row.mf === 'disputed' ? <span className="text-[rgb(var(--color-danger))] font-bold text-[10px]">✗</span> : <span className="text-[rgb(var(--color-warning))] text-[10px]">⏳</span>}</td>
+                        <td className={cn('px-3 py-2.5 font-mono font-bold', row.carc.startsWith('CO') ? 'text-[rgb(var(--color-danger))]' : 'text-[rgb(var(--color-warning))]')}>{row.carc}</td>
+                        <td className="px-3 py-2.5"><button onClick={(e) => { e.stopPropagation(); setSelectedClaim(row.id); setActiveTab('queue'); }} className={cn('px-2 py-0.5 rounded text-[9px] font-bold border', row.action === 'Urgent' ? 'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger)/0.3)]' : row.action === 'Appeal' ? 'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]' : row.action === 'Simulate' ? 'bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))] border-[rgb(var(--color-info)/0.3)]' : 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]')}>{row.action} →</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3 bg-th-surface-raised border border-[rgb(var(--color-primary)/0.2)] rounded-lg">
+              <div>
+                <p className="text-[11px] font-semibold text-th-heading">7 of these 31 high-risk claims had prevention alerts that were dismissed before submission</p>
+                <p className="text-[10px] text-th-muted mt-0.5">ELIGIBILITY_RISK or AUTH_EXPIRY alerts existed but were not acted on</p>
+              </div>
+              <button onClick={() => navigate('/analytics/prevention')} className="ml-4 shrink-0 px-3 py-1.5 rounded border border-th-border bg-th-surface-overlay text-[11px] text-th-secondary hover:text-th-heading transition-colors">🛡 Fix Prevention Rules →</button>
+            </div>
           </div>
         )}
 
-        {/* TAB 4: PAYER PATTERNS */}
+        {/* TAB 4: PAYER PATTERNS + HEATMAP */}
         {activeTab === 'payer' && (
-          <div className="flex-1 flex items-center justify-center h-full text-th-muted text-sm">
-            Payer Patterns + Heatmap — DW-7
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex items-center gap-2 text-[8.5px] font-mono font-bold text-th-muted uppercase tracking-widest">
+              CARC Code Heatmap · Payer × Denial Reason · Click any cell to filter
+              <span className="flex-1 h-px bg-th-border" />
+            </div>
+            <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-th-border bg-th-surface-overlay">
+                <h3 className="text-[11px] font-semibold text-th-heading">🗺️ Denial Heatmap · Payer × CARC</h3>
+                <button onClick={() => navigate('/analytics/graph-explorer')} className="text-[10px] text-[rgb(var(--color-primary))] hover:underline">Graph Explorer →</button>
+              </div>
+              <div className="p-4">
+                {(() => {
+                  const CARCS = ['CO-16\nAuth','CO-4\nCode','CO-97\nDup','PR-50\nMedNec','CO-11\nDiag','CO-29\nTimely','Other'];
+                  const CARC_KEYS = ['CO-16','CO-4','CO-97','PR-50','CO-11','CO-29','Other'];
+                  const ROWS = [
+                    { payer:'Medicare', cells:[5,4,1,0,2,0,1] },
+                    { payer:'BCBS TX', cells:[0,6,1,1,0,0,1] },
+                    { payer:'Aetna', cells:[2,1,3,1,0,1,0] },
+                    { payer:'UHC', cells:[1,2,1,2,1,0,0] },
+                    { payer:'Cigna', cells:[2,0,1,1,2,0,0] },
+                    { payer:'Humana', cells:[1,0,0,0,0,3,0] },
+                  ];
+                  const maxVal = 6;
+                  const cellBg = (v) => {
+                    if (v === 0) return 'bg-th-surface-overlay text-th-muted';
+                    const intensity = v / maxVal;
+                    if (intensity >= 0.8) return 'bg-[rgb(var(--color-danger))] text-white';
+                    if (intensity >= 0.5) return 'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))]';
+                    if (intensity >= 0.2) return 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))]';
+                    return 'bg-th-surface-overlay text-th-muted';
+                  };
+                  return (
+                    <div className="space-y-1.5">
+                      <div className="flex gap-1.5 items-center">
+                        <div className="w-16 shrink-0" />
+                        {CARCS.map((c, i) => (<div key={i} className="flex-1 text-center text-[8px] font-mono text-th-muted leading-tight whitespace-pre-line">{c}</div>))}
+                      </div>
+                      {ROWS.map((row, ri) => (
+                        <div key={ri} className="flex gap-1.5 items-center">
+                          <div className="w-16 shrink-0 text-[9px] font-semibold text-th-secondary truncate">{row.payer}</div>
+                          {row.cells.map((v, ci) => (
+                            <button key={ci} onClick={() => { setPayerFilter(row.payer); setCarcFilter(CARC_KEYS[ci]); setActiveTab('queue'); }}
+                              className={cn('flex-1 h-6 rounded flex items-center justify-center text-[9px] font-bold font-mono transition-transform hover:scale-110', cellBg(v))}>
+                              {v > 0 ? (v === 6 ? `${v}🔥` : String(v)) : ''}
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+                <div className="mt-3 px-3 py-2 bg-[rgb(var(--color-danger-bg))] border border-[rgb(var(--color-danger)/0.3)] rounded-md text-[10.5px] text-th-secondary leading-relaxed flex items-center gap-3">
+                  <span>🔥 <strong className="text-[rgb(var(--color-danger))]">BCBS TX CO-4 spike: 6 denials</strong> — 3 providers. CPT mismatch. MiroFish: fix coding → denial rate drop +$120K/month.</span>
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => navigate('/analytics/prevention')} className="px-2 py-1 rounded text-[9.5px] border border-th-border bg-th-surface-raised text-th-secondary hover:text-th-heading transition-colors whitespace-nowrap">Fix coding →</button>
+                    <button onClick={() => navigate('/intelligence/lida/chat')} className="px-2 py-1 rounded text-[9.5px] border border-th-border bg-th-surface-raised text-th-secondary hover:text-th-heading transition-colors whitespace-nowrap">Ask LIDA →</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden">
+              <div className="px-4 py-3 border-b border-th-border bg-th-surface-overlay">
+                <h3 className="text-[11px] font-semibold text-th-heading">📊 Trending Root Causes · Last 30 Days</h3>
+              </div>
+              <table className="w-full text-[11px]">
+                <thead><tr className="border-b border-th-border bg-th-surface-overlay">
+                  {['Root Cause','Group','Count','Revenue','Trend','Prevention'].map(h => (<th key={h} className="px-3 py-2 text-left text-[9px] font-mono font-semibold uppercase tracking-wider text-th-muted">{h}</th>))}
+                </tr></thead>
+                <tbody>
+                  {[
+                    { cause:'Auth Missing', group:'Admin', gc:'danger', count:11, rev:'$84K', trend:'↑ +18%', tc:'danger', link:'AUTH rule →', lc:'warning' },
+                    { cause:'CPT Mismatch', group:'Coding', gc:'warning', count:9, rev:'$62K', trend:'↑ +41%', tc:'danger', link:'Coding alert →', lc:'danger' },
+                    { cause:'Duplicate Claim', group:'System', gc:'info', count:7, rev:'$44K', trend:'↓ -8%', tc:'success', link:'AUTO-012 ✓', lc:'success' },
+                    { cause:'Med Necessity', group:'Clinical', gc:'purple', count:6, rev:'$38K', trend:'→ Stable', tc:'muted', link:'Manual review', lc:'muted' },
+                    { cause:'Timely Filing', group:'Admin', gc:'warning', count:4, rev:'$28K', trend:'↑ +12%', tc:'warning', link:'AUTO-009 →', lc:'warning' },
+                  ].map((row, i) => {
+                    const colors = {danger:'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger)/0.3)]', warning:'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]', info:'bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))] border-[rgb(var(--color-info)/0.3)]', success:'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]', purple:'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700', muted:'bg-th-surface-overlay text-th-muted border-th-border'};
+                    const tc = {danger:'text-[rgb(var(--color-danger))]', warning:'text-[rgb(var(--color-warning))]', success:'text-[rgb(var(--color-success))]', muted:'text-th-muted'};
+                    return (
+                      <tr key={i} className="border-b border-th-border last:border-0 hover:bg-th-surface-overlay transition-colors cursor-pointer">
+                        <td className="px-3 py-2.5 font-semibold text-th-heading">{row.cause}</td>
+                        <td className="px-3 py-2.5"><span className={cn('px-2 py-0.5 rounded text-[9px] font-bold border', colors[row.gc])}>{row.group}</span></td>
+                        <td className="px-3 py-2.5 font-mono font-bold text-th-heading">{row.count}</td>
+                        <td className={cn('px-3 py-2.5 font-mono font-semibold', tc[row.tc])}>{row.rev}</td>
+                        <td className={cn('px-3 py-2.5 font-semibold', tc[row.tc])}>{row.trend}</td>
+                        <td className="px-3 py-2.5"><span className={cn('px-2 py-0.5 rounded text-[9px] font-bold border', colors[row.lc])}>{row.link}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
         {/* TAB 5: RCA TREE */}
         {activeTab === 'rca' && (
-          <div className="flex-1 flex items-center justify-center h-full text-th-muted text-sm">
-            RCA Tree — RootCauseIntelligence.jsx
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex items-center gap-2 text-[8.5px] font-mono font-bold text-th-muted uppercase tracking-widest">
+              RCA Knowledge Tree · Neo4j · Revenue → Payer → Category → Root Cause → Claims
+              <span className="flex-1 h-px bg-th-border" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-th-border bg-th-surface-overlay">
+                  <h3 className="text-[11px] font-semibold text-th-heading">🕸️ Neo4j Causal Graph · Drill-Down</h3>
+                  <button onClick={() => navigate('/analytics/graph-explorer')} className="text-[10px] text-[rgb(var(--color-primary))] hover:underline">Full Graph →</button>
+                </div>
+                <div className="p-4 space-y-1.5">
+                  {[
+                    { label:'Revenue Cycle · $384K denied', sub:'47 claims · 6 payers', indent:0, textColor:'text-[#6088ff]', bg:'bg-[#0d1628]', border:'border-[#1a3060]', badge:null },
+                    { label:'BCBS TX · 9 denials · $62K', sub:'', indent:1, textColor:'text-[rgb(var(--color-info))]', bg:'bg-[#050f1a]', border:'border-[#0a2a40]', badge:'Coding spike', badgeColor:'danger' },
+                    { label:'Coding/Billing (CO-4) · 6 claims', sub:'', indent:2, textColor:'text-purple-400', bg:'bg-[#0a0f1a]', border:'border-[#1a2050]', badge:null },
+                    { label:'CPT Upcoding · 4 claims', sub:'CLM-9041 · CLM-5510', indent:3, textColor:'text-th-heading', bg:'bg-th-surface-overlay', border:'border-th-border', badge:null, claims:['CLM-9041','CLM-5510'] },
+                    { label:'Modifier-25 Missing · 2 claims', sub:'CLM-4821', indent:3, textColor:'text-th-heading', bg:'bg-th-surface-overlay', border:'border-th-border', badge:null },
+                    { label:'Medicare · 12 denials · $68K', sub:'', indent:1, textColor:'text-[rgb(var(--color-info))]', bg:'bg-[#050f1a]', border:'border-[#0a2a40]', badge:'Auth pattern', badgeColor:'warning' },
+                    { label:'Aetna · 8 denials · $42K', sub:'', indent:1, textColor:'text-[rgb(var(--color-info))]', bg:'bg-[#050f1a]', border:'border-[#0a2a40]', badge:'Mostly dup', badgeColor:'success' },
+                  ].map((node, i) => (
+                    <div key={i} style={{marginLeft:`${node.indent * 14}px`}}>
+                      <div className={cn('flex items-center gap-2 px-3 py-2 rounded border cursor-pointer hover:brightness-110 transition-all', node.bg, node.border)}>
+                        {node.indent === 0 && <span className="text-[14px]">💰</span>}
+                        {node.indent > 0 && <span className={cn('shrink-0 rounded-full', node.indent === 1 ? 'size-2.5' : 'size-2', 'bg-purple-400 border-purple-400 border')} />}
+                        <div className="flex-1 min-w-0">
+                          <p className={cn('text-[10px] font-semibold', node.textColor)}>{node.label}</p>
+                          {node.sub && <p className="text-[8.5px] text-th-muted font-mono mt-0.5">{node.sub}</p>}
+                          {node.claims && <div className="flex gap-1 mt-1">{node.claims.map(c => (<button key={c} onClick={(e) => { e.stopPropagation(); setSelectedClaim(c); setActiveTab('queue'); }} className="px-1.5 py-0.5 rounded text-[8.5px] font-bold bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border border-[rgb(var(--color-danger)/0.3)] hover:opacity-80">{c}</button>))}</div>}
+                        </div>
+                        {node.badge && <span className={cn('px-1.5 py-0.5 rounded text-[8px] font-bold border shrink-0', node.badgeColor === 'danger' ? 'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger)/0.3)]' : node.badgeColor === 'warning' ? 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]' : 'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]')}>{node.badge}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden">
+                <div className="px-4 py-3 border-b border-th-border bg-th-surface-overlay">
+                  <h3 className="text-[11px] font-semibold text-th-heading">🔗 Cross-Page Actions from Root Causes</h3>
+                </div>
+                <div className="p-4 space-y-2">
+                  {[
+                    { title:'Auth Missing (CO-16) → Prevention gap', sub:'AUTH_EXPIRY rule was inactive on DOS', action:'Fix Rule →', route:'/analytics/prevention' },
+                    { title:'CPT Mismatch (CO-4) → 3 provider alerts', sub:'Dr. Martinez, Dr. Kim — coding education', action:'Ask LIDA →', route:'/intelligence/lida/chat' },
+                    { title:'BCBS TX pattern → Run MiroFish simulation', sub:'Model coding scrutiny scenario', action:'Simulate →', route:'/intelligence/simulation' },
+                    { title:'Revenue impact → Neo4j causal graph', sub:'See payer→denial→claim connections', action:'Graph Explorer →', route:'/analytics/graph-explorer' },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center justify-between px-3 py-2.5 bg-th-surface-overlay border border-th-border rounded-lg gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold text-th-heading">{item.title}</p>
+                        <p className="text-[9px] text-th-muted mt-0.5">{item.sub}</p>
+                      </div>
+                      <button onClick={() => navigate(item.route)} className="px-2.5 py-1.5 rounded text-[10px] font-medium border border-th-border bg-th-surface-raised text-th-secondary hover:text-th-heading transition-colors whitespace-nowrap shrink-0">{item.action}</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
