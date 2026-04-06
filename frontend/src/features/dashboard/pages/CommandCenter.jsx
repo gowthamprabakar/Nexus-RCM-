@@ -1227,9 +1227,8 @@ export function CommandCenter() {
          <AIBadge level="Predictive" />
        </div>
      </div>
-     <div className="relative">
-       <div className="absolute top-1/2 left-0 right-0 h-px bg-th-border -translate-y-1/2" />
-       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+     <div className="relative overflow-x-auto">
+       <div className="flex items-stretch min-w-max w-full">
          {(pipelineData && pipelineData.length > 0 ? pipelineData : data.lifecycle && data.lifecycle.length > 0 ? data.lifecycle : [
            { id: 'lc-1', stage: 'Charge Captured', count: 3842, value: '$4.2M', avgDwell: '0.8d', sla: '1d', status: 'healthy' },
            { id: 'lc-2', stage: 'Coded', count: 3654, value: '$3.9M', avgDwell: '1.2d', sla: '2d', status: 'healthy' },
@@ -1253,7 +1252,7 @@ export function CommandCenter() {
 
      {/* Detail Panel for Selected Stage */}
      {selectedStageData && (
-       <div className="mt-3 bg-th-surface-raised rounded-xl border border-th-primary/30 p-5 animate-fade-in">
+       <div className="mt-3 bg-th-surface-raised rounded-lg border border-[rgb(var(--color-primary)/0.3)] p-4 animate-fade-in">
          <div className="flex items-center justify-between mb-3">
            <h3 className="text-sm font-semibold text-th-heading flex items-center gap-2">
              <span className="material-symbols-outlined text-base text-th-primary">info</span>
@@ -2068,11 +2067,13 @@ function LifecycleNode({ stage, index, total, isSelected, onSelect }) {
  <div
  onClick={onSelect}
  className={cn(
- "bg-th-surface-raised p-3 rounded-lg border relative cursor-pointer z-10 group",
- "transition-all duration-200",
+ "bg-th-surface-raised p-3 relative cursor-pointer z-10 group flex-1 min-w-[110px]",
+ "border-t border-b border-r transition-colors duration-150",
+ index === 0 ? "border-l rounded-l-md" : "",
+ index === total - 1 ? "rounded-r-md" : "",
  isSelected
- ? "border-th-primary/50 ring-1 ring-th-primary/30 shadow-lg"
- : "border-th-border hover:border-th-border-subtle"
+ ? "border-[rgb(var(--color-primary)/0.5)] bg-[rgb(var(--color-primary)/0.04)]"
+ : "border-th-border hover:bg-th-surface-overlay"
  )}
  >
  {/* Connector Dot */}
