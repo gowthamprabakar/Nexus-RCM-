@@ -766,10 +766,10 @@ export function CommandCenter() {
        </div>
 
        {/* At Risk */}
-       <div className="bg-th-surface-raised rounded-lg border border-amber-500/20 p-4">
+       <div className="bg-th-surface-raised rounded-lg border border-[rgb(var(--color-warning)/0.35)] p-4">
          <div className="flex items-center gap-2 mb-3">
            <span className="material-symbols-outlined text-sm text-[rgb(var(--color-warning))]">warning</span>
-           <h3 className="text-xs font-semibold uppercase tracking-widest text-amber-400">At Risk</h3>
+           <h3 className="text-xs font-semibold uppercase tracking-widest text-[rgb(var(--color-warning))]">At Risk</h3>
          </div>
          <div className="space-y-2">
            {[
@@ -843,6 +843,10 @@ export function CommandCenter() {
      </div>
 
      {/* KPI Tiles */}
+     <div className="flex items-center gap-2 mb-2 mt-1">
+       <span className="text-[10px] font-semibold uppercase tracking-widest text-th-muted font-mono">C-Level Performance Indicators</span>
+       <span className="flex-1 h-px bg-th-border" />
+     </div>
      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
        <KPITile title="Active Denials" value={b?.kpis?.active_denials?.count?.toLocaleString() ?? '\u2014'} icon="block" trend={data.executive.denialRate?.trend} isPositive={data.executive.denialRate?.isPositive} onClick={() => navigate('/work/denials/queue')} />
        <KPITile title="Appeal Win Rate" value={`${b?.kpis?.appeal_win_rate?.value ?? '\u2014'}%`} icon="gavel" trend={data.executive.denialRate?.trend} isPositive={true} onClick={() => navigate('/analytics/outcomes')} />
@@ -852,43 +856,45 @@ export function CommandCenter() {
        <KPITile title="NCR" value={`${b?.kpis?.ncr?.value ?? '\u2014'}%`} icon="account_balance" trend={data.executive.netCollectionRate?.trend} isPositive={data.executive.netCollectionRate?.isPositive} onClick={() => navigate('/work/collections/queue')} />
      </div>
 
-     {/* ADTP Payer Strip */}
-     <div className="bg-th-surface-raised rounded-lg border border-th-border p-4">
-       <div className="flex items-center gap-2 mb-3">
-         <span className="material-symbols-outlined text-sm text-[rgb(var(--color-primary))]">timeline</span>
-         <h3 className="text-xs font-semibold uppercase tracking-widest text-th-muted">ADTP by Payer</h3>
-         <span className="text-[10px] text-th-muted ml-auto">Avg Days to Pay -- Current vs Baseline</span>
-       </div>
-       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-         {(adtpData.length > 0 ? adtpData.map(p => ({
-           payer_name: p.payer_name,
-           rolling_adtp: p.actual_adtp,
-           historical_adtp: p.expected_adtp,
-         })) : []).map((p, i) => {
-           const delta = (p.rolling_adtp || 0) - (p.historical_adtp || 0);
-           const isAnomaly = Math.abs(delta) > 2;
+     {/* ADTP Payer Strip — horizontal inline bar matching wireframe */}
+     <div className="flex items-center gap-4 bg-th-surface-overlay border border-th-border rounded-lg px-4 py-2.5 overflow-x-auto">
+       <span className="text-[10px] font-semibold uppercase tracking-widest text-[rgb(var(--color-info))] font-mono shrink-0">
+         ⏱ ADTP · Days-to-Pay
+       </span>
+       <div className="flex gap-6 flex-1 min-w-0">
+         {(adtpData.length > 0 ? adtpData : [
+           { payer_name: 'Medicare', actual_adtp: 14, expected_adtp: 14, is_anomaly: false },
+           { payer_name: 'BCBS TX',  actual_adtp: 18, expected_adtp: 19, is_anomaly: false },
+           { payer_name: 'Aetna',    actual_adtp: 32, expected_adtp: 26, is_anomaly: true  },
+           { payer_name: 'UHC',      actual_adtp: 21, expected_adtp: 22, is_anomaly: false },
+           { payer_name: 'Cigna',    actual_adtp: 24, expected_adtp: 22, is_anomaly: false },
+           { payer_name: 'Humana',   actual_adtp: 17, expected_adtp: 18, is_anomaly: false },
+         ]).map((p, i) => {
+           const actual = Math.round(p.actual_adtp || 0);
+           const expected = Math.round(p.expected_adtp || 0);
+           const diff = actual - expected;
+           const anomaly = p.is_anomaly || Math.abs(diff) > 3;
            return (
-             <button
-               key={i}
-               onClick={() => navigate('/analytics/payer-health')}
-               className={cn(
-                 'flex flex-col items-center p-2.5 rounded-lg border transition-all hover:shadow-md',
-                 isAnomaly && delta > 0 ? 'border-[rgb(var(--color-danger))]/30 bg-[rgb(var(--color-danger))]/5' :
-                 isAnomaly && delta < 0 ? 'border-[rgb(var(--color-success))]/30 bg-[rgb(var(--color-success))]/5' :
-                 'border-th-border bg-th-surface-overlay/30'
-               )}
-             >
-               <span className="text-[10px] font-bold uppercase text-th-muted">{p.payer_name}</span>
-               <span className="text-sm font-black text-th-heading tabular-nums">{p.rolling_adtp}d</span>
-               <span className={cn('text-[10px] font-semibold tabular-nums',
-                 delta > 2 ? 'text-[rgb(var(--color-danger))]' : delta < -2 ? 'text-[rgb(var(--color-success))]' : 'text-th-muted'
+             <div key={i} className="text-center shrink-0">
+               <p className="text-[10px] text-th-muted mb-0.5">{p.payer_name}</p>
+               <p className={cn('text-[14px] font-semibold font-mono leading-none',
+                 anomaly ? 'text-[rgb(var(--color-danger))]' : 'text-[rgb(var(--color-success))]'
                )}>
-                 {delta >= 0 ? '+' : ''}{delta}d vs baseline
-               </span>
-             </button>
+                 {actual}d{anomaly ? ' ⚠' : ''}
+               </p>
+               <p className="text-[9px] text-th-muted mt-0.5">
+                 Norm: {expected}d {diff > 0 ? `↑${diff}d` : diff < 0 ? `↓${Math.abs(diff)}d` : '✓'}
+               </p>
+             </div>
            );
          })}
        </div>
+       <button
+         onClick={() => navigate('/analytics/payments/overview')}
+         className="text-[11px] text-th-secondary hover:text-[rgb(var(--color-primary))] shrink-0 transition-colors whitespace-nowrap"
+       >
+         Full ADTP →
+       </button>
      </div>
 
      {/* AI Prescriptive Actions */}
