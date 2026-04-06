@@ -544,7 +544,7 @@ export function CommandCenter() {
      <div className="flex-1 flex items-center justify-center p-12">
        <div className="bg-th-surface-raised border border-th-border rounded-xl p-8 max-w-md w-full text-center shadow-card">
          <div className="size-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-           <span className="material-symbols-outlined text-red-400 text-2xl">error_outline</span>
+           <span className="material-symbols-outlined text-[rgb(var(--color-danger))] text-2xl">error_outline</span>
          </div>
          <h3 className="text-th-heading text-lg font-bold mb-2">Failed to Load Command Center</h3>
          <p className="text-th-secondary text-sm mb-6">{error}</p>
@@ -779,7 +779,7 @@ export function CommandCenter() {
              { icon: '\u{1F4C9}', title: <><strong>{b?.at_risk?.low_propensity?.count?.toLocaleString() ?? '\u2014'} accounts</strong> Propensity-to-Pay &lt;30%</>, body: `${formatCompact(b?.at_risk?.low_propensity?.amount || 0)} write-off risk`, link: '/work/collections/queue', linkText: 'Open Collections Hub \u2192' },
              { icon: '\u{1F30A}', title: <><strong>{b?.at_risk?.adtp_anomalies?.count ?? 0} ADTP anomal{(b?.at_risk?.adtp_anomalies?.count || 0) === 1 ? 'y' : 'ies'}</strong> {'\u00b7'} {b?.at_risk?.adtp_anomalies?.worst_payer || 'None'} +{b?.at_risk?.adtp_anomalies?.worst_deviation ?? 0}d shift</>, body: `${formatCompact(b?.at_risk?.adtp_anomalies?.float_exposure || 0)} float exposure \u00b7 Isolation Forest flagged`, tabLink: 'anomaly', tabText: 'View payer anomalies \u2192' },
            ].map((item, i) => (
-             <div key={i} className="flex items-start gap-2 p-2 rounded-md bg-amber-500/5 hover:bg-amber-500/10 transition-colors">
+             <div key={i} className="flex items-start gap-2 p-2 rounded-md bg-[rgb(var(--color-warning-bg))] hover:bg-[rgb(var(--color-warning)/0.15)] transition-colors">
                <span className="text-sm shrink-0">{item.icon}</span>
                <div className="flex-1 min-w-0">
                  <span className="text-xs font-bold text-th-heading">{item.title}</span>
@@ -941,10 +941,10 @@ export function CommandCenter() {
                {(b?.recent_actions || []).map((a, i) => (
                  <tr key={i} className="border-b border-th-border last:border-0 hover:bg-th-surface-overlay/30 transition-colors">
                    <td className="px-3 py-1.5"><span className="font-mono text-[9.5px] text-th-muted">{a.time}</span></td>
-                   <td className="px-2 py-1.5"><span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">{a.rule_id || '\u2014'}</span></td>
+                   <td className="px-2 py-1.5"><span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[rgb(var(--color-primary-bg))] text-[rgb(var(--color-primary))] border border-[rgb(var(--color-primary)/0.3)]">{a.rule_id || '\u2014'}</span></td>
                    <td className="px-2 py-1.5 text-th-heading font-medium">{a.action}</td>
                    <td className="px-2 py-1.5 font-mono text-th-muted"><strong>{a.claim_id}</strong></td>
-                   <td className="px-2 py-1.5 text-center"><span className={cn('px-1.5 py-0.5 rounded text-[9px] font-bold', (a.status === 'fired' || a.status === 'approved') ? 'bg-[rgb(var(--color-success))]/10 text-[rgb(var(--color-success))]' : 'bg-amber-500/10 text-amber-400')}>{a.status || 'pending'}</span></td>
+                   <td className="px-2 py-1.5 text-center"><span className={cn('px-1.5 py-0.5 rounded text-[9px] font-bold', (a.status === 'fired' || a.status === 'approved') ? 'bg-[rgb(var(--color-success))]/10 text-[rgb(var(--color-success))]' : 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))]')}>{a.status || 'pending'}</span></td>
                    <td className="px-3 py-1.5 text-right font-mono font-bold text-th-heading">{formatCompact(a.amount)}</td>
                  </tr>
                ))}
@@ -1027,7 +1027,7 @@ export function CommandCenter() {
                  <span className={cn('px-1.5 py-0.5 rounded text-[9px] font-bold border w-20 text-center',
                    v.verdict === 'CONFIRMED' ? 'bg-[rgb(var(--color-success))]/10 text-[rgb(var(--color-success))] border-[rgb(var(--color-success))]/20' :
                    v.verdict === 'DISPUTED' ? 'bg-[rgb(var(--color-danger))]/10 text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger))]/20' :
-                   'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                   'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]'
                  )}>{v.verdict || '\u2014'}</span>
                  <span className="font-mono text-th-heading font-bold ml-auto">{formatCompact(v.amount || 0)}</span>
                  <span className="font-mono text-th-muted">{v.confidence ?? '\u2014'}%</span>
@@ -1147,9 +1147,9 @@ export function CommandCenter() {
          <div className="p-3 space-y-2">
            {[
              { label: 'Net Collection Rate', value: b?.kpis?.ncr?.value != null ? `${b.kpis.ncr.value}%` : '\u2014', color: 'border-l-[rgb(var(--color-success))]', textColor: 'text-[rgb(var(--color-success))]' },
-             { label: 'Overall Denial Rate', value: data.executive?.denialRate?.value || '\u2014', color: 'border-l-red-400', textColor: 'text-red-400' },
-             { label: 'AR Days Outstanding', value: data.executive?.daysInAR?.value ? `${data.executive.daysInAR.value}d` : '\u2014', color: 'border-l-amber-400', textColor: 'text-amber-400' },
-             { label: '30-Day Cash Forecast', value: b?.kpis?.forecast_30d?.value ? formatCompact(b.kpis.forecast_30d.value) : '\u2014', color: 'border-l-purple-400', textColor: 'text-purple-400' },
+             { label: 'Overall Denial Rate', value: data.executive?.denialRate?.value || '\u2014', color: 'border-l-[rgb(var(--color-danger))]', textColor: 'text-[rgb(var(--color-danger))]' },
+             { label: 'AR Days Outstanding', value: data.executive?.daysInAR?.value ? `${data.executive.daysInAR.value}d` : '\u2014', color: 'border-l-[rgb(var(--color-warning))]', textColor: 'text-[rgb(var(--color-warning))]' },
+             { label: '30-Day Cash Forecast', value: b?.kpis?.forecast_30d?.value ? formatCompact(b.kpis.forecast_30d.value) : '\u2014', color: 'border-l-purple-600 dark:border-l-purple-400', textColor: 'text-purple-700 dark:text-purple-400' },
              { label: 'Total AI ROI This Month', value: mirofishROI ? formatCompact(mirofishROI.total_roi) : '\u2014', color: 'border-l-[rgb(var(--color-primary))]', textColor: 'text-[rgb(var(--color-primary))]' },
            ].map((m, i) => (
              <div key={i} className={cn('flex items-center justify-between p-2.5 bg-th-surface-overlay/30 rounded border-l-[3px]', m.color)}>
@@ -1190,7 +1190,7 @@ export function CommandCenter() {
                  <span className={cn('px-2 py-0.5 rounded text-[10px] font-bold uppercase border',
                    p.verdict === 'CONFIRMED' ? 'bg-[rgb(var(--color-success))]/10 text-[rgb(var(--color-success))] border-[rgb(var(--color-success))]/20' :
                    p.verdict === 'DISPUTED' ? 'bg-[rgb(var(--color-danger))]/10 text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger))]/20' :
-                   'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                   'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]'
                  )}>{p.verdict}</span>
                </td>
              </tr>
@@ -1462,15 +1462,15 @@ export function CommandCenter() {
                  <div className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer group">
                    <div className={cn('size-[44px] rounded-full flex items-center justify-center text-base border-[1.5px] transition-all group-hover:scale-110',
                      node.state === 'ok' ? 'bg-[#003a1f] border-[rgb(var(--color-success))] text-[rgb(var(--color-success))]' :
-                     node.state === 'warn' ? 'bg-amber-500/10 border-amber-400 text-amber-400' :
-                     node.state === 'fail' ? 'bg-red-500/10 border-red-400 text-red-400' :
+                     node.state === 'warn' ? 'bg-[rgb(var(--color-warning-bg))] border-[rgb(var(--color-warning)/0.4)] text-[rgb(var(--color-warning))]' :
+                     node.state === 'fail' ? 'bg-[rgb(var(--color-danger-bg))] border-[rgb(var(--color-danger)/0.4)] text-[rgb(var(--color-danger))]' :
                      'bg-th-surface-overlay border-th-border text-th-muted'
                    )}>{node.icon}</div>
                    <span className={cn('text-[8.5px] font-bold text-center max-w-[70px] leading-tight',
-                     node.state === 'ok' ? 'text-[rgb(var(--color-success))]' : node.state === 'warn' ? 'text-amber-400' : node.state === 'fail' ? 'text-red-400' : 'text-th-muted'
+                     node.state === 'ok' ? 'text-[rgb(var(--color-success))]' : node.state === 'warn' ? 'text-[rgb(var(--color-warning))]' : node.state === 'fail' ? 'text-[rgb(var(--color-danger))]' : 'text-th-muted'
                    )}>{node.name}</span>
                    <span className={cn('font-mono text-[7.5px] text-center',
-                     node.state === 'ok' ? 'text-[rgb(var(--color-success))]/70' : node.state === 'warn' ? 'text-amber-400/70' : 'text-red-400/70'
+                     node.state === 'ok' ? 'text-[rgb(var(--color-success))]' : node.state === 'warn' ? 'text-[rgb(var(--color-warning))]' : 'text-[rgb(var(--color-danger))]'
                    )}>{node.status}</span>
                  </div>
                  {i < arr.length - 1 && <span className="text-th-muted/30 text-xs shrink-0 mb-5 mx-0.5">▶</span>}
@@ -1490,7 +1490,7 @@ export function CommandCenter() {
            </div>
 
            {/* Prevention Gap Detected */}
-           <div className="mt-2.5 p-2.5 bg-red-500/5 border border-red-500/20 rounded-md">
+           <div className="mt-2.5 p-2.5 bg-[rgb(var(--color-danger-bg))] border border-[rgb(var(--color-danger)/0.3)] rounded-md">
              <p className="text-[9px] font-mono font-bold text-[rgb(var(--color-danger))] uppercase tracking-wider mb-1">⚠ Prevention Gap Detected</p>
              <p className="text-[10px] text-th-secondary leading-relaxed">{b?.rca_example?.prevention_gap || '\u2014'}</p>
            </div>
@@ -1514,7 +1514,7 @@ export function CommandCenter() {
        </div>
        <div className="bg-th-surface-raised border border-th-border rounded-lg p-3.5">
          <p className="text-[8.5px] font-mono text-th-muted uppercase tracking-wider">HITL Pending</p>
-         <p className="text-2xl font-black text-amber-400">{hitlPending.length}</p>
+         <p className="text-2xl font-black text-[rgb(var(--color-warning))]">{hitlPending.length}</p>
          <p className="text-[9px] text-th-muted">Awaiting approval</p>
        </div>
        <div className="bg-th-surface-raised border border-th-border rounded-lg p-3.5">
@@ -1536,7 +1536,7 @@ export function CommandCenter() {
            <span className="material-symbols-outlined text-sm">approval</span>
            Human-in-the-Loop Queue
          </h3>
-         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border border-[rgb(var(--color-warning)/0.3)]">
            {hitlPending.length} pending
          </span>
        </div>
@@ -1623,7 +1623,7 @@ export function CommandCenter() {
            ]).map((rule, i) => (
              <tr key={i} className="border-b border-th-border last:border-0 hover:bg-th-surface-overlay/30 transition-colors">
                <td className="px-5 py-2.5">
-                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">{rule.rule_id}</span>
+                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[rgb(var(--color-primary-bg))] text-[rgb(var(--color-primary))] border border-[rgb(var(--color-primary)/0.3)]">{rule.rule_id}</span>
                </td>
                <td className="px-3 py-2.5 text-th-heading font-medium">{rule.description}</td>
                <td className="text-right px-3 py-2.5 text-th-heading tabular-nums">{(rule.executions || 0).toLocaleString()}</td>
@@ -1698,10 +1698,10 @@ export function CommandCenter() {
                  <span className="font-mono text-[8.5px] text-th-muted w-[100px] shrink-0">{MODEL_TYPES[m.name] || 'ML Model'}</span>
                  <div className="flex-1">
                    <div className="h-1 bg-th-surface-overlay rounded-full overflow-hidden">
-                     <div className={cn('h-full rounded-full', m.accuracy >= 90 ? 'bg-[rgb(var(--color-success))]' : m.accuracy >= 80 ? 'bg-amber-400' : 'bg-red-400')} style={{ width: `${m.accuracy || 0}%` }}></div>
+                     <div className={cn('h-full rounded-full', m.accuracy >= 90 ? 'bg-[rgb(var(--color-success))]' : m.accuracy >= 80 ? 'bg-[rgb(var(--color-warning))]' : 'bg-red-400')} style={{ width: `${m.accuracy || 0}%` }}></div>
                    </div>
                  </div>
-                 <span className={cn('font-mono text-[10px] font-bold w-[45px] text-right shrink-0', m.accuracy >= 90 ? 'text-[rgb(var(--color-success))]' : m.accuracy >= 80 ? 'text-amber-400' : 'text-red-400')}>{m.accuracy || 0}%</span>
+                 <span className={cn('font-mono text-[10px] font-bold w-[45px] text-right shrink-0', m.accuracy >= 90 ? 'text-[rgb(var(--color-success))]' : m.accuracy >= 80 ? 'text-[rgb(var(--color-warning))]' : 'text-[rgb(var(--color-danger))]')}>{m.accuracy || 0}%</span>
                </div>
              ))}
            </div>
@@ -1729,19 +1729,21 @@ export function CommandCenter() {
        </div>
      </div>
      {/* Anomaly Alert Strip */}
-     <div className="flex items-center gap-3 p-3 rounded-md bg-gradient-to-r from-red-500/10 to-red-500/5 border border-red-500/20 mb-4">
-       <span className="font-mono text-[8.5px] font-bold text-red-400 uppercase tracking-wider shrink-0">🚨 Live Anomalies · Isolation Forest</span>
+     <div className="flex items-center gap-3 p-3 rounded-md bg-[rgb(var(--color-danger-bg))] border border-[rgb(var(--color-danger)/0.3)] mb-4">
+       <span className="font-mono text-[8.5px] font-bold text-[rgb(var(--color-danger))] uppercase tracking-wider shrink-0">🚨 Live Anomalies · Isolation Forest</span>
        <div className="flex gap-4 flex-1 overflow-x-auto">
          {adtpData.filter(p => p.is_anomaly).map((p, i) => (
            <div key={i} className="flex items-center gap-1.5 text-[10px] text-th-secondary whitespace-nowrap">
              <span className="font-semibold text-th-heading">{p.payer_name}</span>
              <span>ADTP</span>
-             <span className="text-red-400 font-mono font-bold">+{Math.abs(p.deviation || 0).toFixed(0)} days</span>
+             <span className="text-[rgb(var(--color-danger))] font-mono font-bold">+{Math.abs(p.deviation || 0).toFixed(0)} days</span>
              <span className="text-th-muted">· ${formatCompact(p.total_amount || 0)} float</span>
            </div>
          ))}
          {adtpData.filter(p => p.is_anomaly).length === 0 && (
-           <span className="text-[10px] text-th-muted">No active anomalies detected</span>
+           <span className="text-[10px] text-th-muted">
+             ✓ All payers within normal range · No anomalies detected
+           </span>
          )}
        </div>
      </div>
@@ -1783,28 +1785,28 @@ export function CommandCenter() {
        if (!worst) return null;
        return (
          <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden mb-4">
-           <div className="px-4 py-3 border-b border-th-border bg-red-500/5">
+           <div className="px-4 py-3 border-b border-th-border bg-[rgb(var(--color-danger-bg))]">
              <h3 className="text-[11px] font-bold text-th-heading flex items-center gap-2">🔍 Anomaly Detail · {worst.payer_name} ADTP +{Math.abs(worst.deviation || 0).toFixed(0)} Days</h3>
            </div>
            <div className="p-4">
              {/* Alert Box */}
-             <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-md mb-4">
-               <p className="font-mono text-[9px] font-bold text-red-400 uppercase tracking-wider mb-1.5">🚨 Isolation Forest Alert</p>
+             <div className="p-3 bg-[rgb(var(--color-danger-bg))] border border-[rgb(var(--color-danger)/0.3)] rounded-md mb-4">
+               <p className="font-mono text-[9px] font-bold text-[rgb(var(--color-danger))] uppercase tracking-wider mb-1.5">🚨 Isolation Forest Alert</p>
                <p className="text-[11px] text-th-heading leading-relaxed mb-3">
-                 {worst.payer_name} payment cadence increased from <strong className="text-[rgb(var(--color-success))]">{worst.expected_adtp ?? '\u2014'} days</strong> (3-month avg) to <strong className="text-red-400">{worst.actual_adtp ?? '\u2014'} days</strong> this week. Pattern is statistically significant (z-score: {(worst.z_score || 0).toFixed(1)}). Last seen: Q4 2023 batch delay incident.
+                 {worst.payer_name} payment cadence increased from <strong className="text-[rgb(var(--color-success))]">{worst.expected_adtp ?? '\u2014'} days</strong> (3-month avg) to <strong className="text-[rgb(var(--color-danger))]">{worst.actual_adtp ?? '\u2014'} days</strong> this week. Pattern is statistically significant (z-score: {(worst.z_score || 0).toFixed(1)}). Last seen: Q4 2023 batch delay incident.
                </p>
                <div className="grid grid-cols-3 gap-2">
-                 <div className="bg-red-500/5 rounded p-2 text-center border border-red-500/10">
+                 <div className="bg-[rgb(var(--color-danger-bg))] rounded p-2 text-center border border-[rgb(var(--color-danger)/0.15)]">
                    <p className="text-[8.5px] font-mono text-th-muted">Revenue Float</p>
-                   <p className="text-base font-black text-red-400">{formatCompact(worst.total_amount || 0)}</p>
+                   <p className="text-base font-black text-[rgb(var(--color-danger))]">{formatCompact(worst.total_amount || 0)}</p>
                  </div>
-                 <div className="bg-red-500/5 rounded p-2 text-center border border-red-500/10">
+                 <div className="bg-[rgb(var(--color-danger-bg))] rounded p-2 text-center border border-[rgb(var(--color-danger)/0.15)]">
                    <p className="text-[8.5px] font-mono text-th-muted">Z-Score</p>
-                   <p className="text-base font-black text-red-400">{(worst.z_score || 0).toFixed(1)}σ</p>
+                   <p className="text-base font-black text-[rgb(var(--color-danger))]">{(worst.z_score || 0).toFixed(1)}σ</p>
                  </div>
-                 <div className="bg-amber-500/5 rounded p-2 text-center border border-amber-500/10">
+                 <div className="bg-[rgb(var(--color-warning-bg))] rounded p-2 text-center border border-[rgb(var(--color-warning)/0.15)]">
                    <p className="text-[8.5px] font-mono text-th-muted">Duration</p>
-                   <p className="text-base font-black text-amber-400">8 days</p>
+                   <p className="text-base font-black text-[rgb(var(--color-warning))]">8 days</p>
                  </div>
                </div>
              </div>
@@ -1921,7 +1923,7 @@ export function CommandCenter() {
          <div className="flex items-center gap-3">
            <span className="material-symbols-outlined text-[rgb(var(--color-primary))]">approval</span>
            <h2 className="text-base font-bold text-th-heading">HITL Approval Queue</h2>
-           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+           <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border border-[rgb(var(--color-warning)/0.3)]">
              {(hitlPending.length > 0 ? hitlPending : []).length} pending
            </span>
          </div>
@@ -1955,7 +1957,7 @@ export function CommandCenter() {
                  <button onClick={() => approveAction(action.id)} className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-[rgb(var(--color-success))]/10 text-[rgb(var(--color-success))] hover:bg-[rgb(var(--color-success))]/20 border border-[rgb(var(--color-success))]/20 transition-colors">
                    Approve
                  </button>
-                 <button onClick={() => rejectAction(action.id)} className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/20 transition-colors">
+                 <button onClick={() => rejectAction(action.id)} className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] hover:bg-[rgb(var(--color-warning)/0.2)] border border-[rgb(var(--color-warning)/0.3)] transition-colors">
                    Override
                  </button>
                  <button onClick={() => { setHitlModalOpen(false); openInvestigation(action.claim_id, formatCompact(action.amount), 'N/A', action.description, 'warning'); }} className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-[rgb(var(--color-info))]/10 text-[rgb(var(--color-info))] hover:bg-[rgb(var(--color-info))]/20 border border-[rgb(var(--color-info))]/20 transition-colors">
