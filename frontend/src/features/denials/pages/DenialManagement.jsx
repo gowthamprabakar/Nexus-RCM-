@@ -385,6 +385,7 @@ export function DenialManagement() {
   const [claimRCA, setClaimRCA] = useState({});
   const [rcaLoading, setRcaLoading] = useState(false);
  const [preventionAlerts, setPreventionAlerts] = useState(null);
+ const [detectBriefing, setDetectBriefing] = useState(null);
  // Diagnostic findings state
  const [criticalFindings, setCriticalFindings] = useState(null);
 
@@ -406,6 +407,7 @@ export function DenialManagement() {
    setAiInsights(r?.insights || []);
    setAiLoading(false);
  });
+ api.denials.getDetectBriefing().then(d => { if (d) setDetectBriefing(d); }).catch(() => {});
  try {
  const [sumData, denialsData, matrixData, rootCauseData, treeData] = await Promise.all([
    api.denials.getSummary(),
@@ -736,7 +738,7 @@ export function DenialManagement() {
         {[
           { id: 'queue',  label: 'Denial Queue',           count: summary.total_denials ?? 47 },
           { id: 'appeal', label: 'Appeal Workbench',       count: summary.appeals_in_flight ?? 9 },
-          { id: 'risk',   label: 'High Risk Claims',       count: 31 },
+          { id: 'risk',   label: 'High Risk Claims',       count: detectBriefing?.kpis?.high_risk_count ?? 31 },
           { id: 'payer',  label: 'Payer Patterns + Heatmap', count: null },
           { id: 'rca',    label: 'RCA Tree',               count: 'Neo4j' },
         ].map(t => (
@@ -779,11 +781,15 @@ export function DenialManagement() {
                 {/* MiroFish Verdict */}
                 <div>
                   <p className="text-[8.5px] font-semibold uppercase tracking-widest text-th-muted font-mono mb-2 pb-1.5 border-b border-th-border">MiroFish Verdict</p>
-                  {[
-                    { val: 'confirmed', label: '✓ CONFIRMED', count: 18, color: 'success' },
-                    { val: 'disputed',  label: '✗ DISPUTED',  count: 9,  color: 'danger'  },
-                    { val: 'pending',   label: '⏳ Pending',   count: 20, color: 'warning' },
-                  ].map(f => (
+                  {(() => {
+                    const mfFacets = detectBriefing?.filter_facets?.mf_verdicts || [];
+                    const getMfCount = (val) => mfFacets.find(f => f.val === val)?.count ?? '—';
+                    return [
+                      { val: 'confirmed', label: '✓ CONFIRMED', count: getMfCount('confirmed'), color: 'success' },
+                      { val: 'disputed',  label: '✗ DISPUTED',  count: getMfCount('disputed'),  color: 'danger'  },
+                      { val: 'pending',   label: '⏳ Pending',   count: getMfCount('pending'),   color: 'warning' },
+                    ];
+                  })().map(f => (
                     <button key={f.val} onClick={() => setMfFilter(mfFilter === f.val ? '' : f.val)}
                       className={cn(
                         'w-full flex items-center justify-between px-2 py-1.5 rounded text-[10px] mb-1 border-l-2 transition-colors',
@@ -804,11 +810,15 @@ export function DenialManagement() {
                 {/* AI Urgency */}
                 <div>
                   <p className="text-[8.5px] font-semibold uppercase tracking-widest text-th-muted font-mono mb-2 pb-1.5 border-b border-th-border">AI Urgency</p>
-                  {[
-                    { val: 'CRIT', label: '🔥 Critical >85', count: 8  },
-                    { val: 'HIGH', label: '⚠ High 60–85',    count: 14 },
-                    { val: 'MED',  label: '● Medium <60',    count: 25 },
-                  ].map(f => (
+                  {(() => {
+                    const urgFacets = detectBriefing?.filter_facets?.urgency || [];
+                    const getUrgCount = (val) => urgFacets.find(f => f.val === val)?.count ?? '—';
+                    return [
+                      { val: 'CRIT', label: '🔥 Critical >85', count: getUrgCount('CRIT')  },
+                      { val: 'HIGH', label: '⚠ High 60–85',    count: getUrgCount('HIGH') },
+                      { val: 'MED',  label: '● Medium <60',    count: getUrgCount('MED') },
+                    ];
+                  })().map(f => (
                     <button key={f.val} onClick={() => setUrgFilter(urgFilter === f.val ? '' : f.val)}
                       className={cn(
                         'w-full flex items-center justify-between px-2 py-1.5 rounded text-[10px] mb-1 border-l-2 transition-colors',
@@ -825,14 +835,14 @@ export function DenialManagement() {
                 {/* Payer */}
                 <div>
                   <p className="text-[8.5px] font-semibold uppercase tracking-widest text-th-muted font-mono mb-2 pb-1.5 border-b border-th-border">Payer</p>
-                  {[
+                  {(detectBriefing?.filter_facets?.payers || [
                     { val: 'Medicare',     count: 12 },
                     { val: 'BCBS TX',      count: 9  },
                     { val: 'Aetna',        count: 8  },
                     { val: 'UnitedHealth', count: 7  },
                     { val: 'Cigna',        count: 5  },
                     { val: 'Humana',       count: 4  },
-                  ].map(f => (
+                  ]).map(f => (
                     <button key={f.val} onClick={() => setPayerFilter(payerFilter === f.val ? '' : f.val)}
                       className={cn(
                         'w-full flex items-center justify-between px-2 py-1.5 rounded text-[10px] mb-1 border-l-2 transition-colors',
@@ -849,14 +859,14 @@ export function DenialManagement() {
                 {/* CARC Code */}
                 <div>
                   <p className="text-[8.5px] font-semibold uppercase tracking-widest text-th-muted font-mono mb-2 pb-1.5 border-b border-th-border">CARC Code</p>
-                  {[
+                  {(detectBriefing?.filter_facets?.carc_codes || [
                     { val: 'CO-16', label: 'CO-16 Auth',      count: 11 },
                     { val: 'CO-4',  label: 'CO-4 Coding',     count: 9  },
                     { val: 'CO-97', label: 'CO-97 Duplicate', count: 7  },
                     { val: 'PR-50', label: 'PR-50 Med Nec',   count: 6  },
                     { val: 'CO-11', label: 'CO-11 Diagnosis',  count: 5  },
                     { val: 'CO-29', label: 'CO-29 Timely',    count: 4  },
-                  ].map(f => (
+                  ]).map(f => (
                     <button key={f.val} onClick={() => setCarcFilter(carcFilter === f.val ? '' : f.val)}
                       className={cn(
                         'w-full flex items-center justify-between px-2 py-1.5 rounded text-[10px] mb-1 border-l-2 transition-colors',
@@ -873,12 +883,12 @@ export function DenialManagement() {
                 {/* Denial Category */}
                 <div>
                   <p className="text-[8.5px] font-semibold uppercase tracking-widest text-th-muted font-mono mb-2 pb-1.5 border-b border-th-border">Denial Category</p>
-                  {[
+                  {(detectBriefing?.filter_facets?.categories || [
                     { val: 'Administrative', count: 18 },
                     { val: 'Clinical',       count: 14 },
                     { val: 'Coding',         label: 'Billing/Coding', count: 11 },
                     { val: 'Contractual',    count: 4  },
-                  ].map(f => (
+                  ]).map(f => (
                     <button key={f.val} onClick={() => setCategoryFilter(categoryFilter === f.val ? '' : f.val)}
                       className={cn(
                         'w-full flex items-center justify-between px-2 py-1.5 rounded text-[10px] mb-1 border-l-2 transition-colors',
@@ -1249,10 +1259,10 @@ export function DenialManagement() {
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             <div className="grid grid-cols-4 gap-3">
               {[
-                { label:'High Risk (>70% denial)', val:31, sub:'$248K at risk', note:'Action needed today', accent:'border-t-[rgb(var(--color-danger))]', valColor:'text-[rgb(var(--color-danger))]' },
-                { label:'CRS Below 60', val:8, sub:'AUTO-006 holds active', note:'Review before submission', accent:'border-t-[rgb(var(--color-warning))]', valColor:'text-[rgb(var(--color-warning))]' },
-                { label:'Write-off Risk >50%', val:12, sub:'$89K exposure', note:'Pre-write-off queue', accent:'border-t-[rgb(var(--color-warning))]', valColor:'text-[rgb(var(--color-warning))]' },
-                { label:'Preventable (MiroFish)', val:18, sub:'Appeal recommended', note:'$147K recovery est.', accent:'border-t-[rgb(var(--color-success))]', valColor:'text-[rgb(var(--color-success))]' },
+                { label:'High Risk (>70% denial)', val: detectBriefing?.kpis?.high_risk_count ?? '—', sub: detectBriefing?.kpis?.high_risk_amount ? '$' + Math.round(detectBriefing.kpis.high_risk_amount/1000) + 'K at risk' : '—', note:'Action needed today', accent:'border-t-[rgb(var(--color-danger))]', valColor:'text-[rgb(var(--color-danger))]' },
+                { label:'CRS Below 60', val: detectBriefing?.kpis?.crs_below_60 ?? '—', sub:'AUTO-006 holds active', note:'Review before submission', accent:'border-t-[rgb(var(--color-warning))]', valColor:'text-[rgb(var(--color-warning))]' },
+                { label:'Write-off Risk >50%', val: detectBriefing?.kpis?.write_off_high ?? '—', sub: detectBriefing?.kpis?.write_off_amount ? '$' + Math.round(detectBriefing.kpis.write_off_amount/1000) + 'K exposure' : '—', note:'Pre-write-off queue', accent:'border-t-[rgb(var(--color-warning))]', valColor:'text-[rgb(var(--color-warning))]' },
+                { label:'Preventable (MiroFish)', val: detectBriefing?.kpis?.preventable_count ?? '—', sub:'Appeal recommended', note: detectBriefing?.kpis?.preventable_amount ? '$' + Math.round(detectBriefing.kpis.preventable_amount/1000) + 'K recovery est.' : '—', accent:'border-t-[rgb(var(--color-success))]', valColor:'text-[rgb(var(--color-success))]' },
               ].map((k, i) => (
                 <div key={i} className={cn('bg-th-surface-raised border border-th-border border-t-2 rounded-lg p-4', k.accent)}>
                   <p className="text-[9px] font-mono uppercase tracking-wider text-th-muted mb-2">{k.label}</p>
@@ -1340,7 +1350,7 @@ export function DenialManagement() {
               </div>
               <div className="p-4">
                 {(() => {
-                  // Build heatmap from API matrix data if available, else static fallback
+                  // Build heatmap from detect-briefing API, then denial-matrix API, else static fallback
                   const STATIC_CARCS = ['CO-16\nAuth','CO-4\nCode','CO-97\nDup','PR-50\nMedNec','CO-11\nDiag','CO-29\nTimely','Other'];
                   const STATIC_CARC_KEYS = ['CO-16','CO-4','CO-97','PR-50','CO-11','CO-29','Other'];
                   const STATIC_ROWS = [
@@ -1351,10 +1361,17 @@ export function DenialManagement() {
                     { payer:'Cigna', cells:[2,0,1,1,2,0,0] },
                     { payer:'Humana', cells:[1,0,0,0,0,3,0] },
                   ];
-                  const useApiMatrix = heatmapPayers !== FALLBACK_HEATMAP_PAYERS;
-                  const CARCS = useApiMatrix ? heatmapDepts.map(d => d.replace(/_/g, ' ')) : STATIC_CARCS;
-                  const CARC_KEYS = useApiMatrix ? heatmapDepts : STATIC_CARC_KEYS;
-                  const ROWS = useApiMatrix
+                  const briefingHeatmap = detectBriefing?.heatmap;
+                  const useApiMatrix = briefingHeatmap ? true : heatmapPayers !== FALLBACK_HEATMAP_PAYERS;
+                  const CARCS = briefingHeatmap
+                    ? briefingHeatmap.categories.map(c => c.replace(/_/g, ' ').replace(/-/g, '\n'))
+                    : useApiMatrix ? heatmapDepts.map(d => d.replace(/_/g, ' ')) : STATIC_CARCS;
+                  const CARC_KEYS = briefingHeatmap
+                    ? briefingHeatmap.categories
+                    : useApiMatrix ? heatmapDepts : STATIC_CARC_KEYS;
+                  const ROWS = briefingHeatmap
+                    ? briefingHeatmap.matrix.map(row => ({ payer: row.payer, cells: row.cells.map(c => c.count) }))
+                    : useApiMatrix
                     ? heatmapPayers.map(p => ({
                         payer: p,
                         cells: CARC_KEYS.map(cat => heatmapData[p]?.[cat] ?? 0),
@@ -1390,7 +1407,15 @@ export function DenialManagement() {
                   );
                 })()}
                 <div className="mt-3 px-3 py-2 bg-[rgb(var(--color-danger-bg))] border border-[rgb(var(--color-danger)/0.3)] rounded-md text-[10.5px] text-th-secondary leading-relaxed flex items-center gap-3">
-                  <span>🔥 <strong className="text-[rgb(var(--color-danger))]">BCBS TX CO-4 spike: 6 denials</strong> — 3 providers. CPT mismatch. MiroFish: fix coding → denial rate drop +$120K/month.</span>
+                  {(() => {
+                    const hottestRow = detectBriefing?.heatmap?.matrix?.[0];
+                    const hottestCell = hottestRow?.cells?.reduce((max, c) => c.count > (max?.count || 0) ? c : max, null);
+                    const hottestPayer = hottestRow?.payer;
+                    if (hottestPayer && hottestCell) {
+                      return <span>🔥 <strong className="text-[rgb(var(--color-danger))]">{hottestPayer} {hottestCell.carc || CARC_KEYS[hottestRow.cells.indexOf(hottestCell)]} spike: {hottestCell.count} denials</strong> — MiroFish: fix root cause to reduce denial rate.</span>;
+                    }
+                    return <span>🔥 <strong className="text-[rgb(var(--color-danger))]">BCBS TX CO-4 spike: 6 denials</strong> — 3 providers. CPT mismatch. MiroFish: fix coding → denial rate drop +$120K/month.</span>;
+                  })()}
                   <div className="flex gap-2 shrink-0">
                     <button onClick={() => navigate('/analytics/prevention')} className="px-2 py-1 rounded text-[9.5px] border border-th-border bg-th-surface-raised text-th-secondary hover:text-th-heading transition-colors whitespace-nowrap">Fix coding →</button>
                     <button onClick={() => navigate('/intelligence/lida/chat')} className="px-2 py-1 rounded text-[9.5px] border border-th-border bg-th-surface-raised text-th-secondary hover:text-th-heading transition-colors whitespace-nowrap">Ask LIDA →</button>
@@ -1407,13 +1432,29 @@ export function DenialManagement() {
                   {['Root Cause','Group','Count','Revenue','Trend','Prevention'].map(h => (<th key={h} className="px-3 py-2 text-left text-[9px] font-mono font-semibold uppercase tracking-wider text-th-muted">{h}</th>))}
                 </tr></thead>
                 <tbody>
-                  {[
-                    { cause:'Auth Missing', group:'Admin', gc:'danger', count:11, rev:'$84K', trend:'↑ +18%', tc:'danger', link:'AUTH rule →', lc:'warning' },
-                    { cause:'CPT Mismatch', group:'Coding', gc:'warning', count:9, rev:'$62K', trend:'↑ +41%', tc:'danger', link:'Coding alert →', lc:'danger' },
-                    { cause:'Duplicate Claim', group:'System', gc:'info', count:7, rev:'$44K', trend:'↓ -8%', tc:'success', link:'AUTO-012 ✓', lc:'success' },
-                    { cause:'Med Necessity', group:'Clinical', gc:'purple', count:6, rev:'$38K', trend:'→ Stable', tc:'muted', link:'Manual review', lc:'muted' },
-                    { cause:'Timely Filing', group:'Admin', gc:'warning', count:4, rev:'$28K', trend:'↑ +12%', tc:'warning', link:'AUTO-009 →', lc:'warning' },
-                  ].map((row, i) => {
+                  {(() => {
+                    const STATIC_TRENDS = [
+                      { cause:'Auth Missing', group:'Admin', gc:'danger', count:11, rev:'$84K', trend:'↑ +18%', tc:'danger', link:'AUTH rule →', lc:'warning' },
+                      { cause:'CPT Mismatch', group:'Coding', gc:'warning', count:9, rev:'$62K', trend:'↑ +41%', tc:'danger', link:'Coding alert →', lc:'danger' },
+                      { cause:'Duplicate Claim', group:'System', gc:'info', count:7, rev:'$44K', trend:'↓ -8%', tc:'success', link:'AUTO-012 ✓', lc:'success' },
+                      { cause:'Med Necessity', group:'Clinical', gc:'purple', count:6, rev:'$38K', trend:'→ Stable', tc:'muted', link:'Manual review', lc:'muted' },
+                      { cause:'Timely Filing', group:'Admin', gc:'warning', count:4, rev:'$28K', trend:'↑ +12%', tc:'warning', link:'AUTO-009 →', lc:'warning' },
+                    ];
+                    const groupColorMap = { Admin:'danger', Coding:'warning', System:'info', Clinical:'purple' };
+                    const trendColor = (pct) => pct > 0 ? 'danger' : pct < 0 ? 'success' : 'muted';
+                    const apiTrends = detectBriefing?.trending_root_causes?.map(t => ({
+                      cause: t.cause,
+                      group: t.group,
+                      gc: groupColorMap[t.group] || 'warning',
+                      count: t.count,
+                      rev: t.revenue >= 1000 ? '$' + Math.round(t.revenue / 1000) + 'K' : '$' + t.revenue,
+                      trend: (t.trend_pct > 0 ? '↑ +' : t.trend_pct < 0 ? '↓ ' : '→ ') + (t.trend_pct === 0 ? 'Stable' : t.trend_pct + '%'),
+                      tc: trendColor(t.trend_pct),
+                      link: t.prevention_link || 'Review →',
+                      lc: trendColor(t.trend_pct),
+                    }));
+                    return (apiTrends || STATIC_TRENDS);
+                  })().map((row, i) => {
                     const colors = {danger:'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger)/0.3)]', warning:'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]', info:'bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))] border-[rgb(var(--color-info)/0.3)]', success:'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]', purple:'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700', muted:'bg-th-surface-overlay text-th-muted border-th-border'};
                     const tc = {danger:'text-[rgb(var(--color-danger))]', warning:'text-[rgb(var(--color-warning))]', success:'text-[rgb(var(--color-success))]', muted:'text-th-muted'};
                     return (
