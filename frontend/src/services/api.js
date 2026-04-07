@@ -332,6 +332,13 @@ export const api = {
                 return [];
             }
         },
+        getDetectBriefing: async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/denials/detect-briefing`);
+                if (!res.ok) throw new Error('detect briefing failed');
+                return await res.json();
+            } catch (err) { console.error('Detect briefing error:', err); return null; }
+        },
     },
 
     // ------------------------------------------------------------------------

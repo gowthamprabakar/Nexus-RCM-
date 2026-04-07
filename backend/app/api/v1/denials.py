@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc, and_
+from sqlalchemy import select, func, desc, and_, text
 from datetime import date
 import uuid
 
@@ -515,3 +515,211 @@ async def create_denial(denial_in: DenialCreate, db: AsyncSession = Depends(get_
     await db.commit()
     await db.refresh(db_denial)
     return db_denial
+
+
+# ── GET /denials/detect-briefing ────────────────────────────────────────────
+@router.get("/detect-briefing")
+async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
+    """Single aggregation endpoint for the Detect pages — filter facets, KPIs, heatmap, trends, high-risk claims."""
+    try:
+        # ── 1. FILTER FACETS ──────────────────────────────────────────────
+
+        # MiroFish verdicts from RCA
+        mf_rows = (await db.execute(text("""
+            SELECT
+                CASE
+                    WHEN rca.ml_denial_probability <= 0.45 THEN 'confirmed'
+                    WHEN rca.ml_denial_probability >= 0.70 THEN 'disputed'
+                    ELSE 'pending'
+                END AS verdict,
+                COUNT(*)
+            FROM root_cause_analysis rca
+            GROUP BY 1
+        """))).fetchall()
+        mf_verdicts = [{"val": r[0], "count": r[1]} for r in mf_rows]
+
+        # Denials without RCA = pending
+        total_denials = await db.scalar(select(func.count(Denial.denial_id))) or 0
+        total_with_rca = sum(v["count"] for v in mf_verdicts)
+        if total_denials > total_with_rca:
+            # Find existing pending entry or add one
+            pending_entry = next((v for v in mf_verdicts if v["val"] == "pending"), None)
+            if pending_entry:
+                pending_entry["count"] += (total_denials - total_with_rca)
+            else:
+                mf_verdicts.append({"val": "pending", "count": total_denials - total_with_rca})
+
+        # Urgency levels (from denial_probability thresholds)
+        urg_rows = (await db.execute(text("""
+            SELECT
+                CASE
+                    WHEN rca.ml_denial_probability >= 0.85 THEN 'CRIT'
+                    WHEN rca.ml_denial_probability >= 0.60 THEN 'HIGH'
+                    ELSE 'MED'
+                END AS urg,
+                COUNT(*)
+            FROM root_cause_analysis rca
+            GROUP BY 1
+        """))).fetchall()
+        urgency = [{"val": r[0], "count": r[1]} for r in urg_rows]
+
+        # Top payers by denial count
+        payer_rows = (await db.execute(text("""
+            SELECT pm.payer_name, COUNT(*) as cnt
+            FROM denials d
+            JOIN claims c ON d.claim_id = c.claim_id
+            JOIN payer_master pm ON c.payer_id = pm.payer_id
+            GROUP BY pm.payer_name
+            ORDER BY cnt DESC LIMIT 8
+        """))).fetchall()
+        payers = [{"val": r[0], "count": r[1]} for r in payer_rows]
+
+        # Top CARC codes
+        carc_rows = (await db.execute(text("""
+            SELECT carc_code, COUNT(*) as cnt
+            FROM denials
+            WHERE carc_code IS NOT NULL
+            GROUP BY carc_code
+            ORDER BY cnt DESC LIMIT 8
+        """))).fetchall()
+        carc_codes = [{"val": r[0], "count": r[1]} for r in carc_rows]
+
+        # Denial categories
+        cat_rows = (await db.execute(text("""
+            SELECT denial_category, COUNT(*) as cnt
+            FROM denials
+            WHERE denial_category IS NOT NULL
+            GROUP BY denial_category
+            ORDER BY cnt DESC
+        """))).fetchall()
+        categories = [{"val": r[0], "count": r[1]} for r in cat_rows]
+
+        # ── 2. HIGH RISK KPIs ─────────────────────────────────────────────
+
+        hr = (await db.execute(text("""
+            SELECT
+                COUNT(CASE WHEN rca.ml_denial_probability >= 0.60 THEN 1 END) as high_risk,
+                COALESCE(SUM(CASE WHEN rca.ml_denial_probability >= 0.60 THEN d.denial_amount END), 0) as hr_amount,
+                COUNT(CASE WHEN rca.ml_write_off_probability >= 0.50 THEN 1 END) as wo_high,
+                COALESCE(SUM(CASE WHEN rca.ml_write_off_probability >= 0.50 THEN d.denial_amount END), 0) as wo_amount,
+                COUNT(CASE WHEN rca.ml_denial_probability <= 0.45 THEN 1 END) as preventable,
+                COALESCE(SUM(CASE WHEN rca.ml_denial_probability <= 0.45 THEN d.denial_amount END), 0) as prev_amount
+            FROM root_cause_analysis rca
+            JOIN denials d ON rca.denial_id = d.denial_id
+        """))).fetchone()
+
+        crs_below = await db.scalar(text("""
+            SELECT COUNT(*) FROM claims WHERE crs_score IS NOT NULL AND crs_score < 60
+        """)) or 0
+
+        # ── 3. HEATMAP (Payer x CARC) ────────────────────────────────────
+
+        hm_rows = (await db.execute(text("""
+            SELECT pm.payer_name, d.carc_code, COUNT(*) as cnt
+            FROM denials d
+            JOIN claims c ON d.claim_id = c.claim_id
+            JOIN payer_master pm ON c.payer_id = pm.payer_id
+            WHERE d.carc_code IS NOT NULL
+            GROUP BY pm.payer_name, d.carc_code
+            ORDER BY cnt DESC
+        """))).fetchall()
+
+        # Build matrix
+        hm_payers = list(dict.fromkeys(r[0] for r in hm_rows))[:8]
+        hm_carcs = list(dict.fromkeys(r[1] for r in hm_rows))[:8]
+        hm_lookup = {}
+        for r in hm_rows:
+            hm_lookup.setdefault(r[0], {})[r[1]] = r[2]
+
+        hm_matrix = []
+        for payer in hm_payers:
+            cells = [{"category": carc, "count": hm_lookup.get(payer, {}).get(carc, 0)} for carc in hm_carcs]
+            hm_matrix.append({"payer": payer, "cells": cells})
+
+        # ── 4. TRENDING ROOT CAUSES ───────────────────────────────────────
+
+        trend_rows = (await db.execute(text("""
+            SELECT
+                rca.primary_root_cause,
+                rca.root_cause_group,
+                COUNT(*) as cnt,
+                COALESCE(SUM(rca.financial_impact), 0) as revenue
+            FROM root_cause_analysis rca
+            WHERE rca.primary_root_cause IS NOT NULL
+            GROUP BY rca.primary_root_cause, rca.root_cause_group
+            ORDER BY cnt DESC
+            LIMIT 8
+        """))).fetchall()
+
+        trending = []
+        for r in trend_rows:
+            cause_label = (r[0] or "").replace("_", " ").title()
+            group = r[1] or "Unknown"
+            trending.append({
+                "cause": cause_label,
+                "group": group,
+                "count": r[2],
+                "revenue": round(float(r[3] or 0), 2),
+                "trend_pct": 0,  # Would need historical comparison
+                "prevention_rule": None,
+            })
+
+        # ── 5. HIGH RISK CLAIMS (top 10) ──────────────────────────────────
+
+        hr_claims = (await db.execute(text("""
+            SELECT d.claim_id, pm.payer_name, d.denial_amount, d.carc_code,
+                   rca.ml_denial_probability, rca.ml_write_off_probability,
+                   rca.confidence_score,
+                   CASE WHEN rca.ml_denial_probability <= 0.45 THEN 'confirmed'
+                        WHEN rca.ml_denial_probability >= 0.70 THEN 'disputed'
+                        ELSE 'pending' END as mf_verdict
+            FROM root_cause_analysis rca
+            JOIN denials d ON rca.denial_id = d.denial_id
+            JOIN claims c ON d.claim_id = c.claim_id
+            JOIN payer_master pm ON c.payer_id = pm.payer_id
+            WHERE rca.ml_denial_probability >= 0.60
+            ORDER BY rca.ml_denial_probability DESC
+            LIMIT 10
+        """))).fetchall()
+
+        high_risk_claims = [{
+            "claim_id": r[0],
+            "payer": r[1],
+            "amount": round(float(r[2] or 0), 2),
+            "carc": r[3],
+            "denial_prob": round(float(r[4] or 0), 4),
+            "write_off": round(float(r[5] or 0), 4),
+            "crs": r[6],
+            "mf_verdict": r[7],
+        } for r in hr_claims]
+
+        return {
+            "filter_facets": {
+                "mf_verdicts": mf_verdicts,
+                "urgency": urgency,
+                "payers": payers,
+                "carc_codes": carc_codes,
+                "categories": categories,
+            },
+            "kpis": {
+                "high_risk_count": hr[0] if hr else 0,
+                "high_risk_amount": round(float(hr[1] or 0), 2) if hr else 0,
+                "crs_below_60": crs_below,
+                "write_off_high": hr[2] if hr else 0,
+                "write_off_amount": round(float(hr[3] or 0), 2) if hr else 0,
+                "preventable_count": hr[4] if hr else 0,
+                "preventable_amount": round(float(hr[5] or 0), 2) if hr else 0,
+            },
+            "heatmap": {
+                "payers": hm_payers,
+                "categories": hm_carcs,
+                "matrix": hm_matrix,
+            },
+            "trending_root_causes": trending,
+            "high_risk_claims": high_risk_claims,
+        }
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Detect briefing error: {str(e)}")
