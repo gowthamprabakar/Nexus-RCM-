@@ -112,6 +112,8 @@ export default function AppealPipelineTracker() {
   const [liveAppeals, setLiveAppeals] = useState([]);
   const [letterLoading, setLetterLoading] = useState(false);
   const [appealsLoading, setAppealsLoading] = useState(false);
+  const [claimRCA, setClaimRCA] = useState(null);
+  const [rcaLoading, setRcaLoading] = useState(false);
 
   const claim = APPEAL_DATA[selectedId] || APPEAL_DATA['CLM-8821'];
 
@@ -145,6 +147,51 @@ export default function AppealPipelineTracker() {
       .finally(() => setAppealsLoading(false));
   }, []);
 
+  // Fetch RCA when selectedId changes
+  useEffect(() => {
+    if (!selectedId) return;
+    setRcaLoading(true);
+    setClaimRCA(null);
+    api.rootCause?.getClaimAnalysis?.(selectedId)
+      .then(res => {
+        if (res?.analysis) setClaimRCA(res.analysis);
+      })
+      .catch(() => {})
+      .finally(() => setRcaLoading(false));
+  }, [selectedId]);
+
+  // Compute scores from live appeal data if available
+  const liveAppeal = liveAppeals.find(a => (a.claim_id || a.id) === selectedId);
+  const liveScores = liveAppeal ? [
+    { label: 'Appeal success', val: liveAppeal.win_pct || liveAppeal.winPct || 0, color: (liveAppeal.win_pct || liveAppeal.winPct || 0) >= 70 ? 'success' : (liveAppeal.win_pct || liveAppeal.winPct || 0) >= 50 ? 'warning' : 'danger' },
+    { label: 'Denial recurrence prob', val: Math.round((liveAppeal.denial_prob || 0) * 100) || 0, color: (liveAppeal.denial_prob || 0) <= 0.3 ? 'success' : (liveAppeal.denial_prob || 0) <= 0.6 ? 'warning' : 'danger' },
+    { label: 'Write-off risk', val: Math.round((liveAppeal.write_off || 0) * 100) || 0, color: (liveAppeal.write_off || 0) <= 0.25 ? 'success' : (liveAppeal.write_off || 0) <= 0.5 ? 'warning' : 'danger' },
+  ] : null;
+  const scores = liveScores || claim.scores;
+
+  // Derive MiroFish reason from RCA if available
+  const mfReason = claimRCA?.evidence_summary || claim.mfReason;
+  const mfConf = claimRCA?.confidence_score || claim.mfConf;
+
+  // Derive key arguments from RCA steps if available
+  const liveArguments = claimRCA?.steps ? (() => {
+    const STEP_ARG_MAP = {
+      'ELIGIBILITY_CHECK': { color: 'success', title: 'Eligibility verified:' },
+      'AUTH_TIMELINE_CHECK': { color: 'success', title: 'Authorization status:' },
+      'CODING_VALIDATION': { color: 'primary', title: 'Coding analysis:' },
+      'PAYER_HISTORY_MATCH': { color: 'primary', title: 'Historical precedent:' },
+      'MIROFISH_AGENT_VALIDATION': { color: 'success', title: 'MiroFish consensus:' },
+    };
+    return (claimRCA.steps || [])
+      .filter(s => STEP_ARG_MAP[s.step_name])
+      .map(s => ({
+        color: s.finding_status === 'PASS' ? 'success' : s.finding_status === 'FAIL' ? 'warning' : 'primary',
+        title: STEP_ARG_MAP[s.step_name].title,
+        body: s.finding || 'Analysis complete.',
+      }));
+  })() : null;
+  const arguments_ = liveArguments && liveArguments.length > 0 ? liveArguments : claim.arguments;
+
   // When switching claims: load letter from static data, then try real API
   useEffect(() => {
     setLetterText(claim.letter);
@@ -171,7 +218,11 @@ export default function AppealPipelineTracker() {
     <div className="flex-1 flex min-h-0 overflow-hidden" style={{display:'grid', gridTemplateColumns:'1fr 1fr'}}>
       {/* LEFT: AI EVIDENCE */}
       <div className="border-r border-th-border overflow-y-auto bg-th-surface-base p-4 space-y-4">
-        <p className="text-[8.5px] font-mono font-bold uppercase tracking-widest text-th-muted">AI Evidence · Why the appeal was drafted this way</p>
+        <div className="flex items-center gap-2">
+          <p className="text-[8.5px] font-mono font-bold uppercase tracking-widest text-th-muted">AI Evidence · Why the appeal was drafted this way</p>
+          {claimRCA && <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border border-[rgb(var(--color-success)/0.3)]">LIVE</span>}
+          {!claimRCA && !rcaLoading && <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-th-surface-overlay text-th-muted border border-th-border">TEMPLATE</span>}
+        </div>
 
         {/* Claim header chips */}
         <div className="flex gap-2 flex-wrap">
@@ -197,16 +248,16 @@ export default function AppealPipelineTracker() {
         {/* MiroFish reason */}
         <div className={cn('px-3 py-2.5 rounded-lg border text-[10.5px] text-th-secondary leading-relaxed', claim.mf === 'confirmed' ? 'bg-[rgb(var(--color-success-bg))] border-[rgb(var(--color-success)/0.3)]' : 'bg-[rgb(var(--color-danger-bg))] border-[rgb(var(--color-danger)/0.3)]')}>
           <p className={cn('text-[8px] font-mono font-bold uppercase tracking-wider mb-1.5', claim.mf === 'confirmed' ? 'text-[rgb(var(--color-success))]' : 'text-[rgb(var(--color-danger))]')}>
-            MiroFish {claim.mf.toUpperCase()} · {claim.mfConf}% consensus
+            MiroFish {claim.mf.toUpperCase()} · {mfConf}% consensus
           </p>
-          {claim.mfReason}
+          {mfReason}
         </div>
 
         {/* Key arguments */}
         <div>
           <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-th-muted mb-2">Key Arguments</p>
           <div className="space-y-1.5">
-            {claim.arguments.map((arg, i) => (
+            {arguments_.map((arg, i) => (
               <div key={i} className={cn('px-3 py-2 bg-th-surface-overlay border border-th-border rounded border-l-2 text-[10.5px] text-th-secondary leading-relaxed', argBorder(arg.color))}>
                 <strong className="text-th-heading">{arg.title}</strong> {arg.body}
               </div>
@@ -218,7 +269,7 @@ export default function AppealPipelineTracker() {
         <div>
           <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-th-muted mb-2">ML Scores</p>
           <div className="space-y-2">
-            {claim.scores.map((s, i) => (
+            {scores.map((s, i) => (
               <div key={i}>
                 <div className="flex justify-between text-[9px] text-th-secondary mb-0.5">
                   <span>{s.label}</span>
