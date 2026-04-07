@@ -380,6 +380,7 @@ export function DenialManagement() {
  const [rootCauses, setRootCauses] = useState(FALLBACK_ROOT_CAUSES);
 
  // Prevention alerts state
+ const [rcaTree, setRcaTree] = useState(null);
  const [preventionAlerts, setPreventionAlerts] = useState(null);
  // Diagnostic findings state
  const [criticalFindings, setCriticalFindings] = useState(null);
@@ -403,11 +404,12 @@ export function DenialManagement() {
    setAiLoading(false);
  });
  try {
- const [sumData, denialsData, matrixData, rootCauseData] = await Promise.all([
+ const [sumData, denialsData, matrixData, rootCauseData, treeData] = await Promise.all([
    api.denials.getSummary(),
    api.denials.list({ page: 1, size: 100 }),
    api.analytics.getDenialMatrix().catch(() => null),
    api.rootCause.getSummary().catch(() => null),
+   api.rootCause.getTree().catch(() => null),
  ]);
  setSummary(sumData);
 
@@ -431,6 +433,11 @@ export function DenialManagement() {
      pct: c.pct ?? c.percentage ?? c.count ?? 0,
      color: ROOT_CAUSE_COLORS[i % ROOT_CAUSE_COLORS.length],
    })));
+ }
+
+ // --- RCA tree from API ---
+ if (treeData) {
+   setRcaTree(treeData);
  }
 
  // Map enriched denial rows to the table format (no MOCK_APPEALS backfill)
@@ -1166,9 +1173,10 @@ export function DenialManagement() {
               </div>
               <div className="p-4">
                 {(() => {
-                  const CARCS = ['CO-16\nAuth','CO-4\nCode','CO-97\nDup','PR-50\nMedNec','CO-11\nDiag','CO-29\nTimely','Other'];
-                  const CARC_KEYS = ['CO-16','CO-4','CO-97','PR-50','CO-11','CO-29','Other'];
-                  const ROWS = [
+                  // Build heatmap from API matrix data if available, else static fallback
+                  const STATIC_CARCS = ['CO-16\nAuth','CO-4\nCode','CO-97\nDup','PR-50\nMedNec','CO-11\nDiag','CO-29\nTimely','Other'];
+                  const STATIC_CARC_KEYS = ['CO-16','CO-4','CO-97','PR-50','CO-11','CO-29','Other'];
+                  const STATIC_ROWS = [
                     { payer:'Medicare', cells:[5,4,1,0,2,0,1] },
                     { payer:'BCBS TX', cells:[0,6,1,1,0,0,1] },
                     { payer:'Aetna', cells:[2,1,3,1,0,1,0] },
@@ -1176,7 +1184,18 @@ export function DenialManagement() {
                     { payer:'Cigna', cells:[2,0,1,1,2,0,0] },
                     { payer:'Humana', cells:[1,0,0,0,0,3,0] },
                   ];
-                  const maxVal = 6;
+                  const useApiMatrix = heatmapPayers !== FALLBACK_HEATMAP_PAYERS;
+                  const CARCS = useApiMatrix ? heatmapDepts.map(d => d.replace(/_/g, ' ')) : STATIC_CARCS;
+                  const CARC_KEYS = useApiMatrix ? heatmapDepts : STATIC_CARC_KEYS;
+                  const ROWS = useApiMatrix
+                    ? heatmapPayers.map(p => ({
+                        payer: p,
+                        cells: Array.isArray(heatmapData[p])
+                          ? heatmapData[p]
+                          : CARC_KEYS.map(k => ((heatmapData[p] || {})[k]) || 0),
+                      }))
+                    : STATIC_ROWS;
+                  const maxVal = Math.max(6, ...ROWS.flatMap(r => r.cells));
                   const cellBg = (v) => {
                     if (v === 0) return 'bg-th-surface-overlay text-th-muted';
                     const intensity = v / maxVal;
@@ -1263,15 +1282,36 @@ export function DenialManagement() {
                   <button onClick={() => navigate('/analytics/graph-explorer')} className="text-[10px] text-[rgb(var(--color-primary))] hover:underline">Full Graph →</button>
                 </div>
                 <div className="p-4 space-y-1.5">
-                  {[
-                    { label:'Revenue Cycle · $384K denied', sub:'47 claims · 6 payers', indent:0, textColor:'text-[#6088ff]', bg:'bg-[#0d1628]', border:'border-[#1a3060]', badge:null },
-                    { label:'BCBS TX · 9 denials · $62K', sub:'', indent:1, textColor:'text-[rgb(var(--color-info))]', bg:'bg-[#050f1a]', border:'border-[#0a2a40]', badge:'Coding spike', badgeColor:'danger' },
-                    { label:'Coding/Billing (CO-4) · 6 claims', sub:'', indent:2, textColor:'text-purple-400', bg:'bg-[#0a0f1a]', border:'border-[#1a2050]', badge:null },
-                    { label:'CPT Upcoding · 4 claims', sub:'CLM-9041 · CLM-5510', indent:3, textColor:'text-th-heading', bg:'bg-th-surface-overlay', border:'border-th-border', badge:null, claims:['CLM-9041','CLM-5510'] },
-                    { label:'Modifier-25 Missing · 2 claims', sub:'CLM-4821', indent:3, textColor:'text-th-heading', bg:'bg-th-surface-overlay', border:'border-th-border', badge:null },
-                    { label:'Medicare · 12 denials · $68K', sub:'', indent:1, textColor:'text-[rgb(var(--color-info))]', bg:'bg-[#050f1a]', border:'border-[#0a2a40]', badge:'Auth pattern', badgeColor:'warning' },
-                    { label:'Aetna · 8 denials · $42K', sub:'', indent:1, textColor:'text-[rgb(var(--color-info))]', bg:'bg-[#050f1a]', border:'border-[#0a2a40]', badge:'Mostly dup', badgeColor:'success' },
-                  ].map((node, i) => (
+                  {(() => {
+                    // Build tree nodes from API data or fallback to static
+                    const STATIC_NODES = [
+                      { label:'Revenue Cycle · $384K denied', sub:'47 claims · 6 payers', indent:0, textColor:'text-[#6088ff]', bg:'bg-[#0d1628]', border:'border-[#1a3060]', badge:null },
+                      { label:'BCBS TX · 9 denials · $62K', sub:'', indent:1, textColor:'text-[rgb(var(--color-info))]', bg:'bg-[#050f1a]', border:'border-[#0a2a40]', badge:'Coding spike', badgeColor:'danger' },
+                      { label:'Coding/Billing (CO-4) · 6 claims', sub:'', indent:2, textColor:'text-purple-400', bg:'bg-[#0a0f1a]', border:'border-[#1a2050]', badge:null },
+                      { label:'CPT Upcoding · 4 claims', sub:'CLM-9041 · CLM-5510', indent:3, textColor:'text-th-heading', bg:'bg-th-surface-overlay', border:'border-th-border', badge:null, claims:['CLM-9041','CLM-5510'] },
+                      { label:'Modifier-25 Missing · 2 claims', sub:'CLM-4821', indent:3, textColor:'text-th-heading', bg:'bg-th-surface-overlay', border:'border-th-border', badge:null },
+                      { label:'Medicare · 12 denials · $68K', sub:'', indent:1, textColor:'text-[rgb(var(--color-info))]', bg:'bg-[#050f1a]', border:'border-[#0a2a40]', badge:'Auth pattern', badgeColor:'warning' },
+                      { label:'Aetna · 8 denials · $42K', sub:'', indent:1, textColor:'text-[rgb(var(--color-info))]', bg:'bg-[#050f1a]', border:'border-[#0a2a40]', badge:'Mostly dup', badgeColor:'success' },
+                    ];
+
+                    let treeNodes = STATIC_NODES;
+                    if (rcaTree && rcaTree.root) {
+                      const nodes = [];
+                      const r = rcaTree.root;
+                      nodes.push({ label:`${r.label || 'Revenue Gap'} · ${r.value || '$0'}`, sub:`${r.claims || 0} claims`, indent:0, textColor:'text-[#6088ff]', bg:'bg-[#0d1628]', border:'border-[#1a3060]', badge:null });
+                      (rcaTree.children || []).forEach(group => {
+                        nodes.push({ label:`${group.label || 'Group'} · ${group.value || '$0'}`, sub:`${group.claims || 0} claims`, indent:1, textColor:'text-[rgb(var(--color-info))]', bg:'bg-[#050f1a]', border:'border-[#0a2a40]', badge: group.claims >= 8 ? 'High volume' : null, badgeColor: group.claims >= 10 ? 'danger' : 'warning' });
+                        (group.children || []).slice(0, 4).forEach(cause => {
+                          nodes.push({ label:`${cause.label || 'Cause'} · ${cause.claims || 0} claims`, sub: cause.value || '', indent:2, textColor:'text-purple-400', bg:'bg-[#0a0f1a]', border:'border-[#1a2050]', badge:null });
+                          (cause.children || []).slice(0, 3).forEach(leaf => {
+                            nodes.push({ label:`${leaf.label || ''} · ${leaf.claims || 0} claims`, sub: leaf.carc || '', indent:3, textColor:'text-th-heading', bg:'bg-th-surface-overlay', border:'border-th-border', badge:null });
+                          });
+                        });
+                      });
+                      treeNodes = nodes;
+                    }
+                    return treeNodes;
+                  })().map((node, i) => (
                     <div key={i} style={{marginLeft:`${node.indent * 14}px`}}>
                       <div className={cn('flex items-center gap-2 px-3 py-2 rounded border cursor-pointer hover:brightness-110 transition-all', node.bg, node.border)}>
                         {node.indent === 0 && <span className="text-[14px]">💰</span>}

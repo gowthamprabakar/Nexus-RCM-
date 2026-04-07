@@ -110,16 +110,48 @@ export default function AppealPipelineTracker() {
   const [selectedId, setSelectedId] = useState(urlClaim || 'CLM-8821');
   const [letterText, setLetterText] = useState('');
   const [liveAppeals, setLiveAppeals] = useState([]);
+  const [letterLoading, setLetterLoading] = useState(false);
+  const [appealsLoading, setAppealsLoading] = useState(false);
 
   const claim = APPEAL_DATA[selectedId] || APPEAL_DATA['CLM-8821'];
 
-  useEffect(() => { setLetterText(claim.letter); }, [selectedId]);
+  // Normalize API appeal rows to the UI shape expected by the table
+  const normalizeAppeal = (a) => ({
+    id: a.id || a.claim_id,
+    claim_id: a.claim_id,
+    appeal_id: a.appeal_id,
+    payer: a.payer || 'Unknown',
+    amount: a.amount || 0,
+    winPct: a.winPct || 0,
+    status: a.status || 'Pending review',
+    deadline: a.deadline || '—',
+  });
 
+  // Load real appeals list from backend
   useEffect(() => {
-    api.predictions?.getOutcomeSummary?.()
-      .then(res => { if (res?.appeals) setLiveAppeals(res.appeals); })
-      .catch(() => {});
+    setAppealsLoading(true);
+    api.appeals.list({ page: 1, size: 50 })
+      .then(res => {
+        const list = Array.isArray(res) ? res : (res?.items || res?.appeals || []);
+        if (list.length > 0) setLiveAppeals(list.map(normalizeAppeal));
+      })
+      .catch(() => {})
+      .finally(() => setAppealsLoading(false));
   }, []);
+
+  // When switching claims: load letter from static data, then try real API
+  useEffect(() => {
+    setLetterText(claim.letter);
+    // Try to load real letter if appeal exists for this claim
+    const matchedAppeal = liveAppeals.find(a => (a.id || a.claim_id) === selectedId);
+    if (matchedAppeal?.appeal_id) {
+      setLetterLoading(true);
+      api.appeals.getLetter(matchedAppeal.appeal_id)
+        .then(res => { if (res?.letter_text) setLetterText(res.letter_text); })
+        .catch(() => {})
+        .finally(() => setLetterLoading(false));
+    }
+  }, [selectedId]);
 
   const appeals = liveAppeals.length > 0 ? liveAppeals : IN_FLIGHT_APPEALS;
   const totalValue = appeals.reduce((s, a) => s + (a.amount || 0), 0);
@@ -225,11 +257,33 @@ export default function AppealPipelineTracker() {
       {/* RIGHT: LETTER EDITOR + QUEUE */}
       <div className="overflow-y-auto p-4 flex flex-col gap-4">
         <div className="flex items-center justify-between shrink-0">
-          <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-th-muted">AI-Drafted Appeal Letter · Confidence: {claim.letterConfidence}%</p>
+          <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-th-muted">
+            {letterLoading ? 'Loading letter...' : `AI-Drafted Appeal Letter · Confidence: ${claim.letterConfidence}%`}
+          </p>
           <div className="flex gap-2">
-            <button className="px-2.5 py-1.5 rounded text-[10px] font-medium border border-th-border bg-th-surface-overlay text-th-secondary hover:text-th-heading transition-colors">Regenerate</button>
+            <button onClick={() => {
+              const matched = liveAppeals.find(a => (a.id || a.claim_id) === selectedId);
+              if (matched?.appeal_id) {
+                setLetterLoading(true);
+                api.appeals.getLetter(matched.appeal_id)
+                  .then(res => { if (res?.letter_text) setLetterText(res.letter_text); })
+                  .catch(() => {})
+                  .finally(() => setLetterLoading(false));
+              }
+            }} className="px-2.5 py-1.5 rounded text-[10px] font-medium border border-th-border bg-th-surface-overlay text-th-secondary hover:text-th-heading transition-colors">Regenerate</button>
             <button className="px-2.5 py-1.5 rounded text-[10px] font-medium border border-th-border bg-th-surface-overlay text-th-secondary hover:text-th-heading transition-colors">Edit</button>
-            <button className="px-2.5 py-1.5 rounded text-[10px] font-semibold bg-[rgb(var(--color-primary))] text-white border border-[rgb(var(--color-primary))] hover:opacity-90 transition-opacity">Submit Appeal</button>
+            <button onClick={() => {
+              const matched = liveAppeals.find(a => (a.id || a.claim_id) === selectedId);
+              if (!matched) {
+                // Create a new appeal for this claim's denial
+                const claimData = APPEAL_DATA[selectedId];
+                if (claimData) {
+                  api.appeals.create({ denial_id: selectedId, claim_id: selectedId, appeal_type: 'FIRST_LEVEL', ai_generated: true })
+                    .then(res => { if (res) setLiveAppeals(prev => [...prev, normalizeAppeal(res)]); })
+                    .catch(() => {});
+                }
+              }
+            }} className="px-2.5 py-1.5 rounded text-[10px] font-semibold bg-[rgb(var(--color-primary))] text-white border border-[rgb(var(--color-primary))] hover:opacity-90 transition-opacity">Submit Appeal</button>
           </div>
         </div>
 

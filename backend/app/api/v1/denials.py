@@ -300,19 +300,98 @@ async def get_denial_heatmap(db: AsyncSession = Depends(get_db)) -> Any:
 
 
 # ── GET /denials/appeals ─────────────────────────────────────────────────────
-@router.get("/appeals", response_model=List[AppealOut])
+@router.get("/appeals")
 async def list_appeals(
     db: AsyncSession = Depends(get_db),
     outcome: Optional[str] = None,
     page: int = Query(1, ge=1),
     size: int = Query(50, ge=1, le=200),
 ) -> Any:
-    q = select(Appeal)
+    # Subquery: latest RCA per denial
+    latest_rca = (
+        select(
+            RootCauseAnalysis.denial_id,
+            func.max(RootCauseAnalysis.rca_id).label("max_rca_id"),
+        )
+        .group_by(RootCauseAnalysis.denial_id)
+        .subquery("latest_rca_appeals")
+    )
+
+    q = (
+        select(
+            Appeal,
+            Denial.denial_amount,
+            Denial.carc_code,
+            Denial.appeal_deadline,
+            Claim.claim_id.label("join_claim_id"),
+            Payer.payer_name,
+            RootCauseAnalysis.ml_denial_probability,
+            RootCauseAnalysis.confidence_score,
+        )
+        .join(Denial, Denial.denial_id == Appeal.denial_id, isouter=True)
+        .join(Claim, Claim.claim_id == Denial.claim_id, isouter=True)
+        .join(Payer, Payer.payer_id == Claim.payer_id, isouter=True)
+        .join(latest_rca, latest_rca.c.denial_id == Denial.denial_id, isouter=True)
+        .join(
+            RootCauseAnalysis,
+            and_(
+                RootCauseAnalysis.denial_id == Denial.denial_id,
+                RootCauseAnalysis.rca_id == latest_rca.c.max_rca_id,
+            ),
+            isouter=True,
+        )
+    )
     if outcome:
         q = q.where(Appeal.outcome == outcome)
     q = q.order_by(desc(Appeal.created_at)).offset((page - 1) * size).limit(size)
     result = await db.execute(q)
-    return result.scalars().all()
+    rows = result.all()
+
+    items = []
+    for row in rows:
+        a = row.Appeal
+        denial_prob = row.ml_denial_probability
+        conf = row.confidence_score
+
+        # win_pct = (1 - denial_prob) * (confidence / 100) * 100
+        if denial_prob is not None and conf is not None:
+            win_pct = round((1 - denial_prob) * (conf / 100) * 100, 1)
+        else:
+            win_pct = 0
+
+        # Format deadline as "Mon-DD"
+        dl = row.appeal_deadline
+        if dl:
+            deadline_str = dl.strftime("%b-%d")
+        else:
+            deadline_str = None
+
+        # Map outcome to display status
+        outcome_val = a.outcome or "PENDING"
+        status_map = {"PENDING": "Pending review", "WON": "Won", "LOST": "Lost",
+                       "APPROVED": "Approved", "DENIED": "Denied", "PARTIAL": "Partial"}
+        display_status = status_map.get(outcome_val, outcome_val)
+        if a.ai_generated and outcome_val == "PENDING":
+            display_status = "Pending review"
+
+        items.append({
+            "appeal_id":      a.appeal_id,
+            "denial_id":      a.denial_id,
+            "claim_id":       a.claim_id,
+            "id":             a.claim_id,
+            "payer":          row.payer_name or "Unknown",
+            "amount":         float(row.denial_amount or 0),
+            "carc":           row.carc_code,
+            "winPct":         win_pct,
+            "status":         display_status,
+            "deadline":       deadline_str,
+            "outcome":        a.outcome,
+            "appeal_type":    a.appeal_type,
+            "ai_generated":   a.ai_generated,
+            "submitted_date": str(a.submitted_date) if a.submitted_date else None,
+        })
+
+    return items
 
 
 # ── POST /denials/appeals ─────────────────────────────────────────────────────
