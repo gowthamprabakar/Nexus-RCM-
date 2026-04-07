@@ -1474,100 +1474,179 @@ export function DenialManagement() {
           </div>
         )}
 
-        {/* TAB 5: RCA TREE */}
+        {/* TAB 5: ROOT CAUSE INTELLIGENCE */}
         {activeTab === 'rca' && (
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+            {/* Section label */}
             <div className="flex items-center gap-2 text-[8.5px] font-mono font-bold text-th-muted uppercase tracking-widest">
-              RCA Knowledge Tree · Neo4j · Revenue → Payer → Category → Root Cause → Claims
+              Root Cause Intelligence · Real-time from {(detectBriefing?.filter_facets?.mf_verdicts || []).reduce((s,v) => s + v.count, 0).toLocaleString() || '—'} analyzed denials
               <span className="flex-1 h-px bg-th-border" />
             </div>
+
+            {/* 4 KPI summary cards */}
+            <div className="grid grid-cols-4 gap-3">
+              <div className="bg-th-surface-raised border border-th-border border-t-2 border-t-[rgb(var(--color-success))] rounded-lg p-4">
+                <p className="text-[9px] font-mono uppercase tracking-wider text-th-muted mb-2">Preventable (Recoverable)</p>
+                <p className="text-[28px] font-black leading-none tabular-nums text-[rgb(var(--color-success))]">{detectBriefing?.kpis?.preventable_count?.toLocaleString() ?? '—'}</p>
+                <p className="text-[10px] text-th-muted mt-1">{detectBriefing?.kpis?.preventable_amount ? '$' + Math.round(detectBriefing.kpis.preventable_amount / 1e6) + 'M recovery potential' : '—'}</p>
+              </div>
+              <div className="bg-th-surface-raised border border-th-border border-t-2 border-t-[rgb(var(--color-danger))] rounded-lg p-4">
+                <p className="text-[9px] font-mono uppercase tracking-wider text-th-muted mb-2">CRS Below 60 (Held)</p>
+                <p className="text-[28px] font-black leading-none tabular-nums text-[rgb(var(--color-danger))]">{detectBriefing?.kpis?.crs_below_60?.toLocaleString() ?? '—'}</p>
+                <p className="text-[10px] text-th-muted mt-1">AUTO-006 holds active</p>
+              </div>
+              <div className="bg-th-surface-raised border border-th-border border-t-2 border-t-[rgb(var(--color-warning))] rounded-lg p-4">
+                <p className="text-[9px] font-mono uppercase tracking-wider text-th-muted mb-2">Write-off Risk &gt;50%</p>
+                <p className="text-[28px] font-black leading-none tabular-nums text-[rgb(var(--color-warning))]">{detectBriefing?.kpis?.write_off_high?.toLocaleString() ?? '—'}</p>
+                <p className="text-[10px] text-th-muted mt-1">{detectBriefing?.kpis?.write_off_amount ? '$' + Math.round(detectBriefing.kpis.write_off_amount / 1000) + 'K exposure' : '—'}</p>
+              </div>
+              <div className="bg-th-surface-raised border border-th-border border-t-2 border-t-[rgb(var(--color-info))] rounded-lg p-4">
+                <p className="text-[9px] font-mono uppercase tracking-wider text-th-muted mb-2">MiroFish Confirmed</p>
+                <p className="text-[28px] font-black leading-none tabular-nums text-[rgb(var(--color-info))]">{(detectBriefing?.filter_facets?.mf_verdicts?.find(v => v.val === 'confirmed')?.count || 0).toLocaleString()}</p>
+                <p className="text-[10px] text-th-muted mt-1">Appeal recommended</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
+
+              {/* LEFT: Root Cause Breakdown */}
               <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-th-border bg-th-surface-overlay">
-                  <h3 className="text-[11px] font-semibold text-th-heading">🕸️ Neo4j Causal Graph · Drill-Down</h3>
-                  <button onClick={() => navigate('/analytics/graph-explorer')} className="text-[10px] text-[rgb(var(--color-primary))] hover:underline">Full Graph →</button>
+                  <h3 className="text-[11px] font-semibold text-th-heading">Root Cause Breakdown</h3>
+                  <button onClick={() => navigate('/analytics/graph-explorer')} className="text-[10px] text-[rgb(var(--color-primary))] hover:underline">Graph Explorer →</button>
                 </div>
-                <div className="p-4 space-y-1.5">
-                  {!rcaTree && appeals.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                      <p className="text-[11px] text-th-muted mb-3">No root cause data yet</p>
-                      <button
-                        onClick={() => {
-                          api.rootCause.getTree().then(data => { if (data) setRcaTree(data); }).catch(() => {});
-                        }}
-                        className="px-3 py-1.5 rounded text-[10px] font-semibold bg-[rgb(var(--color-primary))] text-white border border-[rgb(var(--color-primary))] hover:opacity-90 transition-opacity"
-                      >
+                <div className="p-4 space-y-3">
+                  {/* Trending root causes from API */}
+                  {(detectBriefing?.trending_root_causes || []).length > 0 ? (
+                    (detectBriefing.trending_root_causes).map((rc, i) => {
+                      const maxCount = Math.max(...(detectBriefing.trending_root_causes).map(r => r.count));
+                      const pct = maxCount > 0 ? Math.round((rc.count / maxCount) * 100) : 0;
+                      const groupColors = {
+                        'PREVENTABLE': { bar: 'bg-[rgb(var(--color-success))]', text: 'text-[rgb(var(--color-success))]', badge: 'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]' },
+                        'PROCESS': { bar: 'bg-[rgb(var(--color-warning))]', text: 'text-[rgb(var(--color-warning))]', badge: 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]' },
+                        'PAYER': { bar: 'bg-[rgb(var(--color-info))]', text: 'text-[rgb(var(--color-info))]', badge: 'bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))] border-[rgb(var(--color-info)/0.3)]' },
+                        'CLINICAL': { bar: 'bg-purple-500', text: 'text-purple-400', badge: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-300 dark:border-purple-700' },
+                      };
+                      const gc = groupColors[rc.group] || groupColors['PROCESS'];
+                      return (
+                        <div key={i} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-semibold text-th-heading">{rc.cause}</span>
+                              <span className={cn('px-1.5 py-0.5 rounded text-[8px] font-bold border', gc.badge)}>{rc.group}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-[10px] font-mono font-bold text-th-heading">{rc.count}</span>
+                              <span className={cn('text-[10px] font-mono', gc.text)}>
+                                {rc.revenue > 0 ? '$' + (rc.revenue >= 1e6 ? (rc.revenue/1e6).toFixed(1) + 'M' : Math.round(rc.revenue/1000) + 'K') : '—'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="h-1.5 bg-th-surface-overlay rounded-full overflow-hidden">
+                            <div className={cn('h-full rounded-full transition-all', gc.bar)} style={{width: pct + '%'}} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-8 gap-3">
+                      <span className="material-symbols-outlined text-3xl text-th-muted">analytics</span>
+                      <p className="text-[11px] text-th-muted">No root cause data analyzed yet</p>
+                      <button onClick={() => {
+                        api.rootCause.validateBatch(50).then(() => api.denials.getDetectBriefing()).then(d => { if (d) setDetectBriefing(d); }).catch(() => {});
+                      }} className="px-4 py-2 rounded-md text-[11px] font-semibold bg-[rgb(var(--color-primary))] text-white hover:opacity-90 transition-opacity">
                         Run MiroFish Analysis (50 denials)
                       </button>
                     </div>
                   )}
-                  {(rcaTree || appeals.length > 0 || FALLBACK_CLAIMS.length > 0) && (() => {
-                    // Build tree nodes from API data or fallback to static
-                    const STATIC_NODES = [
-                      { label:'Revenue Cycle · $384K denied', sub:'47 claims · 6 payers', indent:0, textColor:'text-[#6088ff]', bg:'bg-[#0d1628]', border:'border-[#1a3060]', badge:null },
-                      { label:'BCBS TX · 9 denials · $62K', sub:'', indent:1, textColor:'text-[rgb(var(--color-info))]', bg:'bg-[#050f1a]', border:'border-[#0a2a40]', badge:'Coding spike', badgeColor:'danger' },
-                      { label:'Coding/Billing (CO-4) · 6 claims', sub:'', indent:2, textColor:'text-purple-400', bg:'bg-[#0a0f1a]', border:'border-[#1a2050]', badge:null },
-                      { label:'CPT Upcoding · 4 claims', sub:'CLM-9041 · CLM-5510', indent:3, textColor:'text-th-heading', bg:'bg-th-surface-overlay', border:'border-th-border', badge:null, claims:['CLM-9041','CLM-5510'] },
-                      { label:'Modifier-25 Missing · 2 claims', sub:'CLM-4821', indent:3, textColor:'text-th-heading', bg:'bg-th-surface-overlay', border:'border-th-border', badge:null },
-                      { label:'Medicare · 12 denials · $68K', sub:'', indent:1, textColor:'text-[rgb(var(--color-info))]', bg:'bg-[#050f1a]', border:'border-[#0a2a40]', badge:'Auth pattern', badgeColor:'warning' },
-                      { label:'Aetna · 8 denials · $42K', sub:'', indent:1, textColor:'text-[rgb(var(--color-info))]', bg:'bg-[#050f1a]', border:'border-[#0a2a40]', badge:'Mostly dup', badgeColor:'success' },
-                    ];
-
-                    let treeNodes = STATIC_NODES;
-                    if (rcaTree && rcaTree.root) {
-                      const nodes = [];
-                      const r = rcaTree.root;
-                      nodes.push({ label:`${r.label || 'Revenue Gap'} · ${r.value || '$0'}`, sub:`${r.claims || 0} claims`, indent:0, textColor:'text-[#6088ff]', bg:'bg-[#0d1628]', border:'border-[#1a3060]', badge:null });
-                      (rcaTree.children || []).forEach(group => {
-                        nodes.push({ label:`${group.label || 'Group'} · ${group.value || '$0'}`, sub:`${group.claims || 0} claims`, indent:1, textColor:'text-[rgb(var(--color-info))]', bg:'bg-[#050f1a]', border:'border-[#0a2a40]', badge: group.claims >= 8 ? 'High volume' : null, badgeColor: group.claims >= 10 ? 'danger' : 'warning' });
-                        (group.children || []).slice(0, 4).forEach(cause => {
-                          nodes.push({ label:`${cause.label || 'Cause'} · ${cause.claims || 0} claims`, sub: cause.value || '', indent:2, textColor:'text-purple-400', bg:'bg-[#0a0f1a]', border:'border-[#1a2050]', badge:null });
-                          (cause.children || []).slice(0, 3).forEach(leaf => {
-                            nodes.push({ label:`${leaf.label || ''} · ${leaf.claims || 0} claims`, sub: leaf.carc || '', indent:3, textColor:'text-th-heading', bg:'bg-th-surface-overlay', border:'border-th-border', badge:null });
-                          });
-                        });
-                      });
-                      treeNodes = nodes;
-                    }
-                    return treeNodes;
-                  })().map((node, i) => (
-                    <div key={i} style={{marginLeft:`${node.indent * 14}px`}}>
-                      <div className={cn('flex items-center gap-2 px-3 py-2 rounded border cursor-pointer hover:brightness-110 transition-all', node.bg, node.border)}>
-                        {node.indent === 0 && <span className="text-[14px]">💰</span>}
-                        {node.indent > 0 && <span className={cn('shrink-0 rounded-full', node.indent === 1 ? 'size-2.5' : 'size-2', 'bg-purple-400 border-purple-400 border')} />}
-                        <div className="flex-1 min-w-0">
-                          <p className={cn('text-[10px] font-semibold', node.textColor)}>{node.label}</p>
-                          {node.sub && <p className="text-[8.5px] text-th-muted font-mono mt-0.5">{node.sub}</p>}
-                          {node.claims && <div className="flex gap-1 mt-1">{node.claims.map(c => (<button key={c} onClick={(e) => { e.stopPropagation(); setSelectedClaim(c); setActiveTab('queue'); }} className="px-1.5 py-0.5 rounded text-[8.5px] font-bold bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border border-[rgb(var(--color-danger)/0.3)] hover:opacity-80">{c}</button>))}</div>}
-                        </div>
-                        {node.badge && <span className={cn('px-1.5 py-0.5 rounded text-[8px] font-bold border shrink-0', node.badgeColor === 'danger' ? 'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger)/0.3)]' : node.badgeColor === 'warning' ? 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]' : 'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]')}>{node.badge}</span>}
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
+
+              {/* RIGHT: Payer x CARC Hotspots */}
               <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden">
-                <div className="px-4 py-3 border-b border-th-border bg-th-surface-overlay">
-                  <h3 className="text-[11px] font-semibold text-th-heading">🔗 Cross-Page Actions from Root Causes</h3>
+                <div className="flex items-center justify-between px-4 py-3 border-b border-th-border bg-th-surface-overlay">
+                  <h3 className="text-[11px] font-semibold text-th-heading">Top Payers by Denial Volume</h3>
                 </div>
                 <div className="p-4 space-y-2">
-                  {[
-                    { title:'Auth Missing (CO-16) → Prevention gap', sub:'AUTH_EXPIRY rule was inactive on DOS', action:'Fix Rule →', route:'/analytics/prevention' },
-                    { title:'CPT Mismatch (CO-4) → 3 provider alerts', sub:'Dr. Martinez, Dr. Kim — coding education', action:'Ask LIDA →', route:'/intelligence/lida/chat' },
-                    { title:'BCBS TX pattern → Run MiroFish simulation', sub:'Model coding scrutiny scenario', action:'Simulate →', route:'/intelligence/simulation' },
-                    { title:'Revenue impact → Neo4j causal graph', sub:'See payer→denial→claim connections', action:'Graph Explorer →', route:'/analytics/graph-explorer' },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center justify-between px-3 py-2.5 bg-th-surface-overlay border border-th-border rounded-lg gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-semibold text-th-heading">{item.title}</p>
-                        <p className="text-[9px] text-th-muted mt-0.5">{item.sub}</p>
-                      </div>
-                      <button onClick={() => navigate(item.route)} className="px-2.5 py-1.5 rounded text-[10px] font-medium border border-th-border bg-th-surface-raised text-th-secondary hover:text-th-heading transition-colors whitespace-nowrap shrink-0">{item.action}</button>
-                    </div>
+                  {(detectBriefing?.filter_facets?.payers || []).map((p, i) => {
+                    const maxC = Math.max(...(detectBriefing?.filter_facets?.payers || []).map(x => x.count));
+                    const pct = maxC > 0 ? Math.round((p.count / maxC) * 100) : 0;
+                    return (
+                      <button key={i} onClick={() => { setPayerFilter(p.val); setActiveTab('queue'); }}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded border border-th-border bg-th-surface-overlay hover:bg-th-surface-raised transition-colors text-left">
+                        <span className="text-[10px] font-semibold text-th-heading w-[120px] truncate">{p.val}</span>
+                        <div className="flex-1 h-1.5 bg-th-surface-base rounded-full overflow-hidden">
+                          <div className="h-full rounded-full bg-[rgb(var(--color-danger))]" style={{width: pct + '%'}} />
+                        </div>
+                        <span className="text-[10px] font-mono font-bold text-[rgb(var(--color-danger))] w-10 text-right">{p.count}</span>
+                      </button>
+                    );
+                  })}
+                  {(detectBriefing?.filter_facets?.payers || []).length === 0 && (
+                    <p className="text-[10px] text-th-muted italic text-center py-4">Loading payer data...</p>
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Bottom: CARC Code Distribution + Denial Categories */}
+            <div className="grid grid-cols-2 gap-4">
+
+              {/* CARC Codes */}
+              <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden">
+                <div className="px-4 py-3 border-b border-th-border bg-th-surface-overlay">
+                  <h3 className="text-[11px] font-semibold text-th-heading">CARC Code Distribution</h3>
+                </div>
+                <div className="p-4 space-y-1.5">
+                  {(detectBriefing?.filter_facets?.carc_codes || []).map((c, i) => (
+                    <button key={i} onClick={() => { setCarcFilter(c.val); setActiveTab('queue'); }}
+                      className="w-full flex items-center justify-between px-3 py-1.5 rounded border border-th-border bg-th-surface-overlay hover:bg-th-surface-raised transition-colors text-left">
+                      <span className="font-mono text-[10px] font-bold text-[rgb(var(--color-danger))]">{c.val}</span>
+                      <span className="text-[10px] font-mono text-th-heading">{c.count}</span>
+                    </button>
                   ))}
                 </div>
               </div>
+
+              {/* Denial Categories */}
+              <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden">
+                <div className="px-4 py-3 border-b border-th-border bg-th-surface-overlay">
+                  <h3 className="text-[11px] font-semibold text-th-heading">Denial Category Breakdown</h3>
+                </div>
+                <div className="p-4 space-y-1.5">
+                  {(detectBriefing?.filter_facets?.categories || []).map((c, i) => {
+                    const totalCats = (detectBriefing?.filter_facets?.categories || []).reduce((s, x) => s + x.count, 0);
+                    const pct = totalCats > 0 ? Math.round((c.count / totalCats) * 100) : 0;
+                    return (
+                      <button key={i} onClick={() => { setCategoryFilter(c.val); setActiveTab('queue'); }}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded border border-th-border bg-th-surface-overlay hover:bg-th-surface-raised transition-colors text-left">
+                        <span className="text-[10px] font-semibold text-th-heading flex-1">{c.val}</span>
+                        <span className="text-[10px] font-mono text-th-muted">{pct}%</span>
+                        <span className="text-[10px] font-mono font-bold text-th-heading w-12 text-right">{c.count.toLocaleString()}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
             </div>
+
+            {/* Action bar */}
+            <div className="flex items-center justify-between px-4 py-3 bg-th-surface-raised border border-[rgb(var(--color-primary)/0.2)] rounded-lg">
+              <div>
+                <p className="text-[11px] font-semibold text-th-heading">
+                  {detectBriefing?.kpis?.preventable_count?.toLocaleString() || '—'} denials are preventable — {detectBriefing?.kpis?.preventable_amount ? '$' + Math.round(detectBriefing.kpis.preventable_amount / 1e6) + 'M' : '—'} recoverable
+                </p>
+                <p className="text-[10px] text-th-muted mt-0.5">Fix prevention rules and coding patterns to reduce future denials</p>
+              </div>
+              <div className="flex gap-2 shrink-0 ml-4">
+                <button onClick={() => navigate('/analytics/prevention')} className="px-3 py-1.5 rounded border border-th-border bg-th-surface-overlay text-[11px] text-th-secondary hover:text-th-heading transition-colors">Fix Prevention Rules →</button>
+                <button onClick={() => navigate('/intelligence/lida/chat')} className="px-3 py-1.5 rounded border border-th-border bg-th-surface-overlay text-[11px] text-th-secondary hover:text-th-heading transition-colors">Ask LIDA →</button>
+              </div>
+            </div>
+
           </div>
         )}
 
