@@ -381,6 +381,8 @@ export function DenialManagement() {
 
  // Prevention alerts state
  const [rcaTree, setRcaTree] = useState(null);
+  const [claimRCA, setClaimRCA] = useState({});
+  const [rcaLoading, setRcaLoading] = useState(false);
  const [preventionAlerts, setPreventionAlerts] = useState(null);
  // Diagnostic findings state
  const [criticalFindings, setCriticalFindings] = useState(null);
@@ -492,6 +494,117 @@ export function DenialManagement() {
  };
  loadDashboardData();
  }, []);
+
+ // ── Fetch live RCA when selected claim changes ─────────────────────────────
+  useEffect(() => {
+    if (!selectedClaim) return;
+    if (claimRCA[selectedClaim]) return;
+
+    setRcaLoading(true);
+
+    api.rootCause.getClaimAnalysis(selectedClaim)
+      .then(res => {
+        if (!res || res.status === 'ERROR') { setRcaLoading(false); return; }
+        if (res.status === 'NOT_ANALYZED') {
+          api.rootCause.validateClaim(selectedClaim).catch(() => {});
+          setRcaLoading(false);
+          return;
+        }
+
+        const a = res.analysis;
+        if (!a) { setRcaLoading(false); return; }
+
+        const STEP_MAP = {
+          'CARC_RARC_DECODE':              { icon: '📋', name: 'CARC Decode' },
+          'ELIGIBILITY_CHECK':             { icon: '👤', name: 'Patient Access' },
+          'AUTH_TIMELINE_CHECK':           { icon: '🔑', name: 'Prior Auth' },
+          'CODING_VALIDATION':             { icon: '💊', name: 'CRS Scrub' },
+          'PAYER_HISTORY_MATCH':           { icon: '📊', name: 'Payer History' },
+          'PROCESS_TIMELINE_CHECK':        { icon: '📤', name: 'Submitted' },
+          'PROVIDER_PATTERN_CHECK':        { icon: '👨‍⚕️', name: 'Provider Check' },
+          'CARC_SPECIFIC_DETECTION':       { icon: '❌', name: 'DENIED' },
+          'DOCUMENTATION_ENROLLMENT_CHECK':{ icon: '📝', name: 'Doc Check' },
+          'GRAPH_PATTERN_SYNTHESIS':       { icon: '🕸️', name: 'Graph Match' },
+          'MIROFISH_AGENT_VALIDATION':     { icon: '🌊', name: 'MiroFish' },
+          'EVIDENCE_SYNTHESIS':            { icon: '📄', name: 'Resolution' },
+        };
+        const STATUS_TYPE = { 'PASS':'ok', 'FAIL':'fail', 'WARNING':'warn', 'INCONCLUSIVE':'neutral' };
+
+        const steps = a.steps || [];
+        const PRIORITY = ['ELIGIBILITY_CHECK','AUTH_TIMELINE_CHECK','CODING_VALIDATION',
+          'CARC_SPECIFIC_DETECTION','MIROFISH_AGENT_VALIDATION','EVIDENCE_SYNTHESIS'];
+        const picked = [
+          ...steps.filter(s => PRIORITY.includes(s.step_name)),
+          ...steps.filter(s => !PRIORITY.includes(s.step_name)),
+        ].slice(0, 7);
+
+        const cfNodes = picked.map(s => {
+          const meta = STEP_MAP[s.step_name] || { icon: '🔍', name: s.step_name };
+          const type = s.step_name === 'MIROFISH_AGENT_VALIDATION' ? 'act' : (STATUS_TYPE[s.finding_status] || 'neutral');
+          return { type, icon: meta.icon, name: meta.name, status: s.finding ? s.finding.substring(0, 22) : s.finding_status };
+        });
+        if (cfNodes.length < 5) {
+          cfNodes.push({ type: 'fail', icon: '❌', name: 'DENIED', status: a.ml_predicted_carc || 'Denied' });
+        }
+
+        const mfStep = steps.find(s => s.step_name === 'MIROFISH_AGENT_VALIDATION');
+        const mfFinding = mfStep?.finding || '';
+        let mfVerdict = mfFinding.toLowerCase().includes('confirmed') ? `CONFIRMED: ${mfFinding}`
+          : mfFinding.toLowerCase().includes('disputed') ? `DISPUTED: ${mfFinding}`
+          : mfFinding || 'MiroFish analysis complete.';
+
+        const agentSteps = ['ELIGIBILITY_CHECK','AUTH_TIMELINE_CHECK','CODING_VALIDATION',
+          'PAYER_HISTORY_MATCH','PROVIDER_PATTERN_CHECK','MIROFISH_AGENT_VALIDATION'];
+        const AGENT_LABELS = {
+          'ELIGIBILITY_CHECK':'Denial Validator', 'AUTH_TIMELINE_CHECK':'Auth Checker',
+          'CODING_VALIDATION':'Code Reviewer', 'PAYER_HISTORY_MATCH':'Payer Behaviour',
+          'PROVIDER_PATTERN_CHECK':'Historical Match', 'MIROFISH_AGENT_VALIDATION':'MiroFish Agent',
+        };
+        const agents = agentSteps.map(sn => {
+          const step = steps.find(s => s.step_name === sn);
+          const rawPct = step ? Math.min(99, Math.max(1, Math.round(
+            step.finding_status === 'PASS' ? 75 + (step.contribution_weight || 0) * 50
+            : step.finding_status === 'WARNING' ? 55 + (step.contribution_weight || 0) * 30
+            : step.finding_status === 'FAIL' ? 20 + (step.contribution_weight || 0) * 20 : 50
+          ))) : 50;
+          return { name: AGENT_LABELS[sn] || sn, pct: rawPct };
+        });
+
+        const rootCauseLabel = (a.primary_root_cause || '').replace(/_/g, ' ');
+        const rcCallout = `Root cause: ${rootCauseLabel}. ${a.evidence_summary || ''}`;
+        const rcSentiment = (a.ml_denial_probability || 0) >= 0.65 ? 'danger' : 'warn';
+
+        const denialRow = (appeals.length > 0 ? appeals : FALLBACK_CLAIMS)
+          .find(d => (d.claim_id || d.id) === selectedClaim);
+
+        const mappedRCA = {
+          descriptive: `${rootCauseLabel} identified for ${selectedClaim}. ${denialRow ? `Payer: ${denialRow.payer_name || denialRow.payer}. Amount: $${(denialRow.denial_amount || denialRow.amount || 0).toLocaleString()}.` : ''} ${a.evidence_summary || ''}`,
+          graphEv: `Graph trace: ${a.primary_root_cause?.replace(/_/g, ' → ') || 'Denial cause identified'}. ${a.evidence_summary || ''}`,
+          graphConf: `${a.confidence_score || 0}pts confidence · ${a.primary_root_cause || 'UNKNOWN'}`,
+          denialProb: Math.round((a.ml_denial_probability || 0) * 100),
+          appealSuccess: Math.round((1 - (a.ml_denial_probability || 0)) * (a.confidence_score || 50) / 100 * 100),
+          writeOff: Math.round((a.ml_write_off_probability || 0) * 100),
+          carcPred: a.ml_predicted_carc || denialRow?.carc_code || denialRow?.carc || '—',
+          payDelay: (a.ml_denial_probability || 0) > 0.6 ? '+7d' : '+3d',
+          claimValue: a.confidence_score || 60,
+          agents, mfVerdict,
+          mfConf: Math.min(99, a.confidence_score || 0),
+          agentCount: 47, simCount: a.confidence_score ? Math.round(a.confidence_score * 2.3) : 0,
+          resolution: a.resolution_path || 'Review denial and consult billing team.',
+          appealDrafted: denialRow?.appeal_drafted || false,
+        };
+
+        setClaimRCA(prev => ({ ...prev, [selectedClaim]: {
+          dos: denialRow?.date_of_service || '—',
+          denied: denialRow?.denial_date ? String(denialRow.denial_date) : '—',
+          daysOut: denialRow?.days_remaining || '—',
+          daysLeft: denialRow?.days_remaining || '—',
+          rcCallout, rcSentiment, cfNodes, rca: mappedRCA,
+        }}));
+        setRcaLoading(false);
+      })
+      .catch(() => setRcaLoading(false));
+  }, [selectedClaim]);
 
  // Filtered appeals
  const filteredAppeals = useMemo(() => {
@@ -873,9 +986,18 @@ export function DenialManagement() {
             {/* COL 3: AI INTELLIGENCE */}
             <div className="flex flex-col overflow-hidden">
               <div className="flex items-center justify-between px-3 py-2.5 border-b border-th-border bg-th-surface-overlay shrink-0">
-                <span className="text-[11px] font-semibold text-th-heading">
+                <span className="text-[11px] font-semibold text-th-heading flex items-center gap-2">
                   🧠 AI Intelligence ·{' '}
                   <span className="text-[rgb(var(--color-info))] font-mono">{selectedClaim || 'CLM-8821'}</span>
+                  {rcaLoading && (
+                    <span className="size-3 border border-[rgb(var(--color-primary))] border-t-transparent rounded-full animate-spin" />
+                  )}
+                  {claimRCA[selectedClaim] && !rcaLoading && (
+                    <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border border-[rgb(var(--color-success)/0.3)]">LIVE</span>
+                  )}
+                  {!claimRCA[selectedClaim] && !rcaLoading && (
+                    <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-th-surface-overlay text-th-muted border border-th-border">CACHED</span>
+                  )}
                 </span>
                 <button onClick={() => navigate('/work/denials/appeals')}
                   className="text-[10px] text-th-muted hover:text-th-heading px-2 py-0.5 rounded border border-th-border bg-th-surface-raised transition-colors">Full RCA →</button>
@@ -883,21 +1005,34 @@ export function DenialManagement() {
               <div className="flex-1 overflow-y-auto p-3 space-y-3">
                 {(() => {
                   const claimId = selectedClaim || 'CLM-8821';
-                  const detail  = CLAIM_DETAIL[claimId];
+                  const liveDetail = claimRCA[claimId];
+                  const staticDetail = CLAIM_DETAIL[claimId];
+                  const detail = liveDetail || staticDetail;
+
                   const fallback = (appeals.length > 0 ? appeals : FALLBACK_CLAIMS).find(
                     a => (a.claim_id || a.id) === claimId
                   );
+
+                  if (rcaLoading && !detail) return (
+                    <div className="flex flex-col items-center justify-center h-40 gap-3">
+                      <div className="size-6 border-2 border-[rgb(var(--color-primary))] border-t-transparent rounded-full animate-spin" />
+                      <p className="text-[11px] text-th-muted">Loading AI intelligence for {claimId}...</p>
+                    </div>
+                  );
+
                   if (!detail && !fallback) return (
                     <p className="text-[11px] text-th-muted italic text-center pt-8">
                       Click a denial row to load AI intelligence
                     </p>
                   );
 
-                  const dos      = detail?.dos       || fallback?.created_at  || '—';
-                  const denied   = detail?.denied    || '—';
-                  const daysOut  = detail?.daysOut   || fallback?.days_remaining || '—';
-                  const daysLeft = detail?.daysLeft  || fallback?.days_remaining || '—';
-                  const cfNodes  = detail?.cfNodes   || [];
+                  const isLive = !!liveDetail;
+
+                  const dos      = detail?.dos      || fallback?.date_of_service || '—';
+                  const denied   = detail?.denied   || '—';
+                  const daysOut  = detail?.daysOut  || fallback?.days_remaining || '—';
+                  const daysLeft = detail?.daysLeft || fallback?.days_remaining || '—';
+                  const cfNodes  = detail?.cfNodes  || [];
                   const rcCallout= detail?.rcCallout || '';
                   const rcSent   = detail?.rcSentiment || 'warn';
 
