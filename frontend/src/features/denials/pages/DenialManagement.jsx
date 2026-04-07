@@ -624,7 +624,7 @@ export function DenialManagement() {
 
  // Filtered appeals
  const filteredAppeals = useMemo(() => {
- let result = appeals.length > 0 ? appeals : FALLBACK_CLAIMS;
+ let result = appeals;
  // Payer filter
  if (payerFilter) result = result.filter(a => (a.payer_id || a.payer) === payerFilter);
  // Category filter
@@ -687,7 +687,7 @@ export function DenialManagement() {
         <div>
           <h1 className="text-[15px] font-semibold text-th-heading tracking-tight">Denial Command + Intelligence</h1>
           <p className="text-[10px] text-th-muted font-mono mt-0.5">
-            {summary.total_denials || 47} active · AI urgency-sorted · MiroFish verdicts inline · 5-layer RCA per claim · click any row
+            {summary.total_denials ?? '—'} active · AI urgency-sorted · MiroFish verdicts inline · 5-layer RCA per claim · click any row
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -717,13 +717,13 @@ export function DenialManagement() {
       {/* ── STATS STRIP — 7 inline metrics ── */}
       <div className="flex items-stretch bg-th-surface-raised border-b border-th-border shrink-0">
         {[
-          { val: summary.total_denials || 47,  label: 'Total Denials',       sub: '↑ +3 overnight',          valColor: 'text-[rgb(var(--color-danger))]',   subColor: 'text-[rgb(var(--color-danger))]' },
-          { val: `$${((summary.denied_revenue_at_risk || 384000)/1000).toFixed(0)}K`, label: 'Revenue at Risk', sub: 'Action needed', valColor: 'text-[rgb(var(--color-warning))]', subColor: 'text-[rgb(var(--color-warning))]' },
-          { val: summary.mirofish_confirmed ?? 18, label: 'MiroFish Confirmed', sub: 'Appeal recommended',     valColor: 'text-[rgb(var(--color-success))]',  subColor: 'text-[rgb(var(--color-success))]' },
-          { val: summary.mirofish_disputed  ?? 9,  label: 'MiroFish Disputed',  sub: 'Coding review needed',   valColor: 'text-[rgb(var(--color-danger))]',   subColor: 'text-[rgb(var(--color-danger))]' },
-          { val: `${summary.successful_appeal_rate ?? 78}%`, label: 'Appeal Win Rate', sub: '↑ +6% AI-assisted', valColor: 'text-[rgb(var(--color-success))]', subColor: 'text-[rgb(var(--color-success))]' },
-          { val: summary.appeals_in_flight  ?? 9,  label: 'Appeals In-Flight',  sub: '$82K recovery',          valColor: 'text-purple-600 dark:text-purple-400', subColor: 'text-th-muted' },
-          { val: `${summary.rca_confidence  ?? 91}%`, label: 'RCA Confidence',   sub: 'Neo4j + ML',             valColor: 'text-[rgb(var(--color-info))]',     subColor: 'text-[rgb(var(--color-success))]' },
+          { val: summary.total_denials ?? '—',  label: 'Total Denials',       sub: '↑ +3 overnight',          valColor: 'text-[rgb(var(--color-danger))]',   subColor: 'text-[rgb(var(--color-danger))]' },
+          { val: summary.denied_revenue_at_risk ? `$${(summary.denied_revenue_at_risk/1000).toFixed(0)}K` : '—', label: 'Revenue at Risk', sub: 'Action needed', valColor: 'text-[rgb(var(--color-warning))]', subColor: 'text-[rgb(var(--color-warning))]' },
+          { val: summary.mirofish_confirmed ?? '—', label: 'MiroFish Confirmed', sub: 'Appeal recommended',     valColor: 'text-[rgb(var(--color-success))]',  subColor: 'text-[rgb(var(--color-success))]' },
+          { val: summary.mirofish_disputed  ?? '—',  label: 'MiroFish Disputed',  sub: 'Coding review needed',   valColor: 'text-[rgb(var(--color-danger))]',   subColor: 'text-[rgb(var(--color-danger))]' },
+          { val: summary.successful_appeal_rate != null ? `${summary.successful_appeal_rate}%` : '—', label: 'Appeal Win Rate', sub: '↑ +6% AI-assisted', valColor: 'text-[rgb(var(--color-success))]', subColor: 'text-[rgb(var(--color-success))]' },
+          { val: summary.appeals_in_flight  ?? '—',  label: 'Appeals In-Flight',  sub: '$82K recovery',          valColor: 'text-purple-600 dark:text-purple-400', subColor: 'text-th-muted' },
+          { val: summary.rca_confidence != null ? `${summary.rca_confidence}%` : '—', label: 'RCA Confidence',   sub: 'Neo4j + ML',             valColor: 'text-[rgb(var(--color-info))]',     subColor: 'text-[rgb(var(--color-success))]' },
         ].map((s, i) => (
           <div key={i} className="flex-1 px-3 py-2 text-center border-r border-th-border last:border-r-0">
             <p className={cn('text-[18px] font-black leading-none tabular-nums', s.valColor)}>{s.val}</p>
@@ -736,8 +736,8 @@ export function DenialManagement() {
       {/* ── TAB BAR ── */}
       <div className="flex items-center bg-th-surface-raised border-b border-th-border px-4 shrink-0 overflow-x-auto">
         {[
-          { id: 'queue',  label: 'Denial Queue',           count: summary.total_denials ?? 47 },
-          { id: 'appeal', label: 'Appeal Workbench',       count: summary.appeals_in_flight ?? 9 },
+          { id: 'queue',  label: 'Denial Queue',           count: summary.total_denials ?? '—' },
+          { id: 'appeal', label: 'Appeal Workbench',       count: summary.appeals_in_flight ?? '—' },
           { id: 'risk',   label: 'High Risk Claims',       count: detectBriefing?.kpis?.high_risk_count ?? 31 },
           { id: 'payer',  label: 'Payer Patterns + Heatmap', count: null },
           { id: 'rca',    label: 'RCA Tree',               count: 'Neo4j' },
