@@ -346,6 +346,7 @@ export function DenialManagement() {
  const [showHeatmapModal, setShowHeatmapModal] = useState(false);
  const [activeTab, setActiveTab] = useState('queue');
  const [selectedClaim, setSelectedClaim] = useState('CLM-8821');
+ const [openLayers, setOpenLayers] = useState([1, 2]);
 
  // Filter state
  const [mfFilter, setMfFilter] = useState('');
@@ -1170,7 +1171,7 @@ export function DenialManagement() {
                       {detail?.rca && (() => {
                         const r = detail.rca;
                         const mf = fallback?.mf_verdict || fallback?.mf || 'pending';
-                        const [openLayers, setOpenLayers] = React.useState([1, 2]);
+                        // openLayers + setOpenLayers from component-level state
                         const toggleLayer = (n) => setOpenLayers(prev =>
                           prev.includes(n) ? prev.filter(x => x !== n) : [...prev, n]
                         );
