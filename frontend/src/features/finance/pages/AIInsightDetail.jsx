@@ -1,8 +1,63 @@
 import React, { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { mockForecastingData } from '../../../data/synthetic/mockForecastingData';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { getSeriesColors, getGridProps, getAxisProps, getTooltipStyle } from '../../../lib/chartTheme';
+
+// Placeholder AI insights — replace with real API data
+const aiInsights = [
+ {
+  id: 'INS-2023-001', date: '2023-10-05', type: 'anomaly', severity: 'high',
+  title: 'Significant Payor Delay',
+  message: 'Detected a $600k variance due to delayed ERA posting from UnitedHealthcare.',
+  root_cause_analysis: "Synchronization delay between the clearinghouse (Availity) and the payer's EFT deposit notification system.",
+  confidence_score: 94, impact_value: "$600,000", prediction_window: "48 Hours",
+  contributing_factors: [
+   { factor: 'Payer Processing Lag (UHC)', impact: 65, trend: 'up' },
+   { factor: 'Weekend Clearinghouse Batching', impact: 25, trend: 'flat' },
+   { factor: 'Unmatched Bulk deposits', impact: 10, trend: 'down' }
+  ],
+  recommended_actions: [
+   { action: 'Trigger Manual ERA Fetch', type: 'primary', icon: 'sync' },
+   { action: 'Review Unposted Cash Bucket', type: 'secondary', icon: 'account_balance_wallet' },
+   { action: 'Contact Payer Rep (Jane D.)', type: 'tertiary', icon: 'phone' }
+  ],
+  history_link: [
+   { date: '2023-09-15', event: 'Similar delay resolved in 36h' },
+   { date: '2023-08-10', event: 'Recurring pattern detected' }
+  ],
+  related_transactions: [
+   { id: 'TXN-984210', date: '2023-10-22', amount: 14240.00, predicted_date: '2023-10-20', variance: '+2 Days', status: 'Pending' },
+   { id: 'TXN-984212', date: '2023-10-22', amount: 5600.50, predicted_date: '2023-10-20', variance: '+2 Days', status: 'Pending' },
+   { id: 'TXN-984218', date: '2023-10-22', amount: 3200.00, predicted_date: '2023-10-20', variance: '+2 Days', status: 'Pending' },
+   { id: 'TXN-984225', date: '2023-10-23', amount: 1100.00, predicted_date: '2023-10-21', variance: '+2 Days', status: 'Ack Received' },
+   { id: 'TXN-984231', date: '2023-10-23', amount: 9450.00, predicted_date: '2023-10-21', variance: '+2 Days', status: 'Pending' }
+  ]
+ },
+ {
+  id: 'INS-2023-002', date: '2023-10-12', type: 'alert', severity: 'medium',
+  title: 'Coding Denial Spike',
+  message: '5% drop in posted reimbursement correlated with new NCCI edit updates.',
+  root_cause_analysis: "New NCCI edits causing Code 16 denials for CPT 99213/99214 with modifier 25.",
+  confidence_score: 88, impact_value: "-$125,000", prediction_window: "Next 7 Days",
+  contributing_factors: [
+   { factor: 'NCCI Edit Update (Q4)', impact: 80, trend: 'up' },
+   { factor: 'Documentation Gaps', impact: 20, trend: 'flat' }
+  ],
+  recommended_actions: [
+   { action: 'Update Scrubbing Rules', type: 'primary', icon: 'tune' },
+   { action: 'Educate Coding Team', type: 'secondary', icon: 'group' }
+  ],
+  history_link: [], related_transactions: []
+ },
+ {
+  id: 'INS-2023-003', date: '2023-10-26', type: 'prediction', severity: 'info',
+  title: 'Month-End Surge',
+  message: 'AI predicts a 15% increase in bank credits over the next 3 days.',
+  confidence_score: 75, impact_value: "+$450,000",
+  root_cause_analysis: "End-of-month processing cycles for major payers typically result in higher deposit volumes.",
+  related_transactions: []
+ }
+];
 
 export function AIInsightDetail() {
  const { insightId } = useParams();
@@ -10,7 +65,7 @@ export function AIInsightDetail() {
 
  // In detail view, we fetch the specific insight
  const insight = useMemo(() =>
- mockForecastingData.aiInsights.find(i => i.id === insightId) || mockForecastingData.aiInsights[0],
+ aiInsights.find(i => i.id === insightId) || aiInsights[0],
  [insightId]);
 
  // Data for the "Factor Impact" chart
