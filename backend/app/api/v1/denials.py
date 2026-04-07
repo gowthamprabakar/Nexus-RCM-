@@ -38,85 +38,117 @@ async def list_denials(
     payer_id: Optional[str] = None,
     search: Optional[str] = None,
 ) -> Any:
-    # Subquery: latest RCA per denial (max rca_id as tie-breaker)
-    latest_rca = (
-        select(
-            RootCauseAnalysis.denial_id,
-            func.max(RootCauseAnalysis.rca_id).label("max_rca_id"),
-        )
-        .group_by(RootCauseAnalysis.denial_id)
-        .subquery("latest_rca")
-    )
+    # Simple LEFT JOIN — get RCA enrichment without expensive subquery
+    # Use raw SQL for the RCA join to avoid N+1 and subquery overhead
+    q = text("""
+        SELECT d.denial_id, d.claim_id, d.carc_code, d.carc_description,
+               d.rarc_code, d.denial_category, d.denial_amount, d.denial_date,
+               d.denial_source, d.appeal_deadline, d.similar_denial_30d,
+               d.recommended_action, d.created_at,
+               c.total_charges, c.date_of_service,
+               pat.first_name, pat.last_name,
+               pm.payer_name,
+               rca.ml_denial_probability, rca.ml_write_off_probability,
+               rca.confidence_score, rca.primary_root_cause, rca.resolution_path
+        FROM denials d
+        LEFT JOIN claims c ON c.claim_id = d.claim_id
+        LEFT JOIN patients pat ON pat.patient_id = c.patient_id
+        LEFT JOIN payer_master pm ON pm.payer_id = c.payer_id
+        LEFT JOIN LATERAL (
+            SELECT r.ml_denial_probability, r.ml_write_off_probability,
+                   r.confidence_score, r.primary_root_cause, r.resolution_path
+            FROM root_cause_analysis r
+            WHERE r.denial_id = d.denial_id
+            ORDER BY r.created_at DESC LIMIT 1
+        ) rca ON true
+        WHERE 1=1
+    """)
 
-    q = (
-        select(
-            Denial,
-            Claim.total_charges,
-            Claim.date_of_service,
-            Patient.first_name,
-            Patient.last_name,
-            Payer.payer_name,
-            RootCauseAnalysis.ml_denial_probability,
-            RootCauseAnalysis.ml_write_off_probability,
-            RootCauseAnalysis.confidence_score,
-            RootCauseAnalysis.primary_root_cause,
-            RootCauseAnalysis.resolution_path,
-        )
-        .join(Claim,   Claim.claim_id   == Denial.claim_id,   isouter=True)
-        .join(Patient,  Patient.patient_id == Claim.patient_id, isouter=True)
-        .join(Payer,   Payer.payer_id    == Claim.payer_id,    isouter=True)
-        .join(latest_rca, latest_rca.c.denial_id == Denial.denial_id, isouter=True)
-        .join(
-            RootCauseAnalysis,
-            and_(
-                RootCauseAnalysis.denial_id == Denial.denial_id,
-                RootCauseAnalysis.rca_id == latest_rca.c.max_rca_id,
-            ),
-            isouter=True,
-        )
-    )
+    # Build WHERE clauses
+    params = {}
+    where_clauses = ""
     if denial_category:
-        q = q.where(Denial.denial_category == denial_category)
+        where_clauses += " AND d.denial_category = :denial_category"
+        params["denial_category"] = denial_category
     if carc_code:
-        q = q.where(Denial.carc_code == carc_code)
+        where_clauses += " AND d.carc_code = :carc_code"
+        params["carc_code"] = carc_code
     if payer_id and payer_id != "all":
-        q = q.where(Claim.payer_id == payer_id)
+        where_clauses += " AND c.payer_id = :payer_id"
+        params["payer_id"] = payer_id
     if search:
-        s = f"%{search}%"
-        q = q.where(
-            (Denial.claim_id.ilike(s)) |
-            (Patient.first_name.ilike(s)) |
-            (Patient.last_name.ilike(s)) |
-            (Denial.carc_code.ilike(s))
-        )
+        where_clauses += " AND (d.claim_id ILIKE :search OR pat.first_name ILIKE :search OR pat.last_name ILIKE :search OR d.carc_code ILIKE :search)"
+        params["search"] = f"%{search}%"
 
-    count_q = select(func.count()).select_from(q.subquery())
-    total = await db.scalar(count_q)
+    # Count query
+    count_sql = text(f"""
+        SELECT COUNT(*) FROM denials d
+        LEFT JOIN claims c ON c.claim_id = d.claim_id
+        LEFT JOIN patients pat ON pat.patient_id = c.patient_id
+        WHERE 1=1 {where_clauses}
+    """)
+    total = await db.scalar(count_sql.bindparams(**params)) or 0
 
-    q = q.order_by(desc(Denial.denial_date)).offset((page - 1) * size).limit(size)
-    result = await db.execute(q)
-    rows = result.all()
+    # Main query with pagination
+    main_sql = text(f"""
+        SELECT d.denial_id, d.claim_id, d.carc_code, d.carc_description,
+               d.rarc_code, d.denial_category, d.denial_amount, d.denial_date,
+               d.denial_source, d.appeal_deadline, d.similar_denial_30d,
+               d.recommended_action, d.created_at,
+               c.total_charges, c.date_of_service,
+               pat.first_name, pat.last_name,
+               pm.payer_name,
+               rca.ml_denial_probability, rca.ml_write_off_probability,
+               rca.confidence_score, rca.primary_root_cause, rca.resolution_path
+        FROM denials d
+        LEFT JOIN claims c ON c.claim_id = d.claim_id
+        LEFT JOIN patients pat ON pat.patient_id = c.patient_id
+        LEFT JOIN payer_master pm ON pm.payer_id = c.payer_id
+        LEFT JOIN LATERAL (
+            SELECT r.ml_denial_probability, r.ml_write_off_probability,
+                   r.confidence_score, r.primary_root_cause, r.resolution_path
+            FROM root_cause_analysis r
+            WHERE r.denial_id = d.denial_id
+            ORDER BY r.created_at DESC LIMIT 1
+        ) rca ON true
+        WHERE 1=1 {where_clauses}
+        ORDER BY d.denial_date DESC
+        LIMIT :limit OFFSET :offset
+    """)
+    params["limit"] = size
+    params["offset"] = (page - 1) * size
 
-    # Bulk-fetch appeal_drafted (ai_generated = true) for all denial_ids in page
-    denial_ids = [r.Denial.denial_id for r in rows]
-    drafted_set: set = set()
+    result = await db.execute(main_sql.bindparams(**params))
+    rows = result.fetchall()
+
+    # Bulk-fetch appeal_drafted for denial_ids in this page
+    denial_ids = [r[0] for r in rows]  # denial_id is first column
+    appeal_drafted_set = set()
     if denial_ids:
-        drafted_q = (
-            select(Appeal.denial_id)
-            .where(and_(Appeal.denial_id.in_(denial_ids), Appeal.ai_generated == True))  # noqa: E712
-        )
-        drafted_rows = await db.execute(drafted_q)
-        drafted_set = {r[0] for r in drafted_rows.all()}
+        appeal_q = text("""
+            SELECT DISTINCT denial_id FROM appeals
+            WHERE denial_id = ANY(:ids) AND ai_generated = true
+        """)
+        appeal_result = await db.execute(appeal_q.bindparams(ids=denial_ids))
+        appeal_drafted_set = {r[0] for r in appeal_result.fetchall()}
 
     items = []
-    for row in rows:
-        d = row.Denial
-        patient_name = f"{row.first_name or ''} {row.last_name or ''}".strip() or "Unknown Patient"
+    for r in rows:
+        # Unpack row columns by position
+        denial_id = r[0]; claim_id = r[1]; carc_code = r[2]; carc_desc = r[3]
+        rarc_code = r[4]; denial_cat = r[5]; denial_amt = r[6]; denial_date = r[7]
+        denial_src = r[8]; appeal_deadline = r[9]; similar_30d = r[10]
+        rec_action = r[11]; created_at = r[12]
+        total_charges = r[13]; dos = r[14]
+        first_name = r[15]; last_name = r[16]; payer_name = r[17]
+        dp = r[18]; wo = r[19]; conf = r[20]; root_cause = r[21]; resolution = r[22]
 
-        denial_prob = row.ml_denial_probability
-        write_off   = row.ml_write_off_probability
-        confidence  = row.confidence_score
-        days_rem    = _days_remaining(d.appeal_deadline)
+        patient_name = f"{first_name or ''} {last_name or ''}".strip() or "Unknown"
+        days_rem = _days_remaining(appeal_deadline)
+
+        denial_prob = dp
+        write_off   = wo
+        confidence  = conf
 
         # MiroFish verdict — use denial_probability if available, else derive from confidence_score
         if denial_prob is not None:
@@ -170,23 +202,23 @@ async def list_denials(
             appeal_prob = None
 
         items.append({
-            "denial_id":         d.denial_id,
-            "claim_id":          d.claim_id,
-            "carc_code":         d.carc_code,
-            "carc_description":  d.carc_description,
-            "rarc_code":         d.rarc_code,
-            "denial_category":   d.denial_category,
-            "denial_amount":     d.denial_amount or 0.0,
-            "denial_date":       d.denial_date,
-            "denial_source":     d.denial_source,
-            "appeal_deadline":   d.appeal_deadline,
+            "denial_id":         denial_id,
+            "claim_id":          claim_id,
+            "carc_code":         carc_code,
+            "carc_description":  carc_desc,
+            "rarc_code":         rarc_code,
+            "denial_category":   denial_cat,
+            "denial_amount":     float(denial_amt or 0),
+            "denial_date":       str(denial_date) if denial_date else None,
+            "denial_source":     denial_src,
+            "appeal_deadline":   str(appeal_deadline) if appeal_deadline else None,
             "days_remaining":    days_rem,
-            "recommended_action": d.recommended_action or get_recommended_action(d.carc_code, d.denial_category),
-            "similar_denial_30d": d.similar_denial_30d or 0,
+            "recommended_action": rec_action or get_recommended_action(carc_code, denial_cat),
+            "similar_denial_30d": similar_30d or 0,
             "patient_name":      patient_name,
-            "payer_name":        row.payer_name or d.claim_id,
-            "date_of_service":   str(row.date_of_service) if row.date_of_service else None,
-            "created_at":        d.created_at,
+            "payer_name":        payer_name or claim_id,
+            "date_of_service":   str(dos) if dos else None,
+            "created_at":        str(created_at) if created_at else None,
             # ML + MiroFish enrichment
             "mf_verdict":        mf_verdict,
             "mf_confidence":     confidence,
@@ -194,10 +226,10 @@ async def list_denials(
             "urg_score":         urg_score,
             "denial_probability": round(denial_prob, 4) if denial_prob is not None else None,
             "appeal_probability": appeal_prob,
-            "appeal_drafted":    d.denial_id in drafted_set,
+            "appeal_drafted":    denial_id in appeal_drafted_set,
             "write_off_risk":    round(write_off, 4) if write_off is not None else None,
-            "primary_root_cause": row.primary_root_cause,
-            "resolution_path":   row.resolution_path,
+            "primary_root_cause": root_cause,
+            "resolution_path":   resolution,
         })
 
     return {"items": items, "total": total or 0, "page": page, "size": size}
