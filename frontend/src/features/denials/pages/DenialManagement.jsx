@@ -410,13 +410,13 @@ export function DenialManagement() {
  api.denials.getDetectBriefing().then(d => { if (d) setDetectBriefing(d); }).catch(() => {});
  try {
  const [sumData, denialsData, matrixData, rootCauseData, treeData] = await Promise.all([
-   api.denials.getSummary(),
-   api.denials.list({ page: 1, size: 100 }),
+   api.denials.getSummary().catch(() => ({})),
+   api.denials.list({ page: 1, size: 200 }).catch(() => ({ items: [], total: 0 })),
    api.analytics.getDenialMatrix().catch(() => null),
    api.rootCause.getSummary().catch(() => null),
    api.rootCause.getTree().catch(() => null),
  ]);
- setSummary(sumData);
+ setSummary(sumData || {});
 
  // --- Heatmap from denial matrix API ---
  if (matrixData && matrixData.payers && (matrixData.categories || matrixData.departments) && matrixData.matrix) {
