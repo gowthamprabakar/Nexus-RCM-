@@ -117,13 +117,19 @@ export default function AppealPipelineTracker() {
 
   // Normalize API appeal rows to the UI shape expected by the table
   const normalizeAppeal = (a) => ({
-    id: a.id || a.claim_id,
+    id: a.claim_id || a.id,
     claim_id: a.claim_id,
     appeal_id: a.appeal_id,
-    payer: a.payer || 'Unknown',
-    amount: a.amount || 0,
-    winPct: a.winPct || 0,
-    status: a.status || 'Pending review',
+    payer: a.payer_name || a.payer || 'Unknown',
+    amount: a.denial_amount != null ? a.denial_amount : (a.amount || 0),
+    winPct: a.win_pct != null ? a.win_pct : (a.winPct || a.appeal_quality_score || 0),
+    status: (() => {
+      const o = (a.outcome || '').toUpperCase();
+      if (o === 'WON' || o === 'APPROVED') return 'Submitted';
+      if (o === 'UNDER_REVIEW') return 'Under review';
+      if (o === 'LOST' || o === 'DENIED') return 'Denied';
+      return a.status || 'Pending review';
+    })(),
     deadline: a.deadline || '—',
   });
 

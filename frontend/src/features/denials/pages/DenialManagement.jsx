@@ -416,10 +416,23 @@ export function DenialManagement() {
  setSummary(sumData);
 
  // --- Heatmap from denial matrix API ---
- if (matrixData && matrixData.payers && matrixData.departments && matrixData.matrix) {
+ if (matrixData && matrixData.payers && (matrixData.categories || matrixData.departments) && matrixData.matrix) {
    setHeatmapPayers(matrixData.payers);
-   setHeatmapDepts(matrixData.departments);
-   setHeatmapData(matrixData.matrix);
+   setHeatmapDepts(matrixData.categories || matrixData.departments);
+   // Normalize matrix: if rows are arrays, convert to {category: count} dicts
+   const cats = matrixData.categories || matrixData.departments;
+   const rawMatrix = matrixData.matrix;
+   const normalizedMatrix = {};
+   matrixData.payers.forEach(p => {
+     if (Array.isArray(rawMatrix[p])) {
+       const dict = {};
+       rawMatrix[p].forEach((v, i) => { dict[cats[i]] = v; });
+       normalizedMatrix[p] = dict;
+     } else {
+       normalizedMatrix[p] = rawMatrix[p] || {};
+     }
+   });
+   setHeatmapData(normalizedMatrix);
  }
 
  // --- Root cause from API (by_root_cause array from /root-cause/summary) ---
@@ -1261,13 +1274,31 @@ export function DenialManagement() {
                     ))}
                   </tr></thead>
                   <tbody>
-                    {[
-                      { id:'CLM-9041', payer:'BCBS TX', amt:12400, dp:91, wo:67, crs:'54 HOLD', mf:'disputed', carc:'CO-4', action:'Review' },
-                      { id:'CLM-5510', payer:'Medicare', amt:6100, dp:84, wo:41, crs:'62', mf:'disputed', carc:'CO-4', action:'Review' },
-                      { id:'CLM-3301', payer:'Humana', amt:9800, dp:78, wo:72, crs:'48 HOLD', mf:'disputed', carc:'CO-29', action:'Urgent' },
-                      { id:'CLM-7204', payer:'UHC', amt:2800, dp:78, wo:35, crs:'71', mf:'pending', carc:'PR-50', action:'Simulate' },
-                      { id:'CLM-7788', payer:'Aetna', amt:8400, dp:62, wo:18, crs:'74', mf:'confirmed', carc:'CO-97', action:'Appeal' },
-                    ].map((row, i) => (
+                    {(() => {
+                      const STATIC_HIGH_RISK = [
+                        { id:'CLM-9041', payer:'BCBS TX', amt:12400, dp:91, wo:67, crs:'54 HOLD', mf:'disputed', carc:'CO-4', action:'Review' },
+                        { id:'CLM-5510', payer:'Medicare', amt:6100, dp:84, wo:41, crs:'62', mf:'disputed', carc:'CO-4', action:'Review' },
+                        { id:'CLM-3301', payer:'Humana', amt:9800, dp:78, wo:72, crs:'48 HOLD', mf:'disputed', carc:'CO-29', action:'Urgent' },
+                        { id:'CLM-7204', payer:'UHC', amt:2800, dp:78, wo:35, crs:'71', mf:'pending', carc:'PR-50', action:'Simulate' },
+                        { id:'CLM-7788', payer:'Aetna', amt:8400, dp:62, wo:18, crs:'74', mf:'confirmed', carc:'CO-97', action:'Appeal' },
+                      ];
+                      const src = appeals.length > 0 ? appeals : FALLBACK_CLAIMS;
+                      const liveHighRisk = src
+                        .filter(c => (c.denial_probability >= 0.60) || c.urg_level === 'CRIT' || c.urg_level === 'HIGH')
+                        .sort((a, b) => (b.denial_probability || 0) - (a.denial_probability || 0))
+                        .map(c => ({
+                          id: c.claim_id || c.id,
+                          payer: c.payer || c.payer_id || 'Unknown',
+                          amt: c.denial_amount || c.amount || 0,
+                          dp: c.denial_probability != null ? Math.round(c.denial_probability * 100) : (c.urgScore || 0),
+                          wo: c.write_off_risk != null ? Math.round(c.write_off_risk * 100) : 0,
+                          crs: c.composite_risk_score != null ? `${c.composite_risk_score}${c.hold_flag ? ' HOLD' : ''}` : String(c.urgScore || 0),
+                          mf: c.mf_verdict || c.mf || 'pending',
+                          carc: c.carc_code || c.carc || '',
+                          action: c.urg_level === 'CRIT' ? 'Urgent' : c.mf_verdict === 'confirmed' ? 'Appeal' : 'Review',
+                        }));
+                      return (liveHighRisk.length > 0 ? liveHighRisk : STATIC_HIGH_RISK);
+                    })().map((row, i) => (
                       <tr key={i} onClick={() => { setSelectedClaim(row.id); setActiveTab('queue'); }} className="border-b border-th-border last:border-0 hover:bg-th-surface-overlay transition-colors cursor-pointer">
                         <td className="px-3 py-2.5 font-mono font-bold text-[rgb(var(--color-info))]">{row.id}</td>
                         <td className="px-3 py-2.5 text-th-secondary">{row.payer}</td>
@@ -1325,9 +1356,7 @@ export function DenialManagement() {
                   const ROWS = useApiMatrix
                     ? heatmapPayers.map(p => ({
                         payer: p,
-                        cells: Array.isArray(heatmapData[p])
-                          ? heatmapData[p]
-                          : CARC_KEYS.map(k => ((heatmapData[p] || {})[k]) || 0),
+                        cells: CARC_KEYS.map(cat => heatmapData[p]?.[cat] ?? 0),
                       }))
                     : STATIC_ROWS;
                   const maxVal = Math.max(6, ...ROWS.flatMap(r => r.cells));
@@ -1417,7 +1446,20 @@ export function DenialManagement() {
                   <button onClick={() => navigate('/analytics/graph-explorer')} className="text-[10px] text-[rgb(var(--color-primary))] hover:underline">Full Graph →</button>
                 </div>
                 <div className="p-4 space-y-1.5">
-                  {(() => {
+                  {!rcaTree && appeals.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <p className="text-[11px] text-th-muted mb-3">No root cause data yet</p>
+                      <button
+                        onClick={() => {
+                          api.rootCause.getTree().then(data => { if (data) setRcaTree(data); }).catch(() => {});
+                        }}
+                        className="px-3 py-1.5 rounded text-[10px] font-semibold bg-[rgb(var(--color-primary))] text-white border border-[rgb(var(--color-primary))] hover:opacity-90 transition-opacity"
+                      >
+                        Run MiroFish Analysis (50 denials)
+                      </button>
+                    </div>
+                  )}
+                  {(rcaTree || appeals.length > 0 || FALLBACK_CLAIMS.length > 0) && (() => {
                     // Build tree nodes from API data or fallback to static
                     const STATIC_NODES = [
                       { label:'Revenue Cycle · $384K denied', sub:'47 claims · 6 payers', indent:0, textColor:'text-[#6088ff]', bg:'bg-[#0d1628]', border:'border-[#1a3060]', badge:null },
