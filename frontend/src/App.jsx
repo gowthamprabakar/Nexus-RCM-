@@ -238,15 +238,13 @@ function App() {
                     <Route path="scrub" element={<ScrubDashboard />} />
                 </Route>
 
-                {/* Denial Work Center */}
-                <Route path="work/denials" element={<DenialWorkCenterLayout />}>
-                    <Route index element={<Navigate to="queue" replace />} />
-                    <Route path="queue" element={<DenialManagement />} />
-                    <Route path="high-risk" element={<HighRiskClaims />} />
-                    <Route path="appeals" element={<AppealGenerator />} />
-                    <Route path="workflow-log" element={<DenialWorkflowLog />} />
-                    <Route path="claim/:id" element={<DenialIntelligence />} />
-                </Route>
+                {/* Denial Work Center — DenialManagement has its own shell (DW-1) */}
+                <Route path="work/denials" element={<DenialManagement />} />
+                <Route path="work/denials/queue" element={<DenialManagement />} />
+                <Route path="work/denials/high-risk" element={<DenialManagement />} />
+                <Route path="work/denials/appeals" element={<DenialManagement />} />
+                <Route path="work/denials/workflow-log" element={<DenialWorkflowLog />} />
+                <Route path="work/denials/claim/:id" element={<DenialIntelligence />} />
 
                 {/* Appeal Pipeline */}
                 <Route path="denials/appeal-pipeline" element={<AppealPipelineTracker />} />
