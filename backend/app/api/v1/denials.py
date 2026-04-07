@@ -118,7 +118,7 @@ async def list_denials(
         confidence  = row.confidence_score
         days_rem    = _days_remaining(d.appeal_deadline)
 
-        # MiroFish verdict derived from denial probability
+        # MiroFish verdict — use denial_probability if available, else derive from confidence_score
         if denial_prob is not None:
             if denial_prob <= 0.45:
                 mf_verdict = "confirmed"
@@ -126,15 +126,30 @@ async def list_denials(
                 mf_verdict = "disputed"
             else:
                 mf_verdict = "pending"
+        elif confidence is not None:
+            # Fallback: high confidence → recoverable (confirmed), low → disputed
+            if confidence >= 75:
+                mf_verdict = "confirmed"
+                denial_prob = 0.30  # synthetic low denial prob for scoring
+            elif confidence < 50:
+                mf_verdict = "disputed"
+                denial_prob = 0.80  # synthetic high denial prob
+            else:
+                mf_verdict = "pending"
+                denial_prob = 0.55
         else:
-            mf_verdict = None
+            mf_verdict = "pending"
+            denial_prob = 0.50  # default mid-range
 
-        # Urgency score: denial_prob * write_off * days_factor (0-100)
-        if denial_prob is not None and write_off is not None and days_rem is not None:
+        # Derive write_off from confidence if missing
+        if write_off is None and confidence is not None:
+            write_off = max(0, min(1.0, (100 - confidence) / 100))
+
+        # Urgency score: denial_prob × write_off × days_factor (0-100)
+        days_factor = 0.5  # default
+        if days_rem is not None:
             days_factor = max(0, min(1, 1 - (days_rem / 180)))
-            urg_score = int(min(100, (denial_prob * 40) + (write_off * 30) + (days_factor * 30)))
-        else:
-            urg_score = None
+        urg_score = int(min(100, (denial_prob * 40) + ((write_off or 0.3) * 30) + (days_factor * 30)))
 
         if urg_score is not None:
             if urg_score >= 85:
@@ -234,15 +249,17 @@ async def get_denials_summary(db: AsyncSession = Depends(get_db)) -> Any:
     # AI prevention impact = projected recovery × 0.35 (claims fixed pre-submission)
     ai_impact = round(total_at_risk * 0.35, 2)
 
-    # MiroFish verdict counts (derived from ml_denial_probability thresholds)
-    mf_confirmed = await db.scalar(
-        select(func.count(RootCauseAnalysis.rca_id))
-        .where(RootCauseAnalysis.ml_denial_probability <= 0.45)
-    ) or 0
-    mf_disputed = await db.scalar(
-        select(func.count(RootCauseAnalysis.rca_id))
-        .where(RootCauseAnalysis.ml_denial_probability >= 0.70)
-    ) or 0
+    # MiroFish verdict counts — use confidence_score as proxy when ml_denial_probability is NULL
+    mf_confirmed = await db.scalar(text("""
+        SELECT COUNT(*) FROM root_cause_analysis
+        WHERE (ml_denial_probability IS NOT NULL AND ml_denial_probability <= 0.45)
+           OR (ml_denial_probability IS NULL AND confidence_score >= 75)
+    """)) or 0
+    mf_disputed = await db.scalar(text("""
+        SELECT COUNT(*) FROM root_cause_analysis
+        WHERE (ml_denial_probability IS NOT NULL AND ml_denial_probability >= 0.70)
+           OR (ml_denial_probability IS NULL AND confidence_score < 50)
+    """)) or 0
 
     # Average RCA confidence
     avg_confidence = await db.scalar(
@@ -528,8 +545,10 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
         mf_rows = (await db.execute(text("""
             SELECT
                 CASE
-                    WHEN rca.ml_denial_probability <= 0.45 THEN 'confirmed'
-                    WHEN rca.ml_denial_probability >= 0.70 THEN 'disputed'
+                    WHEN rca.ml_denial_probability IS NOT NULL AND rca.ml_denial_probability <= 0.45 THEN 'confirmed'
+                    WHEN rca.ml_denial_probability IS NOT NULL AND rca.ml_denial_probability >= 0.70 THEN 'disputed'
+                    WHEN rca.ml_denial_probability IS NULL AND rca.confidence_score >= 75 THEN 'confirmed'
+                    WHEN rca.ml_denial_probability IS NULL AND rca.confidence_score < 50 THEN 'disputed'
                     ELSE 'pending'
                 END AS verdict,
                 COUNT(*)
@@ -553,8 +572,8 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
         urg_rows = (await db.execute(text("""
             SELECT
                 CASE
-                    WHEN rca.ml_denial_probability >= 0.85 THEN 'CRIT'
-                    WHEN rca.ml_denial_probability >= 0.60 THEN 'HIGH'
+                    WHEN COALESCE(rca.ml_denial_probability, CASE WHEN rca.confidence_score < 50 THEN 0.80 WHEN rca.confidence_score < 75 THEN 0.55 ELSE 0.30 END) >= 0.85 THEN 'CRIT'
+                    WHEN COALESCE(rca.ml_denial_probability, CASE WHEN rca.confidence_score < 50 THEN 0.80 WHEN rca.confidence_score < 75 THEN 0.55 ELSE 0.30 END) >= 0.60 THEN 'HIGH'
                     ELSE 'MED'
                 END AS urg,
                 COUNT(*)
@@ -598,12 +617,12 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
 
         hr = (await db.execute(text("""
             SELECT
-                COUNT(CASE WHEN rca.ml_denial_probability >= 0.60 THEN 1 END) as high_risk,
-                COALESCE(SUM(CASE WHEN rca.ml_denial_probability >= 0.60 THEN d.denial_amount END), 0) as hr_amount,
-                COUNT(CASE WHEN rca.ml_write_off_probability >= 0.50 THEN 1 END) as wo_high,
-                COALESCE(SUM(CASE WHEN rca.ml_write_off_probability >= 0.50 THEN d.denial_amount END), 0) as wo_amount,
-                COUNT(CASE WHEN rca.ml_denial_probability <= 0.45 THEN 1 END) as preventable,
-                COALESCE(SUM(CASE WHEN rca.ml_denial_probability <= 0.45 THEN d.denial_amount END), 0) as prev_amount
+                COUNT(CASE WHEN COALESCE(rca.ml_denial_probability, CASE WHEN rca.confidence_score < 50 THEN 0.80 WHEN rca.confidence_score < 75 THEN 0.55 ELSE 0.30 END) >= 0.60 THEN 1 END) as high_risk,
+                COALESCE(SUM(CASE WHEN COALESCE(rca.ml_denial_probability, CASE WHEN rca.confidence_score < 50 THEN 0.80 WHEN rca.confidence_score < 75 THEN 0.55 ELSE 0.30 END) >= 0.60 THEN d.denial_amount END), 0) as hr_amount,
+                COUNT(CASE WHEN COALESCE(rca.ml_write_off_probability, (100 - rca.confidence_score) / 100.0) >= 0.50 THEN 1 END) as wo_high,
+                COALESCE(SUM(CASE WHEN COALESCE(rca.ml_write_off_probability, (100 - rca.confidence_score) / 100.0) >= 0.50 THEN d.denial_amount END), 0) as wo_amount,
+                COUNT(CASE WHEN COALESCE(rca.ml_denial_probability, CASE WHEN rca.confidence_score >= 75 THEN 0.30 ELSE 0.55 END) <= 0.45 THEN 1 END) as preventable,
+                COALESCE(SUM(CASE WHEN COALESCE(rca.ml_denial_probability, CASE WHEN rca.confidence_score >= 75 THEN 0.30 ELSE 0.55 END) <= 0.45 THEN d.denial_amount END), 0) as prev_amount
             FROM root_cause_analysis rca
             JOIN denials d ON rca.denial_id = d.denial_id
         """))).fetchone()
@@ -677,8 +696,8 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
             JOIN denials d ON rca.denial_id = d.denial_id
             JOIN claims c ON d.claim_id = c.claim_id
             JOIN payer_master pm ON c.payer_id = pm.payer_id
-            WHERE rca.ml_denial_probability >= 0.60
-            ORDER BY rca.ml_denial_probability DESC
+            WHERE COALESCE(rca.ml_denial_probability, CASE WHEN rca.confidence_score < 50 THEN 0.80 WHEN rca.confidence_score < 75 THEN 0.55 ELSE 0.30 END) >= 0.60
+            ORDER BY COALESCE(rca.ml_denial_probability, CASE WHEN rca.confidence_score < 50 THEN 0.80 ELSE 0.30 END) DESC
             LIMIT 10
         """))).fetchall()
 
