@@ -140,7 +140,7 @@ function ClaimLeaf({ claim, onClick, delay }) {
 }
 
 /* ── Main RootCauseTree Component ────────────────────────────────────────── */
-export function RootCauseTree({ onClaimSelect }) {
+export function RootCauseTree({ onClaimSelect, onNodeSelect }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -184,6 +184,14 @@ export function RootCauseTree({ onClaimSelect }) {
   /* Level 2: Toggle payer expansion */
   const togglePayer = async (payer) => {
     const pid = payer.payer_id;
+    onNodeSelect?.({
+      level: 'payer',
+      label: payer.payer_name,
+      group: 'PAYER',
+      impact: payer.impact,
+      count: payer.claim_count || payer.denial_count,
+      payer_id: pid,
+    });
     // Check current state via functional setter to avoid stale closures
     setExpandedPayers(prev => {
       if (prev[pid]) {
@@ -208,8 +216,18 @@ export function RootCauseTree({ onClaimSelect }) {
   };
 
   /* Level 3: Toggle category expansion */
-  const toggleCategory = async (payerId, category) => {
+  const toggleCategory = async (payerId, category, catData) => {
     const key = `${payerId}|${category}`;
+    if (catData) {
+      onNodeSelect?.({
+        level: 'category',
+        label: category,
+        category,
+        impact: catData.impact,
+        count: catData.count,
+        payer_id: payerId,
+      });
+    }
     setExpandedCategories(prev => {
       if (prev[key]) {
         const n = { ...prev }; delete n[key]; return n;
@@ -229,8 +247,22 @@ export function RootCauseTree({ onClaimSelect }) {
   };
 
   /* Level 4: Toggle root cause expansion */
-  const toggleRootCause = async (payerId, category, cause) => {
+  const toggleRootCause = async (payerId, category, cause, rcData) => {
     const key = `${payerId}|${category}|${cause}`;
+    if (rcData) {
+      onNodeSelect?.({
+        level: 'root_cause',
+        label: cause.replace(/_/g, ' '),
+        root_cause: cause,
+        cause,
+        category,
+        group: rcData.group,
+        impact: rcData.impact,
+        count: rcData.count,
+        confidence: rcData.avg_confidence,
+        payer_id: payerId,
+      });
+    }
     setExpandedRootCauses(prev => {
       if (prev[key]) {
         const n = { ...prev }; delete n[key]; return n;
@@ -353,7 +385,7 @@ export function RootCauseTree({ onClaimSelect }) {
                         sublabel={`${cat.count} denials · ${cat.pct || Math.round((cat.impact / (payerData.total_impact || 1)) * 100)}%`}
                         clickable
                         expanded={isExpanded}
-                        onClick={() => toggleCategory(pid, cat.category)}
+                        onClick={() => toggleCategory(pid, cat.category, cat)}
                         size="sm"
                       />
 
@@ -377,7 +409,7 @@ export function RootCauseTree({ onClaimSelect }) {
                                     sublabel={`${rc.count} cases · ${rc.weight_pct}% weight`}
                                     clickable
                                     expanded={rcExpanded}
-                                    onClick={() => toggleRootCause(pid, cat.category, rc.cause)}
+                                    onClick={() => toggleRootCause(pid, cat.category, rc.cause, rc)}
                                     size="sm"
                                   />
 

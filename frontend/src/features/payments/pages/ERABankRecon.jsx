@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../../services/api';
+import { EmptyState, Skeleton } from '../../../components/ui';
 
 const fmt = (n) => {
   if (n == null) return '$0';
@@ -24,6 +25,18 @@ export function ERABankRecon() {
   const [triangulation, setTriangulation] = useState(null);
   const [floatData, setFloatData] = useState([]);
   const [statusFilter, setStatusFilter] = useState('');
+  const [unmatchedDrawerOpen, setUnmatchedDrawerOpen] = useState(false);
+  const [unmatchedItems, setUnmatchedItems] = useState(null);
+  const [unmatchedLoading, setUnmatchedLoading] = useState(false);
+
+  const openUnmatched = async () => {
+    setUnmatchedDrawerOpen(true);
+    if (unmatchedItems != null) return;
+    setUnmatchedLoading(true);
+    const res = await api.payments.getUnmatchedEras(50);
+    setUnmatchedItems(res?.items || []);
+    setUnmatchedLoading(false);
+  };
 
   useEffect(() => {
     async function load() {
@@ -161,10 +174,16 @@ export function ERABankRecon() {
             return (
               <div
                 key={status}
-                onClick={() => setStatusFilter(statusFilter === status ? '' : status)}
+                onClick={() => {
+                  if (status === 'Unmatched') openUnmatched();
+                  else setStatusFilter(statusFilter === status ? '' : status);
+                }}
                 className={`flex flex-col gap-0.5 rounded-lg p-3 bg-th-surface-raised border border-th-border border-l-[3px] ${colors[status]} cursor-pointer transition-all duration-200 ${statusFilter === status ? 'ring-2 ring-primary' : 'hover:-translate-y-0.5 hover:shadow-md'}`}
               >
-                <p className="text-[10px] font-bold uppercase tracking-wider text-th-muted">{status}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-th-muted">
+                  {status}
+                  {status === 'Unmatched' && <span className="ml-1 text-th-muted normal-case">(drill-down →)</span>}
+                </p>
                 <p className={`text-xl font-black tabular-nums ${textColors[status]}`}>{statusCounts[status] || 0}</p>
               </div>
             );
@@ -317,6 +336,49 @@ export function ERABankRecon() {
         )}
 
       </div>
+
+      {unmatchedDrawerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60" onClick={() => setUnmatchedDrawerOpen(false)}>
+          <div
+            className="absolute right-0 top-0 h-full w-full max-w-xl bg-th-surface-raised border-l border-th-border shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-th-border flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-th-heading">Unmatched ERAs</h3>
+                <p className="text-xs text-th-muted mt-0.5">ERAs received but not yet matched to bank deposits</p>
+              </div>
+              <button onClick={() => setUnmatchedDrawerOpen(false)} className="text-th-muted hover:text-th-heading focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {unmatchedLoading ? (
+                [...Array(4)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)
+              ) : unmatchedItems?.length ? (
+                unmatchedItems.map((era, i) => (
+                  <div key={era.id || era.era_id || i} className="rounded-lg border border-th-border bg-th-surface-overlay/40 p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-xs text-primary font-bold">{era.id || era.era_id}</span>
+                      <span className="text-sm font-bold text-emerald-400 tabular-nums">{fmt(era.amount || era.payment_amount || 0)}</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between text-xs text-th-muted">
+                      <span>{era.payer || era.payer_name}</span>
+                      <span>{era.date || era.received_date}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <EmptyState
+                  icon="check_circle"
+                  title="No unmatched ERAs"
+                  description="All received ERAs have been matched to bank deposits."
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

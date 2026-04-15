@@ -4,10 +4,10 @@ GET /analytics/pipeline   — 7-stage RCM funnel with live counts & values
 GET /analytics/denial-matrix — payer × denial_code heatmap data
 GET /analytics/appeal-win-rate — win probability by denial reason
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, text
-from typing import Any
+from typing import Any, Optional
 from datetime import date, timedelta
 
 from app.core.deps import get_db
@@ -170,52 +170,56 @@ async def get_pipeline(db: AsyncSession = Depends(get_db)) -> Any:
 
 # ── GET /analytics/denial-matrix ──────────────────────────────────────────────
 @router.get("/denial-matrix")
-async def get_denial_matrix(db: AsyncSession = Depends(get_db)) -> Any:
-    """Payer × denial_category heatmap — top 6 payers × top 6 denial reasons."""
-    # Top 6 denial categories by volume
-    cat_rows = await db.execute(
-        select(Denial.denial_category, func.count().label("cnt"))
-        .group_by(Denial.denial_category)
-        .order_by(func.count().desc())
-        .limit(6)
-    )
-    categories = [r[0] for r in cat_rows]
+async def get_denial_matrix(
+    days: Optional[int] = Query(None, ge=1, le=730, description="Lookback window in days"),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Payer × denial_category heatmap — top 6 payers × top 6 denial reasons (single GROUP BY)."""
+    where_clause = "d.denial_category IS NOT NULL"
+    params: dict = {}
+    if days:
+        where_clause += " AND d.denial_date >= CURRENT_DATE - (:days || ' days')::interval"
+        params["days"] = str(days)
 
-    # Top 6 payers by denial count (join via claim)
-    from app.models.claim import Claim as ClaimModel
-    payer_rows = await db.execute(
-        select(Payer.payer_name, func.count().label("cnt"))
-        .select_from(Denial)
-        .join(ClaimModel, ClaimModel.claim_id == Denial.claim_id)
-        .join(Payer, Payer.payer_id == ClaimModel.payer_id)
-        .group_by(Payer.payer_name)
-        .order_by(func.count().desc())
-        .limit(6)
-    )
-    payers = [r[0] for r in payer_rows]
+    # Single GROUP BY query — pulls payer × category counts + amounts in one shot.
+    rows = (await db.execute(text(f"""
+        SELECT pm.payer_name, d.denial_category,
+               COUNT(*) AS cnt,
+               COALESCE(SUM(d.denial_amount), 0) AS amt
+        FROM denials d
+        JOIN claims c ON c.claim_id = d.claim_id
+        JOIN payer_master pm ON pm.payer_id = c.payer_id
+        WHERE {where_clause}
+        GROUP BY pm.payer_name, d.denial_category
+    """), params)).fetchall()
 
-    # Build matrix: for each payer × category, count denials
+    # Aggregate totals to pick top-6 categories and top-6 payers
+    cat_totals: dict[str, int] = {}
+    payer_totals: dict[str, int] = {}
+    lookup: dict[tuple[str, str], tuple[int, float]] = {}
+    for payer_name, cat, cnt, amt in rows:
+        if payer_name is None or cat is None:
+            continue
+        cnt_i = int(cnt or 0)
+        amt_f = float(amt or 0)
+        cat_totals[cat] = cat_totals.get(cat, 0) + cnt_i
+        payer_totals[payer_name] = payer_totals.get(payer_name, 0) + cnt_i
+        lookup[(payer_name, cat)] = (cnt_i, amt_f)
+
+    categories = [c for c, _ in sorted(cat_totals.items(), key=lambda x: x[1], reverse=True)[:6]]
+    payers = [p for p, _ in sorted(payer_totals.items(), key=lambda x: x[1], reverse=True)[:6]]
+
+    # Pivot to matrix shape
     matrix = []
     for payer in payers:
-        row = {"payer": payer, "cells": []}
+        cells = []
         for cat in categories:
-            cnt = await db.scalar(
-                select(func.count(Denial.denial_id))
-                .select_from(Denial)
-                .join(ClaimModel, ClaimModel.claim_id == Denial.claim_id)
-                .join(Payer, Payer.payer_id == ClaimModel.payer_id)
-                .where(
-                    and_(
-                        Payer.payer_name == payer,
-                        Denial.denial_category == cat
-                    )
-                )
-            ) or 0
-            row["cells"].append({"category": cat, "count": cnt})
-        matrix.append(row)
+            cnt_i, amt_f = lookup.get((payer, cat), (0, 0.0))
+            cells.append({"category": cat, "count": cnt_i, "amount": round(amt_f, 2)})
+        matrix.append({"payer": payer, "cells": cells})
 
     # Find max for normalization
-    all_counts = [c["count"] for row in matrix for c in row["cells"]]
+    all_counts = [c["count"] for r in matrix for c in r["cells"]]
     max_count = max(all_counts) if all_counts else 1
 
     return {

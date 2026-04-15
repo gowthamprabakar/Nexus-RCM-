@@ -790,24 +790,31 @@ async def get_claim_root_cause(db: AsyncSession, claim_id: str) -> dict:
 async def get_root_cause_summary(db: AsyncSession, filters: Optional[dict] = None) -> dict:
     """
     Aggregate root cause summary: counts by root cause, group, and payer.
-    Filters: payer_id, root_cause_group
+    Filters: payer_id, root_cause_group, carc_code, days
     """
     try:
+        from datetime import datetime, timedelta
         filters = filters or {}
 
-        base_q = select(RootCauseAnalysis)
-        if filters.get("payer_id"):
-            base_q = base_q.where(RootCauseAnalysis.payer_id == filters["payer_id"])
-        if filters.get("root_cause_group"):
-            base_q = base_q.where(RootCauseAnalysis.root_cause_group == filters["root_cause_group"])
+        # Build a reusable WHERE-clause helper so every aggregation applies the same filters
+        def apply_filters(query):
+            if filters.get("payer_id"):
+                query = query.where(RootCauseAnalysis.payer_id == filters["payer_id"])
+            if filters.get("root_cause_group"):
+                query = query.where(RootCauseAnalysis.root_cause_group == filters["root_cause_group"])
+            if filters.get("days"):
+                cutoff = datetime.utcnow() - timedelta(days=int(filters["days"]))
+                query = query.where(RootCauseAnalysis.created_at >= cutoff)
+            return query
 
+        base_q = apply_filters(select(RootCauseAnalysis))
         sub = base_q.subquery()
 
         # Total analyses
         total = await db.scalar(select(func.count()).select_from(sub)) or 0
 
         # By root cause
-        by_cause_q = (
+        by_cause_q = apply_filters(
             select(
                 RootCauseAnalysis.primary_root_cause,
                 func.count().label("count"),
@@ -815,10 +822,6 @@ async def get_root_cause_summary(db: AsyncSession, filters: Optional[dict] = Non
                 func.avg(RootCauseAnalysis.confidence_score).label("avg_confidence"),
             )
         )
-        if filters.get("payer_id"):
-            by_cause_q = by_cause_q.where(RootCauseAnalysis.payer_id == filters["payer_id"])
-        if filters.get("root_cause_group"):
-            by_cause_q = by_cause_q.where(RootCauseAnalysis.root_cause_group == filters["root_cause_group"])
 
         by_cause_q = by_cause_q.group_by(RootCauseAnalysis.primary_root_cause).order_by(desc("count"))
         cause_rows = await db.execute(by_cause_q)
@@ -834,41 +837,42 @@ async def get_root_cause_summary(db: AsyncSession, filters: Optional[dict] = Non
                 "pct": round(row[1] / max(total, 1) * 100, 1),
             })
 
-        # By group
-        by_group_q = (
+        # By group — includes revenue_impact + avg_confidence for BE-FIX-3
+        by_group_q = apply_filters(
             select(
                 RootCauseAnalysis.root_cause_group,
                 func.count().label("count"),
-                func.sum(RootCauseAnalysis.financial_impact).label("total_impact"),
+                func.sum(RootCauseAnalysis.financial_impact).label("revenue_impact"),
+                func.avg(RootCauseAnalysis.confidence_score).label("avg_confidence"),
             )
         )
-        if filters.get("payer_id"):
-            by_group_q = by_group_q.where(RootCauseAnalysis.payer_id == filters["payer_id"])
 
         by_group_q = by_group_q.group_by(RootCauseAnalysis.root_cause_group).order_by(desc("count"))
         group_rows = await db.execute(by_group_q)
 
         by_group = []
         for row in group_rows:
+            revenue_impact = round(float(row[2] or 0), 2)
             by_group.append({
                 "group": row[0],
                 "count": row[1],
-                "total_impact": round(float(row[2] or 0), 2),
+                "revenue_impact": revenue_impact,
+                # Keep total_impact for backwards compat with existing consumers
+                "total_impact": revenue_impact,
+                "avg_confidence": round(float(row[3] or 0), 1),
                 "pct": round(row[1] / max(total, 1) * 100, 1),
             })
 
         # Total financial impact
-        total_impact_q = select(func.sum(RootCauseAnalysis.financial_impact))
-        if filters.get("payer_id"):
-            total_impact_q = total_impact_q.where(RootCauseAnalysis.payer_id == filters["payer_id"])
+        total_impact_q = apply_filters(select(func.sum(RootCauseAnalysis.financial_impact)))
         total_impact = await db.scalar(total_impact_q) or 0
 
         # Preventable amount
-        preventable_q = select(func.sum(RootCauseAnalysis.financial_impact)).where(
-            RootCauseAnalysis.root_cause_group == "PREVENTABLE"
+        preventable_q = apply_filters(
+            select(func.sum(RootCauseAnalysis.financial_impact)).where(
+                RootCauseAnalysis.root_cause_group == "PREVENTABLE"
+            )
         )
-        if filters.get("payer_id"):
-            preventable_q = preventable_q.where(RootCauseAnalysis.payer_id == filters["payer_id"])
         preventable_amount = await db.scalar(preventable_q) or 0
 
         return {
@@ -894,41 +898,106 @@ async def get_root_cause_summary(db: AsyncSession, filters: Optional[dict] = Non
 
 async def get_root_cause_trending(db: AsyncSession, weeks_back: int = 12,
                                    payer_id: Optional[str] = None) -> dict:
-    """Weekly trending of root cause categories over time."""
+    """Weekly trending of root cause categories over time.
+
+    Returns:
+        {
+          weeks_back, start_date, end_date, total_in_period,
+          weeks: [{week_start, count, revenue_at_risk}]  -- TIME SERIES for charts
+          trending: [{root_cause, count, total_impact, group, trend_pct, current, prior}]
+              -- AGGREGATE with trend vs prior half of the window
+        }
+    """
     try:
+        from sqlalchemy import text as sql_text
         today = date.today()
         start_date = today - timedelta(weeks=weeks_back)
+        midpoint = today - timedelta(weeks=weeks_back // 2)
 
-        q = (
-            select(
-                RootCauseAnalysis.primary_root_cause,
-                func.count().label("count"),
-                func.sum(RootCauseAnalysis.financial_impact).label("total_impact"),
-            )
-            .where(RootCauseAnalysis.created_at >= start_date)
-        )
+        # ── 1. Weekly time-series bucket via denial_date (RCA.created_at was
+        #    seeded in a single batch so isn't useful for time-series). We JOIN
+        #    to denials to get the real DOS-linked week.  ────────────────────
+        payer_filter = ""
+        params = {"start": start_date}
         if payer_id:
-            q = q.where(RootCauseAnalysis.payer_id == payer_id)
+            payer_filter = " AND rca.payer_id = :payer_id"
+            params["payer_id"] = payer_id
 
-        q = q.group_by(RootCauseAnalysis.primary_root_cause).order_by(desc("count"))
-        rows = await db.execute(q)
+        weekly_sql = sql_text(f"""
+            SELECT date_trunc('week', d.denial_date)::date AS week_start,
+                   COUNT(*) AS cnt,
+                   COALESCE(SUM(rca.financial_impact), 0) AS revenue_at_risk
+            FROM root_cause_analysis rca
+            JOIN denials d ON d.denial_id = rca.denial_id
+            WHERE d.denial_date >= :start {payer_filter}
+            GROUP BY 1
+            ORDER BY 1 ASC
+        """)
+        weekly_rows = (await db.execute(weekly_sql, params)).fetchall()
+        weeks_ts = [
+            {
+                "week_start": str(r[0]),
+                "count": int(r[1]),
+                "revenue_at_risk": round(float(r[2] or 0), 2),
+            }
+            for r in weekly_rows
+        ]
+
+        # ── 2. Aggregate by root_cause (counts + impact) — bucket by denial_date ─
+        agg_sql = sql_text(f"""
+            SELECT rca.primary_root_cause,
+                   COUNT(*) AS cnt,
+                   COALESCE(SUM(rca.financial_impact), 0) AS impact
+            FROM root_cause_analysis rca
+            JOIN denials d ON d.denial_id = rca.denial_id
+            WHERE d.denial_date >= :start {payer_filter}
+            GROUP BY rca.primary_root_cause
+            ORDER BY cnt DESC
+        """)
+        agg_rows = (await db.execute(agg_sql, params)).fetchall()
+
+        # ── 3. Per-cause trend (current half vs prior half of window) ───────
+        trend_sql = sql_text(f"""
+            SELECT rca.primary_root_cause,
+                   SUM(CASE WHEN d.denial_date >= :mid THEN 1 ELSE 0 END) AS current_cnt,
+                   SUM(CASE WHEN d.denial_date < :mid THEN 1 ELSE 0 END) AS prior_cnt
+            FROM root_cause_analysis rca
+            JOIN denials d ON d.denial_id = rca.denial_id
+            WHERE d.denial_date >= :start {payer_filter}
+            GROUP BY rca.primary_root_cause
+        """)
+        trend_params = {**params, "mid": midpoint}
+        trend_rows = (await db.execute(trend_sql, trend_params)).fetchall()
+        trend_map = {r[0]: (int(r[1] or 0), int(r[2] or 0)) for r in trend_rows}
 
         trending = []
-        for row in rows:
+        for row in agg_rows:
+            cause = row[0]
+            current_cnt, prior_cnt = trend_map.get(cause, (0, 0))
+            if prior_cnt > 0:
+                trend_pct = round((current_cnt - prior_cnt) / prior_cnt * 100, 1)
+            elif current_cnt > 0:
+                trend_pct = 100.0  # new signal
+            else:
+                trend_pct = 0.0
             trending.append({
-                "root_cause": row[0],
-                "count": row[1],
+                "root_cause": cause,
+                "count": int(row[1]),
                 "total_impact": round(float(row[2] or 0), 2),
-                "group": ROOT_CAUSE_GROUPS.get(row[0], "PROCESS"),
+                "group": ROOT_CAUSE_GROUPS.get(cause, "PROCESS"),
+                "trend_pct": trend_pct,
+                "current_half": current_cnt,
+                "prior_half": prior_cnt,
             })
 
-        # Overall totals for the period
-        total_q = select(func.count()).select_from(RootCauseAnalysis).where(
-            RootCauseAnalysis.created_at >= start_date
-        )
-        if payer_id:
-            total_q = total_q.where(RootCauseAnalysis.payer_id == payer_id)
-        total = await db.scalar(total_q) or 0
+        # Overall totals for the period — bucket by denial_date to match the weekly series
+        total_sql = sql_text(f"""
+            SELECT COUNT(*)
+            FROM root_cause_analysis rca
+            JOIN denials d ON d.denial_id = rca.denial_id
+            WHERE d.denial_date >= :start {payer_filter}
+        """)
+        total = (await db.execute(total_sql, params)).scalar() or 0
 
         return {
             "weeks_back": weeks_back,
@@ -936,7 +1005,8 @@ async def get_root_cause_trending(db: AsyncSession, weeks_back: int = 12,
             "end_date": str(today),
             "total_in_period": total,
             "payer_id": payer_id,
-            "trending": trending,
+            "weeks": weeks_ts,          # NEW — weekly time-series for charts
+            "trending": trending,       # aggregate with trend_pct
         }
 
     except Exception as e:
@@ -944,6 +1014,7 @@ async def get_root_cause_trending(db: AsyncSession, weeks_back: int = 12,
         return {
             "weeks_back": weeks_back,
             "total_in_period": 0,
+            "weeks": [],
             "trending": [],
         }
 
@@ -1005,28 +1076,62 @@ def _priority_from_impact(impact: float, total: float) -> str:
     return "low"
 
 
-async def get_root_cause_tree(db: AsyncSession) -> dict:
+async def get_root_cause_tree(
+    db: AsyncSession,
+    payer_id: Optional[str] = None,
+    root_cause_group: Optional[str] = None,
+    limit: int = 50,
+) -> dict:
     """
     Build hierarchical root cause tree from real data.
     Root → L1 (by root_cause_group) → L2 (by primary_root_cause) → L3 (top payer+CARC combos)
+
+    Filters:
+        payer_id         — restrict to a single payer
+        root_cause_group — restrict to PREVENTABLE | PROCESS | PAYER | CLINICAL
+        limit            — max payer+CARC leaves per root cause (default 50, max 500)
     """
     from sqlalchemy import text as sql_text
 
+    # Build reusable filter clauses
+    filter_params: dict = {}
+    l2_extra_clauses = ""
+    l3_extra_clauses = ""
+
+    if root_cause_group:
+        l2_extra_clauses += " AND rca.root_cause_group = :rc_group"
+        l3_extra_clauses += " AND rca.root_cause_group = :rc_group"
+        filter_params["rc_group"] = root_cause_group.upper()
+
+    if payer_id:
+        # L2 needs claim join to filter by payer
+        l2_needs_claim_join = True
+        l3_extra_clauses += " AND c.payer_id = :payer_id"
+        filter_params["payer_id"] = payer_id
+    else:
+        l2_needs_claim_join = False
+
+    l2_sql = f"""
+        SELECT rca.primary_root_cause, rca.root_cause_group,
+               COUNT(*) as cnt,
+               SUM(rca.financial_impact) as impact,
+               ROUND(AVG(rca.confidence_score)) as avg_conf
+        FROM root_cause_analysis rca
+        {"JOIN claims c ON c.claim_id = rca.claim_id" if l2_needs_claim_join else ""}
+        WHERE 1=1 {l2_extra_clauses} {" AND c.payer_id = :payer_id" if l2_needs_claim_join else ""}
+        GROUP BY rca.primary_root_cause, rca.root_cause_group
+        ORDER BY impact DESC
+    """
+
+    leaf_limit = max(1, min(500, int(limit)))
+
     try:
         # L2: by primary root cause with payer breakdown
-        result = await db.execute(sql_text("""
-            SELECT rca.primary_root_cause, rca.root_cause_group,
-                   COUNT(*) as cnt,
-                   SUM(rca.financial_impact) as impact,
-                   ROUND(AVG(rca.confidence_score)) as avg_conf
-            FROM root_cause_analysis rca
-            GROUP BY rca.primary_root_cause, rca.root_cause_group
-            ORDER BY impact DESC
-        """))
+        result = await db.execute(sql_text(l2_sql), filter_params)
         cause_rows = result.all()
 
-        # L3: top payer+CARC per root cause (top 4)
-        result = await db.execute(sql_text("""
+        # L3: top payer+CARC per root cause
+        l3_sql = f"""
             SELECT rca.primary_root_cause, pm.payer_name, d.carc_code,
                    COUNT(*) as cnt,
                    SUM(rca.financial_impact) as impact,
@@ -1035,10 +1140,11 @@ async def get_root_cause_tree(db: AsyncSession) -> dict:
             JOIN denials d ON rca.denial_id = d.denial_id
             JOIN claims c ON rca.claim_id = c.claim_id
             JOIN payer_master pm ON c.payer_id = pm.payer_id
-            WHERE d.carc_code IS NOT NULL
+            WHERE d.carc_code IS NOT NULL {l3_extra_clauses}
             GROUP BY rca.primary_root_cause, pm.payer_name, d.carc_code
             ORDER BY rca.primary_root_cause, impact DESC
-        """))
+        """
+        result = await db.execute(sql_text(l3_sql), filter_params)
         payer_carc_rows = result.all()
 
         # Organize L3 by root cause
@@ -1047,7 +1153,7 @@ async def get_root_cause_tree(db: AsyncSession) -> dict:
             cause = row[0]
             if cause not in l3_by_cause:
                 l3_by_cause[cause] = []
-            if len(l3_by_cause[cause]) < 4:  # top 4
+            if len(l3_by_cause[cause]) < leaf_limit:
                 l3_by_cause[cause].append({
                     "id": f"{cause}-{row[1]}-{row[2]}".lower().replace(" ", "-"),
                     "label": f"{row[1]} {row[2]}",

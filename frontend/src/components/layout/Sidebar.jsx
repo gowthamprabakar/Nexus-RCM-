@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { useCollectionsSummary } from '../../hooks/useCollectionsSummary';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
@@ -47,6 +48,9 @@ const SectionHeader = ({ label }) => (
 );
 
 export function Sidebar() {
+    const { badgeText: collectionsBadge, loading: collectionsLoading } = useCollectionsSummary({ pollMs: 60000 });
+    const collectionsBadgeText = collectionsLoading ? '—' : collectionsBadge;
+
     return (
         <aside className="w-[240px] bg-th-surface-sidebar border-r border-th-border flex flex-col h-screen shrink-0 font-sans z-20 transition-colors duration-200">
 
@@ -92,9 +96,9 @@ export function Sidebar() {
                     <SidebarLink to="/work/denials"           icon="bolt"           label="Denial Command"     badge="47" badgeDanger />
                     <SidebarLink to="/analytics/denials"      icon="psychology"     label="Denial Intelligence" isNew />
                     <SidebarLink to="/work/denials/appeals"   icon="description"    label="Appeal Workbench"   badge="9" />
-                    <SidebarLink to="/work/denials/high-risk" icon="local_fire_department" label="High Risk Claims" badge="31" badgeDanger />
+                    {/* High Risk Claims consolidated — now accessible as a tab inside Denial Command */}
                     <SidebarLink to="/analytics/payer-health" icon="bar_chart"      label="Payer Patterns" />
-                    <SidebarLink to="/analytics/root-cause"   icon="hub"            label="RCA Tree"           isNew />
+                    <SidebarLink to="/analytics/denials/root-cause" icon="hub"      label="RCA Tree"           isNew />
                 </div>
 
                 <div className="mx-3 my-2 h-px bg-th-border" />
@@ -102,10 +106,10 @@ export function Sidebar() {
                 {/* ── RECOVER ── */}
                 <SectionHeader label="💰 Recover" />
                 <div className="space-y-0.5 mb-1">
-                    <SidebarLink to="/work/collections"       icon="call"           label="Collections Hub"    badge="$2.4M" badgeAmber />
-                    <SidebarLink to="/analytics/ar-aging"     icon="hourglass_bottom" label="AR Aging" />
-                    <SidebarLink to="/analytics/cash-flow"    icon="account_balance_wallet" label="Cash Flow" />
-                    <SidebarLink to="/payments/era"           icon="receipt"        label="ERA Processing" />
+                    <SidebarLink to="/work/collections"                icon="call"                    label="Collections Hub"    badge={collectionsBadgeText} badgeAmber />
+                    <SidebarLink to="/analytics/revenue/ar-aging"      icon="hourglass_bottom"        label="AR Aging" />
+                    <SidebarLink to="/analytics/revenue/cash-flow"     icon="account_balance_wallet"  label="Cash Flow" />
+                    <SidebarLink to="/work/payments/era"               icon="receipt"                 label="ERA Processing" />
                 </div>
 
                 <div className="mx-3 my-2 h-px bg-th-border" />

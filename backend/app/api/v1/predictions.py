@@ -49,7 +49,10 @@ async def predict_denial_probability(
     """Predict denial probability for a specific claim."""
     model = _get_denial_model()
     if not model.is_fitted:
-        return {"error": "Model not trained. POST /predictions/train/denial-probability first."}
+        raise HTTPException(
+            status_code=503,
+            detail="Model not trained. POST /predictions/train/denial-probability first.",
+        )
     try:
         result = await model.predict_claim(db, claim_id)
         prob = result.get("probability")
@@ -61,8 +64,10 @@ async def predict_denial_probability(
             except Exception:
                 pass
         return {"claim_id": claim_id, **result}
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e), "claim_id": claim_id}
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/appeal-success/{denial_id}")
@@ -73,7 +78,10 @@ async def predict_appeal_success(
     """Predict appeal success probability for a specific denial."""
     model = _get_appeal_model()
     if not model.is_fitted:
-        return {"error": "Model not trained. POST /predictions/train/appeal-success first."}
+        raise HTTPException(
+            status_code=503,
+            detail="Model not trained. POST /predictions/train/appeal-success first.",
+        )
     try:
         result = await model.predict_denial(db, denial_id)
         prob = result.get("probability")
@@ -85,8 +93,10 @@ async def predict_appeal_success(
             except Exception:
                 pass
         return {"denial_id": denial_id, **result}
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e), "denial_id": denial_id}
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/train/{model_name}")
@@ -290,7 +300,7 @@ async def outcome_summary(
         from app.services.outcome_tracker import get_outcome_summary
         return await get_outcome_summary(db, days=days)
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/outcomes/accuracy")
@@ -303,7 +313,7 @@ async def prediction_accuracy(
         from app.services.outcome_tracker import get_prediction_accuracy
         return await get_prediction_accuracy(db, days=days)
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ---------------------------------------------------------------------------

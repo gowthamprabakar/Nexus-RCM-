@@ -395,6 +395,27 @@ export const api = {
                 return null;
             }
         },
+        updateLetter: async (appealId, letterText) => {
+            // PATCH /denials/appeals/{id}/letter — backend endpoint pending.
+            // Returns { ok: true } on success, { ok: false, status, reason } on failure
+            // so the caller can mark the letter as "unsaved" locally and continue.
+            try {
+                const res = await fetch(`${BASE_URL}/denials/appeals/${appealId}/letter`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ letter_text: letterText }),
+                });
+                if (!res.ok) {
+                    console.warn(`updateLetter returned ${res.status} for appeal ${appealId}`);
+                    return { ok: false, status: res.status, reason: `HTTP ${res.status}` };
+                }
+                const body = await res.json().catch(() => ({}));
+                return { ok: true, ...body };
+            } catch (err) {
+                console.error('Appeal letter update error:', err);
+                return { ok: false, status: 0, reason: err?.message || 'network error' };
+            }
+        },
     },
 
     // ------------------------------------------------------------------------
@@ -525,9 +546,10 @@ export const api = {
                 return await res.json();
             } catch (err) { console.error('Post payment error:', err); return null; }
         },
-        getTriangulationSummary: async () => {
+        getTriangulationSummary: async ({ days } = {}) => {
             try {
-                const res = await fetch(`${BASE_URL}/payments/triangulation/summary`);
+                const qs = days ? `?days=${days}` : '';
+                const res = await fetch(`${BASE_URL}/payments/triangulation/summary${qs}`);
                 if (!res.ok) throw new Error('triangulation summary failed');
                 return await res.json();
             } catch (err) { console.error('Triangulation summary error:', err); return null; }
@@ -582,6 +604,194 @@ export const api = {
                 return await res.json();
             } catch (err) { console.error('Silent underpayments error:', err); return { items: [], total: 0, total_variance: 0 }; }
         },
+        // ─── CARC / RARC reference tables ────────────────────────────────
+        getCarcCodes: async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/payments/carc-codes`);
+                if (!res.ok) throw new Error('CARC codes failed');
+                return await res.json();
+            } catch (err) { console.error('CARC codes error:', err); return { items: [] }; }
+        },
+        getRarcCodes: async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/payments/rarc-codes`);
+                if (!res.ok) throw new Error('RARC codes failed');
+                return await res.json();
+            } catch (err) { console.error('RARC codes error:', err); return { items: [] }; }
+        },
+        // ─── Unmatched ERAs (drill-down from triangulation) ──────────────
+        getUnmatchedEras: async (arg = 50) => {
+            // Accept either getUnmatchedEras(50) or getUnmatchedEras({ limit: 50 })
+            const limit = typeof arg === 'object' && arg !== null ? (arg.limit ?? 50) : (arg ?? 50);
+            try {
+                const res = await fetch(`${BASE_URL}/payments/triangulation/unmatched-eras?limit=${limit}`);
+                if (!res.ok) throw new Error('unmatched ERAs failed');
+                return await res.json();
+            } catch (err) { console.error('Unmatched ERAs error:', err); return { items: [], total: 0 }; }
+        },
+        // ─── ERA workflow: import / resolve / match candidates / batch ──
+        era: {
+            importFile: async (file, onProgress) => {
+                // Use XHR for upload progress; fall back to fetch shape on completion.
+                return new Promise((resolve) => {
+                    try {
+                        const fd = new FormData();
+                        fd.append('file', file);
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', `${BASE_URL}/payments/era/import`);
+                        if (typeof onProgress === 'function') {
+                            xhr.upload.onprogress = (e) => {
+                                if (e.lengthComputable) {
+                                    onProgress(Math.round((e.loaded / e.total) * 100));
+                                }
+                            };
+                        }
+                        xhr.onload = () => {
+                            try {
+                                const data = JSON.parse(xhr.responseText || '{}');
+                                if (xhr.status >= 200 && xhr.status < 300) {
+                                    resolve(data);
+                                } else {
+                                    resolve({
+                                        ok: false,
+                                        status: xhr.status,
+                                        filename: file.name,
+                                        total_rows: 0,
+                                        valid_rows: 0,
+                                        error_rows: 0,
+                                        errors: data?.errors || [{ message: data?.detail || `HTTP ${xhr.status}` }],
+                                        staged_ids: [],
+                                    });
+                                }
+                            } catch (e) {
+                                resolve({
+                                    ok: false,
+                                    filename: file.name,
+                                    total_rows: 0,
+                                    valid_rows: 0,
+                                    error_rows: 0,
+                                    errors: [{ message: 'Could not parse server response' }],
+                                    staged_ids: [],
+                                });
+                            }
+                        };
+                        xhr.onerror = () => {
+                            resolve({
+                                ok: false,
+                                filename: file.name,
+                                total_rows: 0,
+                                valid_rows: 0,
+                                error_rows: 0,
+                                errors: [{ message: 'Network error during upload' }],
+                                staged_ids: [],
+                            });
+                        };
+                        xhr.send(fd);
+                    } catch (err) {
+                        console.error('ERA import error:', err);
+                        resolve({
+                            ok: false,
+                            filename: file?.name || 'unknown',
+                            total_rows: 0,
+                            valid_rows: 0,
+                            error_rows: 0,
+                            errors: [{ message: err?.message || 'Upload failed' }],
+                            staged_ids: [],
+                        });
+                    }
+                });
+            },
+            resolveException: async (era_id, data) => {
+                try {
+                    const res = await fetch(`${BASE_URL}/payments/era/${encodeURIComponent(era_id)}/exception`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data || {}),
+                    });
+                    if (!res.ok) throw new Error(`Resolve exception failed: HTTP ${res.status}`);
+                    return await res.json();
+                } catch (err) { console.error('Resolve exception error:', err); return { ok: false, error: err?.message || 'Failed' }; }
+            },
+            getMatchCandidates: async (era_id) => {
+                try {
+                    const res = await fetch(`${BASE_URL}/payments/era/${encodeURIComponent(era_id)}/match-candidates`);
+                    if (!res.ok) throw new Error('Match candidates failed');
+                    return await res.json();
+                } catch (err) { console.error('Match candidates error:', err); return { items: [] }; }
+            },
+            batchAutoPost: async (data) => {
+                try {
+                    const res = await fetch(`${BASE_URL}/payments/era/batch-auto-post`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data || {}),
+                    });
+                    if (!res.ok) throw new Error(`Batch auto-post failed: HTTP ${res.status}`);
+                    return await res.json();
+                } catch (err) { console.error('Batch auto-post error:', err); return { ok: false, posted_count: 0, skipped_count: 0, errors: [{ message: err?.message || 'Failed' }] }; }
+            },
+            updateStatus: async (era_id, status) => {
+                try {
+                    const res = await fetch(`${BASE_URL}/payments/era/${encodeURIComponent(era_id)}/exception`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'set_status', status }),
+                    });
+                    if (!res.ok) throw new Error('Status update failed');
+                    return await res.json();
+                } catch (err) { console.error('ERA status update error:', err); return { ok: false }; }
+            },
+        },
+    },
+
+    // ------------------------------------------------------------------------
+    // Finance / Cash Flow (Working Capital, DSO/DPO, Scenario Modeling)
+    // ------------------------------------------------------------------------
+    finance: {
+        getCashFlowDaily: async ({ days = 90 } = {}) => {
+            try {
+                const res = await fetch(`${BASE_URL}/finance/cash-flow/daily?days=${days}`);
+                if (!res.ok) throw new Error('cash flow daily failed');
+                return await res.json();
+            } catch (err) { console.error('cash-flow daily error:', err); return null; }
+        },
+        getDso: async ({ lookback_days = 90 } = {}) => {
+            try {
+                const res = await fetch(`${BASE_URL}/finance/dso?lookback_days=${lookback_days}`);
+                if (!res.ok) throw new Error('dso failed');
+                return await res.json();
+            } catch (err) { console.error('DSO error:', err); return null; }
+        },
+        getDpo: async ({ lookback_days = 90 } = {}) => {
+            try {
+                const res = await fetch(`${BASE_URL}/finance/dpo?lookback_days=${lookback_days}`);
+                if (!res.ok) throw new Error('dpo failed');
+                return await res.json();
+            } catch (err) { console.error('DPO error:', err); return null; }
+        },
+        computeScenario: async (deltas = {}) => {
+            try {
+                const body = {
+                    denial_rate_delta: deltas.denial_rate_delta ?? 0,
+                    payer_lag_delta: deltas.payer_lag_delta ?? 0,
+                    appeal_win_rate_delta: deltas.appeal_win_rate_delta ?? 0,
+                };
+                const res = await fetch(`${BASE_URL}/finance/cash-flow/scenario`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                if (!res.ok) throw new Error('scenario failed');
+                return await res.json();
+            } catch (err) { console.error('Scenario error:', err); return null; }
+        },
+        getWorkingCapital: async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/finance/working-capital`);
+                if (!res.ok) throw new Error('working capital failed');
+                return await res.json();
+            } catch (err) { console.error('Working capital error:', err); return null; }
+        },
     },
 
     // ------------------------------------------------------------------------
@@ -595,15 +805,15 @@ export const api = {
                 return await res.json();
             } catch (err) { console.error('AR summary error:', err); return null; }
         },
-        getAging: async ({ page = 1, size = 50, bucket, payer_id } = {}) => {
+        getAging: async ({ dimension = 'payer', bucket, payer_id, page = 1, size = 50 } = {}) => {
             try {
-                const params = new URLSearchParams({ page, size });
+                const params = new URLSearchParams({ page, size, dimension });
                 if (bucket) params.set('bucket', bucket);
                 if (payer_id && payer_id !== 'all') params.set('payer_id', payer_id);
                 const res = await fetch(`${BASE_URL}/ar/aging?${params}`);
                 if (!res.ok) throw new Error('AR aging failed');
                 return await res.json();
-            } catch (err) { console.error('AR aging error:', err); return { items: [], total: 0 }; }
+            } catch (err) { console.error('AR aging error:', err); return { items: [], total: 0, dimension }; }
         },
         getTrend: async () => {
             try {
@@ -618,6 +828,34 @@ export const api = {
                 if (!res.ok) throw new Error('AR aging root cause failed');
                 return await res.json();
             } catch (err) { console.error('AR aging root cause error:', err); return null; }
+        },
+        getCohortAnalysis: async ({ months = 6 } = {}) => {
+            try {
+                const res = await fetch(`${BASE_URL}/ar/cohort-analysis?months=${months}`);
+                if (!res.ok) throw new Error('AR cohort analysis failed');
+                return await res.json();
+            } catch (err) { console.error('AR cohort analysis error:', err); return null; }
+        },
+        getForecast: async ({ days = 30 } = {}) => {
+            try {
+                const res = await fetch(`${BASE_URL}/ar/forecast?days=${days}`);
+                if (!res.ok) throw new Error('AR forecast failed');
+                return await res.json();
+            } catch (err) { console.error('AR forecast error:', err); return null; }
+        },
+        getWriteOffWaterfall: async ({ days = 90 } = {}) => {
+            try {
+                const res = await fetch(`${BASE_URL}/ar/write-off-waterfall?days=${days}`);
+                if (!res.ok) throw new Error('AR write-off waterfall failed');
+                return await res.json();
+            } catch (err) { console.error('AR write-off waterfall error:', err); return null; }
+        },
+        getArToRevenueRatio: async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/ar/ar-to-revenue-ratio`);
+                if (!res.ok) throw new Error('AR-to-revenue ratio failed');
+                return await res.json();
+            } catch (err) { console.error('AR-to-revenue ratio error:', err); return null; }
         },
     },
 
@@ -732,6 +970,176 @@ export const api = {
                 if (!res.ok) throw new Error('Team metrics failed');
                 return await res.json();
             } catch (err) { console.error('Team metrics error:', err); return null; }
+        },
+
+        // ----------------------------------------------------------------
+        // Dunning Letter Sequences (R4 backend)
+        // ----------------------------------------------------------------
+        dunning: {
+            getSummary: async () => {
+                try {
+                    const res = await fetch(`${BASE_URL}/collections/dunning/summary`);
+                    if (!res.ok) throw new Error('dunning summary failed');
+                    return await res.json();
+                } catch (err) { console.error('Dunning summary error:', err); return null; }
+            },
+            getQueue: async ({ page = 1, size = 25, status, step } = {}) => {
+                try {
+                    const params = new URLSearchParams({ page, size });
+                    if (status) params.set('status', status);
+                    if (step != null) params.set('step', step);
+                    const res = await fetch(`${BASE_URL}/collections/dunning/queue?${params}`);
+                    if (!res.ok) throw new Error('dunning queue failed');
+                    return await res.json();
+                } catch (err) { console.error('Dunning queue error:', err); return { items: [], total: 0 }; }
+            },
+            send: async ({ sequence_id, step } = {}) => {
+                try {
+                    const res = await fetch(`${BASE_URL}/collections/dunning/send`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sequence_id, step }),
+                    });
+                    if (!res.ok) throw new Error('dunning send failed');
+                    return await res.json();
+                } catch (err) { console.error('Dunning send error:', err); return null; }
+            },
+            getTemplates: async () => {
+                try {
+                    const res = await fetch(`${BASE_URL}/collections/dunning/templates`);
+                    if (!res.ok) throw new Error('dunning templates failed');
+                    return await res.json();
+                } catch (err) { console.error('Dunning templates error:', err); return { templates: [] }; }
+            },
+            getSequence: async (sequenceId) => {
+                try {
+                    const res = await fetch(`${BASE_URL}/collections/dunning/sequence/${sequenceId}`);
+                    if (!res.ok) throw new Error('dunning sequence failed');
+                    return await res.json();
+                } catch (err) { console.error('Dunning sequence error:', err); return null; }
+            },
+            pause: async (sequenceId) => {
+                try {
+                    const res = await fetch(`${BASE_URL}/collections/dunning/sequence/${sequenceId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'paused' }),
+                    });
+                    if (!res.ok) throw new Error('dunning pause failed');
+                    return await res.json();
+                } catch (err) { console.error('Dunning pause error:', err); return null; }
+            },
+        },
+
+        // ----------------------------------------------------------------
+        // Auto-Dialer (R4 backend)
+        // ----------------------------------------------------------------
+        dialer: {
+            getCampaigns: async () => {
+                try {
+                    const res = await fetch(`${BASE_URL}/collections/dialer/campaigns`);
+                    if (!res.ok) throw new Error('dialer campaigns failed');
+                    return await res.json();
+                } catch (err) { console.error('Dialer campaigns error:', err); return { campaigns: [] }; }
+            },
+            getAgents: async () => {
+                try {
+                    const res = await fetch(`${BASE_URL}/collections/dialer/agents`);
+                    if (!res.ok) throw new Error('dialer agents failed');
+                    return await res.json();
+                } catch (err) { console.error('Dialer agents error:', err); return { agents: [] }; }
+            },
+            getCallLogs: async ({ page = 1, size = 25, agent_id, outcome } = {}) => {
+                try {
+                    const params = new URLSearchParams({ page, size });
+                    if (agent_id) params.set('agent_id', agent_id);
+                    if (outcome) params.set('outcome', outcome);
+                    const res = await fetch(`${BASE_URL}/collections/dialer/call-logs?${params}`);
+                    if (!res.ok) throw new Error('dialer call logs failed');
+                    return await res.json();
+                } catch (err) { console.error('Dialer call logs error:', err); return { items: [], total: 0 }; }
+            },
+            createCampaign: async (data) => {
+                try {
+                    const res = await fetch(`${BASE_URL}/collections/dialer/campaigns`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data),
+                    });
+                    if (!res.ok) throw new Error('dialer create campaign failed');
+                    return await res.json();
+                } catch (err) { console.error('Dialer create campaign error:', err); return null; }
+            },
+            updateCampaign: async (id, data) => {
+                try {
+                    const res = await fetch(`${BASE_URL}/collections/dialer/campaigns/${id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data),
+                    });
+                    if (!res.ok) throw new Error('dialer update campaign failed');
+                    return await res.json();
+                } catch (err) { console.error('Dialer update campaign error:', err); return null; }
+            },
+            getSummary: async () => {
+                try {
+                    const res = await fetch(`${BASE_URL}/collections/dialer/summary`);
+                    if (!res.ok) throw new Error('dialer summary failed');
+                    return await res.json();
+                } catch (err) { console.error('Dialer summary error:', err); return null; }
+            },
+        },
+
+        // ----------------------------------------------------------------
+        // Settlement Offers (R4 backend)
+        // ----------------------------------------------------------------
+        settlements: {
+            getQueue: async ({ status } = {}) => {
+                try {
+                    const params = new URLSearchParams();
+                    if (status) params.set('status', status);
+                    const qs = params.toString() ? `?${params}` : '';
+                    const res = await fetch(`${BASE_URL}/collections/settlements/queue${qs}`);
+                    if (!res.ok) throw new Error('settlements queue failed');
+                    return await res.json();
+                } catch (err) { console.error('Settlements queue error:', err); return { items: [], total: 0 }; }
+            },
+            getSummary: async () => {
+                try {
+                    const res = await fetch(`${BASE_URL}/collections/settlements/summary`);
+                    if (!res.ok) throw new Error('settlements summary failed');
+                    return await res.json();
+                } catch (err) { console.error('Settlements summary error:', err); return null; }
+            },
+            create: async (data) => {
+                try {
+                    const res = await fetch(`${BASE_URL}/collections/settlements`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data),
+                    });
+                    if (!res.ok) throw new Error('settlement create failed');
+                    return await res.json();
+                } catch (err) { console.error('Settlement create error:', err); return null; }
+            },
+            update: async (id, data) => {
+                try {
+                    const res = await fetch(`${BASE_URL}/collections/settlements/${id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data),
+                    });
+                    if (!res.ok) throw new Error('settlement update failed');
+                    return await res.json();
+                } catch (err) { console.error('Settlement update error:', err); return null; }
+            },
+            getPaymentPlans: async () => {
+                try {
+                    const res = await fetch(`${BASE_URL}/collections/payment-plans`);
+                    if (!res.ok) throw new Error('payment plans failed');
+                    return await res.json();
+                } catch (err) { console.error('Payment plans error:', err); return { plans: [] }; }
+            },
         },
     },
 
@@ -949,9 +1357,13 @@ export const api = {
                 return await res.json();
             } catch (err) { console.error('Root cause validate-batch error:', err); return null; }
         },
-        getTree: async () => {
+        getTree: async ({ payer_id, group } = {}) => {
             try {
-                const res = await fetch(`${BASE_URL}/root-cause/tree`);
+                const params = new URLSearchParams();
+                if (payer_id && payer_id !== 'all') params.append('payer_id', payer_id);
+                if (group && group !== 'ALL') params.append('group', group);
+                const qs = params.toString() ? `?${params}` : '';
+                const res = await fetch(`${BASE_URL}/root-cause/tree${qs}`);
                 if (!res.ok) throw new Error('root cause tree failed');
                 return await res.json();
             } catch (err) { console.error('Root cause tree error:', err); return null; }
@@ -1407,9 +1819,10 @@ export const api = {
                 return await res.json();
             } catch (err) { console.error('Pipeline error:', err); return null; }
         },
-        getDenialMatrix: async () => {
+        getDenialMatrix: async ({ days } = {}) => {
             try {
-                const res = await fetch(`${BASE_URL}/analytics/denial-matrix`);
+                const qs = days ? `?days=${days}` : '';
+                const res = await fetch(`${BASE_URL}/analytics/denial-matrix${qs}`);
                 if (!res.ok) throw new Error('Denial matrix fetch failed');
                 return await res.json();
             } catch (err) { console.error('Denial matrix error:', err); return null; }

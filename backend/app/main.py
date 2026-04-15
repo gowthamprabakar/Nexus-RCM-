@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.v1 import auth, claims, denials, forecast, crs, payments, ar, collections, collections_extended, reconciliation, ai, analytics, root_cause, diagnostics, graph, simulation, prevention, lida, predictions, coding, evv, patient_access, admin, compliance, dashboard
+from app.api.v1 import auth, claims, denials, forecast, crs, payments, ar, collections, collections_extended, collections_automation, reconciliation, ai, analytics, root_cause, diagnostics, graph, simulation, prevention, lida, predictions, coding, evv, patient_access, admin, compliance, dashboard, finance
 
 # Register all models so Alembic/SQLAlchemy sees them
 import app.models.payer           # noqa
@@ -13,6 +13,10 @@ import app.models.rcm_extended    # noqa
 import app.models.ar_collections  # noqa
 import app.models.root_cause      # noqa
 import app.models.automation      # noqa
+import app.models.code_reference  # noqa  (CARC / RARC reference tables)
+import app.models.dunning         # noqa  (dunning sequences + letters + templates)
+import app.models.auto_dialer     # noqa  (call campaigns + call logs + agent stats)
+import app.models.settlement      # noqa  (settlement offers + payment plans)
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +74,31 @@ async def lifespan(app: FastAPI):
     except Exception as exc:
         logger.warning("Governance store setup failed (non-fatal): %s", exc)
 
+    # ── ERA Processing tables (CARC/RARC, staging, exception cols) ──
+    try:
+        from app.db.session import AsyncSessionLocal
+        from app.scripts.seed_carc_rarc import ensure_tables as ensure_codes, seed
+        from app.services.era_import_service import (
+            ensure_staging_table, ensure_era_exception_columns,
+        )
+        from sqlalchemy import select, func
+        from app.models.code_reference import CarcCode
+
+        async with AsyncSessionLocal() as db:
+            await ensure_codes(db)
+            await ensure_staging_table(db)
+            await ensure_era_exception_columns(db)
+            await db.commit()
+
+            count = await db.scalar(select(func.count(CarcCode.code))) or 0
+            if count == 0:
+                res = await seed()
+                logger.info("Seeded ERA reference codes: %s", res)
+            else:
+                logger.info("ERA reference codes already present (%d CARC).", count)
+    except Exception as exc:
+        logger.warning("ERA processing setup failed (non-fatal): %s", exc)
+
     yield
 
     # ── Shutdown ─────────────────────────────────────────────────────
@@ -111,6 +140,7 @@ app.include_router(payments.router,       prefix=f"{settings.API_V1_STR}/payment
 app.include_router(ar.router,             prefix=f"{settings.API_V1_STR}/ar",              tags=["ar"])
 app.include_router(collections.router,    prefix=f"{settings.API_V1_STR}/collections",     tags=["collections"])
 app.include_router(collections_extended.router, prefix=f"{settings.API_V1_STR}/collections", tags=["collections"])
+app.include_router(collections_automation.router, prefix=f"{settings.API_V1_STR}/collections", tags=["collections-automation"])
 app.include_router(reconciliation.router, prefix=f"{settings.API_V1_STR}/reconciliation",  tags=["reconciliation"])
 app.include_router(ai.router,             prefix=f"{settings.API_V1_STR}/ai",              tags=["ai"])
 app.include_router(analytics.router,      prefix=f"{settings.API_V1_STR}/analytics",        tags=["analytics"])
@@ -127,6 +157,7 @@ app.include_router(patient_access.router, prefix=f"{settings.API_V1_STR}/patient
 app.include_router(admin.router,       prefix=f"{settings.API_V1_STR}/admin",            tags=["admin"])
 app.include_router(compliance.router,  prefix=f"{settings.API_V1_STR}/compliance",       tags=["compliance"])
 app.include_router(dashboard.router,   prefix=f"{settings.API_V1_STR}/dashboard",        tags=["dashboard"])
+app.include_router(finance.router,     prefix=f"{settings.API_V1_STR}/finance",          tags=["finance"])
 
 # Neo4j health endpoint
 @app.get("/api/v1/neo4j/health")

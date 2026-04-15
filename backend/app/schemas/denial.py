@@ -97,6 +97,15 @@ class DenialOutEnriched(BaseModel):
     primary_root_cause: Optional[str]   = None
     resolution_path:    Optional[str]   = None
 
+    # ── CRS 6-component breakdown (from claims JOIN) — used by High Risk tab ──
+    crs_score:             Optional[int] = None
+    crs_eligibility_pts:   Optional[int] = None
+    crs_auth_pts:          Optional[int] = None
+    crs_coding_pts:        Optional[int] = None
+    crs_cob_pts:           Optional[int] = None
+    crs_documentation_pts: Optional[int] = None
+    crs_evv_pts:           Optional[int] = None
+
     class Config:
         from_attributes = True
 

@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { cn } from '../../../lib/utils';
 
 const tabs = [
+  { label: 'Hub', to: 'hub' },
   { label: 'Queue', to: 'queue' },
   { label: 'Alerts', to: 'alerts' },
   { label: 'Patient Portal', to: 'portal' },

@@ -1,8 +1,9 @@
 from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, Query, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc, and_, text
-from datetime import date
+from datetime import date, timedelta
 import uuid
 
 from app.db.session import get_db
@@ -15,9 +16,22 @@ from app.schemas.denial import (
     DenialCreate, DenialOut, DenialOutEnriched, PaginatedDenials,
     AppealCreate, AppealOut, AppealUpdate,
 )
-from app.services.appeal_generator import generate_appeal_letter, get_recommended_action
+from app.services.appeal_generator import (
+    generate_appeal_letter,
+    get_recommended_action,
+    generate_appeal_letter_with_llm,
+)
 
 router = APIRouter()
+
+
+# ── Inline request bodies for write endpoints (BE-FIX-4) ─────────────────────
+class LetterUpdateBody(BaseModel):
+    letter_text: str
+
+
+class DenialStatusBody(BaseModel):
+    status: str
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -37,6 +51,11 @@ async def list_denials(
     carc_code: Optional[str] = None,
     payer_id: Optional[str] = None,
     search: Optional[str] = None,
+    mf_verdict: Optional[str] = Query(None, description="confirmed | disputed | pending"),
+    urg_level: Optional[str] = Query(None, description="CRIT | HIGH | MED | LOW"),
+    min_amount: Optional[float] = Query(None, ge=0),
+    max_amount: Optional[float] = Query(None, ge=0),
+    status: Optional[str] = Query(None, description="OPEN | UNDER_INVESTIGATION | APPEALED | RESOLVED | WRITTEN_OFF"),
 ) -> Any:
     # Simple LEFT JOIN — get RCA enrichment without expensive subquery
     # Use raw SQL for the RCA join to avoid N+1 and subquery overhead
@@ -79,23 +98,81 @@ async def list_denials(
     if search:
         where_clauses += " AND (d.claim_id ILIKE :search OR pat.first_name ILIKE :search OR pat.last_name ILIKE :search OR d.carc_code ILIKE :search)"
         params["search"] = f"%{search}%"
+    if min_amount is not None:
+        where_clauses += " AND d.denial_amount >= :min_amount"
+        params["min_amount"] = min_amount
+    if max_amount is not None:
+        where_clauses += " AND d.denial_amount <= :max_amount"
+        params["max_amount"] = max_amount
+    if status:
+        where_clauses += " AND d.status = :status"
+        params["status"] = status.upper()
 
-    # Count query
+    # mf_verdict / urg_level both derive from rca — translate to SQL predicates
+    if mf_verdict:
+        mv = mf_verdict.lower()
+        if mv == "confirmed":
+            where_clauses += (
+                " AND ((rca.ml_denial_probability IS NOT NULL AND rca.ml_denial_probability <= 0.45)"
+                " OR (rca.ml_denial_probability IS NULL AND rca.confidence_score >= 75))"
+            )
+        elif mv == "disputed":
+            where_clauses += (
+                " AND ((rca.ml_denial_probability IS NOT NULL AND rca.ml_denial_probability >= 0.70)"
+                " OR (rca.ml_denial_probability IS NULL AND rca.confidence_score < 50))"
+            )
+        elif mv == "pending":
+            where_clauses += (
+                " AND (rca.ml_denial_probability IS NULL AND rca.confidence_score BETWEEN 50 AND 74)"
+            )
+
+    if urg_level:
+        lvl = urg_level.upper()
+        # Mirror Python urg_score math: approx thresholds on denial_probability proxy
+        prob_expr = (
+            "COALESCE(rca.ml_denial_probability,"
+            " CASE WHEN rca.confidence_score < 50 THEN 0.80"
+            "      WHEN rca.confidence_score < 75 THEN 0.55"
+            "      ELSE 0.30 END)"
+        )
+        if lvl == "CRIT":
+            where_clauses += f" AND {prob_expr} >= 0.85"
+        elif lvl == "HIGH":
+            where_clauses += f" AND {prob_expr} >= 0.60 AND {prob_expr} < 0.85"
+        elif lvl == "MED":
+            where_clauses += f" AND {prob_expr} >= 0.40 AND {prob_expr} < 0.60"
+        elif lvl == "LOW":
+            where_clauses += f" AND {prob_expr} < 0.40"
+
+    # Count query — include rca LATERAL join if filters reference it
+    needs_rca = any(k in where_clauses for k in ("rca.ml_denial_probability", "rca.confidence_score"))
+    rca_join_sql = """
+        LEFT JOIN LATERAL (
+            SELECT r.ml_denial_probability, r.confidence_score
+            FROM root_cause_analysis r
+            WHERE r.denial_id = d.denial_id
+            ORDER BY r.created_at DESC LIMIT 1
+        ) rca ON true
+    """ if needs_rca else ""
+
     count_sql = text(f"""
         SELECT COUNT(*) FROM denials d
         LEFT JOIN claims c ON c.claim_id = d.claim_id
         LEFT JOIN patients pat ON pat.patient_id = c.patient_id
+        {rca_join_sql}
         WHERE 1=1 {where_clauses}
     """)
     total = await db.scalar(count_sql.bindparams(**params)) or 0
 
-    # Main query with pagination
+    # Main query with pagination — includes CRS 6-component breakdown from claims table
     main_sql = text(f"""
         SELECT d.denial_id, d.claim_id, d.carc_code, d.carc_description,
                d.rarc_code, d.denial_category, d.denial_amount, d.denial_date,
                d.denial_source, d.appeal_deadline, d.similar_denial_30d,
                d.recommended_action, d.created_at,
                c.total_charges, c.date_of_service,
+               c.crs_score, c.crs_eligibility_pts, c.crs_auth_pts, c.crs_coding_pts,
+               c.crs_cob_pts, c.crs_documentation_pts, c.crs_evv_pts,
                pat.first_name, pat.last_name,
                pm.payer_name,
                rca.ml_denial_probability, rca.ml_write_off_probability,
@@ -140,8 +217,11 @@ async def list_denials(
         denial_src = r[8]; appeal_deadline = r[9]; similar_30d = r[10]
         rec_action = r[11]; created_at = r[12]
         total_charges = r[13]; dos = r[14]
-        first_name = r[15]; last_name = r[16]; payer_name = r[17]
-        dp = r[18]; wo = r[19]; conf = r[20]; root_cause = r[21]; resolution = r[22]
+        # CRS 6-component breakdown from claims table (for High Risk Claims tab)
+        crs_score_total = r[15]; crs_elig = r[16]; crs_auth = r[17]; crs_coding = r[18]
+        crs_cob = r[19]; crs_doc = r[20]; crs_evv = r[21]
+        first_name = r[22]; last_name = r[23]; payer_name = r[24]
+        dp = r[25]; wo = r[26]; conf = r[27]; root_cause = r[28]; resolution = r[29]
 
         patient_name = f"{first_name or ''} {last_name or ''}".strip() or "Unknown"
         days_rem = _days_remaining(appeal_deadline)
@@ -230,6 +310,14 @@ async def list_denials(
             "write_off_risk":    round(write_off, 4) if write_off is not None else None,
             "primary_root_cause": root_cause,
             "resolution_path":   resolution,
+            # CRS 6-component breakdown from claim (null when backfill not run)
+            "crs_score":             crs_score_total,
+            "crs_eligibility_pts":   crs_elig,
+            "crs_auth_pts":          crs_auth,
+            "crs_coding_pts":        crs_coding,
+            "crs_cob_pts":           crs_cob,
+            "crs_documentation_pts": crs_doc,
+            "crs_evv_pts":           crs_evv,
         })
 
     return {"items": items, "total": total or 0, "page": page, "size": size}
@@ -568,12 +656,23 @@ async def create_denial(denial_in: DenialCreate, db: AsyncSession = Depends(get_
 
 # ── GET /denials/detect-briefing ────────────────────────────────────────────
 @router.get("/detect-briefing")
-async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
+async def detect_briefing(
+    db: AsyncSession = Depends(get_db),
+    date_from: Optional[date] = Query(None, description="Filter denials on or after this date"),
+    date_to: Optional[date] = Query(None, description="Filter denials on or before this date"),
+) -> Any:
     """Single aggregation endpoint for the Detect pages — filter facets, KPIs, heatmap, trends, high-risk claims."""
     try:
+        # ── Apply date range (default: last 365 days) ─────────────────────
+        if date_to is None:
+            date_to = date.today()
+        if date_from is None:
+            date_from = date_to - timedelta(days=365)
+        params = {"date_from": date_from, "date_to": date_to}
+
         # ── 1. FILTER FACETS ──────────────────────────────────────────────
 
-        # MiroFish verdicts from RCA
+        # MiroFish verdicts from RCA (joined to denials for date filter)
         mf_rows = (await db.execute(text("""
             SELECT
                 CASE
@@ -585,12 +684,16 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
                 END AS verdict,
                 COUNT(*)
             FROM root_cause_analysis rca
+            JOIN denials d ON rca.denial_id = d.denial_id
+            WHERE d.denial_date BETWEEN :date_from AND :date_to
             GROUP BY 1
-        """))).fetchall()
+        """), params)).fetchall()
         mf_verdicts = [{"val": r[0], "count": r[1]} for r in mf_rows]
 
         # Denials without RCA = pending
-        total_denials = await db.scalar(select(func.count(Denial.denial_id))) or 0
+        total_denials = await db.scalar(text(
+            "SELECT COUNT(*) FROM denials WHERE denial_date BETWEEN :date_from AND :date_to"
+        ), params) or 0
         total_with_rca = sum(v["count"] for v in mf_verdicts)
         if total_denials > total_with_rca:
             # Find existing pending entry or add one
@@ -610,8 +713,10 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
                 END AS urg,
                 COUNT(*)
             FROM root_cause_analysis rca
+            JOIN denials d ON rca.denial_id = d.denial_id
+            WHERE d.denial_date BETWEEN :date_from AND :date_to
             GROUP BY 1
-        """))).fetchall()
+        """), params)).fetchall()
         urgency = [{"val": r[0], "count": r[1]} for r in urg_rows]
 
         # Top payers by denial count
@@ -620,9 +725,10 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
             FROM denials d
             JOIN claims c ON d.claim_id = c.claim_id
             JOIN payer_master pm ON c.payer_id = pm.payer_id
+            WHERE d.denial_date BETWEEN :date_from AND :date_to
             GROUP BY pm.payer_name
             ORDER BY cnt DESC LIMIT 8
-        """))).fetchall()
+        """), params)).fetchall()
         payers = [{"val": r[0], "count": r[1]} for r in payer_rows]
 
         # Top CARC codes
@@ -630,9 +736,10 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
             SELECT carc_code, COUNT(*) as cnt
             FROM denials
             WHERE carc_code IS NOT NULL
+              AND denial_date BETWEEN :date_from AND :date_to
             GROUP BY carc_code
             ORDER BY cnt DESC LIMIT 8
-        """))).fetchall()
+        """), params)).fetchall()
         carc_codes = [{"val": r[0], "count": r[1]} for r in carc_rows]
 
         # Denial categories
@@ -640,9 +747,10 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
             SELECT denial_category, COUNT(*) as cnt
             FROM denials
             WHERE denial_category IS NOT NULL
+              AND denial_date BETWEEN :date_from AND :date_to
             GROUP BY denial_category
             ORDER BY cnt DESC
-        """))).fetchall()
+        """), params)).fetchall()
         categories = [{"val": r[0], "count": r[1]} for r in cat_rows]
 
         # ── 2. HIGH RISK KPIs ─────────────────────────────────────────────
@@ -657,11 +765,17 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
                 COALESCE(SUM(CASE WHEN COALESCE(rca.ml_denial_probability, CASE WHEN rca.confidence_score >= 75 THEN 0.30 ELSE 0.55 END) <= 0.45 THEN d.denial_amount END), 0) as prev_amount
             FROM root_cause_analysis rca
             JOIN denials d ON rca.denial_id = d.denial_id
-        """))).fetchone()
+            WHERE d.denial_date BETWEEN :date_from AND :date_to
+        """), params)).fetchone()
 
         crs_below = await db.scalar(text("""
-            SELECT COUNT(*) FROM claims WHERE crs_score IS NOT NULL AND crs_score < 60
-        """)) or 0
+            SELECT COUNT(DISTINCT c.claim_id)
+            FROM claims c
+            JOIN denials d ON d.claim_id = c.claim_id
+            WHERE c.crs_score IS NOT NULL
+              AND c.crs_score < 60
+              AND d.denial_date BETWEEN :date_from AND :date_to
+        """), params) or 0
 
         # ── 3. HEATMAP (Payer x CARC) ────────────────────────────────────
 
@@ -671,9 +785,10 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
             JOIN claims c ON d.claim_id = c.claim_id
             JOIN payer_master pm ON c.payer_id = pm.payer_id
             WHERE d.carc_code IS NOT NULL
+              AND d.denial_date BETWEEN :date_from AND :date_to
             GROUP BY pm.payer_name, d.carc_code
             ORDER BY cnt DESC
-        """))).fetchall()
+        """), params)).fetchall()
 
         # Build matrix
         hm_payers = list(dict.fromkeys(r[0] for r in hm_rows))[:8]
@@ -696,11 +811,13 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
                 COUNT(*) as cnt,
                 COALESCE(SUM(rca.financial_impact), 0) as revenue
             FROM root_cause_analysis rca
+            JOIN denials d ON rca.denial_id = d.denial_id
             WHERE rca.primary_root_cause IS NOT NULL
+              AND d.denial_date BETWEEN :date_from AND :date_to
             GROUP BY rca.primary_root_cause, rca.root_cause_group
             ORDER BY cnt DESC
             LIMIT 8
-        """))).fetchall()
+        """), params)).fetchall()
 
         trending = []
         for r in trend_rows:
@@ -729,9 +846,10 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
             JOIN claims c ON d.claim_id = c.claim_id
             JOIN payer_master pm ON c.payer_id = pm.payer_id
             WHERE COALESCE(rca.ml_denial_probability, CASE WHEN rca.confidence_score < 50 THEN 0.80 WHEN rca.confidence_score < 75 THEN 0.55 ELSE 0.30 END) >= 0.60
+              AND d.denial_date BETWEEN :date_from AND :date_to
             ORDER BY COALESCE(rca.ml_denial_probability, CASE WHEN rca.confidence_score < 50 THEN 0.80 ELSE 0.30 END) DESC
             LIMIT 10
-        """))).fetchall()
+        """), params)).fetchall()
 
         high_risk_claims = [{
             "claim_id": r[0],
@@ -745,6 +863,7 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
         } for r in hr_claims]
 
         return {
+            "date_range": {"date_from": str(date_from), "date_to": str(date_to)},
             "filter_facets": {
                 "mf_verdicts": mf_verdicts,
                 "urgency": urgency,
@@ -774,3 +893,154 @@ async def detect_briefing(db: AsyncSession = Depends(get_db)) -> Any:
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Detect briefing error: {str(e)}")
+
+
+# ── POST /denials/{denial_id}/investigate ───────────────────────────────────
+@router.post("/{denial_id}/investigate")
+async def investigate_denial(
+    denial_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Mark a denial as UNDER_INVESTIGATION and return the updated denial."""
+    denial = await db.get(Denial, denial_id)
+    if not denial:
+        raise HTTPException(status_code=404, detail="Denial not found")
+    denial.status = "UNDER_INVESTIGATION"
+    await db.commit()
+    await db.refresh(denial)
+    return {
+        "denial_id": denial.denial_id,
+        "claim_id": denial.claim_id,
+        "status": denial.status,
+        "denial_category": denial.denial_category,
+        "denial_amount": float(denial.denial_amount or 0),
+        "updated": True,
+    }
+
+
+# ── PATCH /denials/appeals/{appeal_id}/letter ───────────────────────────────
+@router.patch("/appeals/{appeal_id}/letter")
+async def update_appeal_letter(
+    appeal_id: str,
+    body: LetterUpdateBody,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Update an appeal letter body (tries LLM-assist first, then template fallback if no text supplied)."""
+    appeal = await db.get(Appeal, appeal_id)
+    if not appeal:
+        raise HTTPException(status_code=404, detail="Appeal not found")
+
+    letter_text = (body.letter_text or "").strip()
+    source = "user"
+    confidence: Optional[int] = None
+
+    # If caller passed an empty body we auto-generate using LLM → template fallback
+    if not letter_text:
+        denial = await db.get(Denial, appeal.denial_id)
+        if not denial:
+            raise HTTPException(status_code=404, detail="Denial not found for appeal")
+        claim = await db.get(Claim, denial.claim_id)
+        patient_name = "Patient"
+        payer_name = "Payer"
+        dos_str = None
+        if claim:
+            patient_row = await db.get(Patient, claim.patient_id)
+            payer_row = await db.get(Payer, claim.payer_id)
+            if patient_row:
+                patient_name = f"{patient_row.first_name} {patient_row.last_name}"
+            if payer_row:
+                payer_name = payer_row.payer_name
+            dos_str = str(claim.date_of_service) if claim.date_of_service else None
+
+        llm_result = await generate_appeal_letter_with_llm({
+            "denial_id": denial.denial_id,
+            "claim_id": denial.claim_id,
+            "patient": patient_name,
+            "payer": payer_name,
+            "denial_category": denial.denial_category,
+            "carc_code": denial.carc_code,
+            "rarc_code": denial.rarc_code,
+            "denial_amount": denial.denial_amount or 0.0,
+            "dos": dos_str,
+        })
+        letter_text = llm_result["letter"]
+        source = llm_result["source"]
+        confidence = llm_result.get("confidence")
+
+    appeal.letter_text = letter_text
+    await db.commit()
+    await db.refresh(appeal)
+
+    return {
+        "appeal_id": appeal.appeal_id,
+        "letter": letter_text,
+        "source": source,
+        "confidence": confidence if confidence is not None else appeal.appeal_quality_score,
+        "updated_at": str(appeal.updated_at) if appeal.updated_at else None,
+    }
+
+
+# ── POST /denials/{denial_id}/execute-appeal ────────────────────────────────
+@router.post("/{denial_id}/execute-appeal", status_code=201)
+async def execute_appeal(
+    denial_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Create an Appeal record for this denial. Returns appeal_id."""
+    denial = await db.get(Denial, denial_id)
+    if not denial:
+        raise HTTPException(status_code=404, detail="Denial not found")
+
+    new_id = f"APL{uuid.uuid4().hex[:7].upper()}"
+    appeal = Appeal(
+        appeal_id=new_id,
+        denial_id=denial.denial_id,
+        claim_id=denial.claim_id,
+        appeal_type="FIRST_LEVEL",
+        appeal_method="PORTAL",
+        ai_generated=True,
+        outcome="PENDING",
+        appeal_quality_score=80,
+        submitted_date=date.today(),
+    )
+    db.add(appeal)
+    # Flip denial to APPEALED workflow status
+    denial.status = "APPEALED"
+    await db.commit()
+    await db.refresh(appeal)
+
+    return {
+        "appeal_id": appeal.appeal_id,
+        "denial_id": appeal.denial_id,
+        "claim_id": appeal.claim_id,
+        "status": denial.status,
+        "submitted_date": str(appeal.submitted_date),
+        "outcome": appeal.outcome,
+    }
+
+
+# ── PATCH /denials/{denial_id}/status ───────────────────────────────────────
+@router.patch("/{denial_id}/status")
+async def update_denial_status(
+    denial_id: str,
+    body: DenialStatusBody,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Update denial workflow status."""
+    denial = await db.get(Denial, denial_id)
+    if not denial:
+        raise HTTPException(status_code=404, detail="Denial not found")
+
+    allowed = {"OPEN", "UNDER_INVESTIGATION", "APPEALED", "RESOLVED", "WRITTEN_OFF"}
+    new_status = (body.status or "").upper()
+    if new_status not in allowed:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {sorted(allowed)}")
+
+    denial.status = new_status
+    await db.commit()
+    await db.refresh(denial)
+    return {
+        "denial_id": denial.denial_id,
+        "status": denial.status,
+        "updated": True,
+    }

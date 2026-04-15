@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
+import { ErrorBoundary } from './components/ui';
 
 // ── Command Center ─────────────────────────────────────────────────────
 import { CommandCenter } from './features/dashboard/pages/CommandCenter';
@@ -19,6 +20,7 @@ import { ARAgingPage } from './features/analytics/pages/ARAgingPage';
 import { RootCauseClaimsPage } from './features/analytics/pages/RootCauseClaimsPage';
 import { CashFlowPage } from './features/analytics/pages/CashFlowPage';
 import { DenialAnalytics } from './features/denials/pages/DenialAnalytics';
+import { DenialTrends } from './features/denials/pages/DenialTrends';
 import { RootCauseIntelligence } from './features/analytics/pages/RootCauseIntelligence';
 import { ClaimRootCauseDetail } from './features/analytics/pages/ClaimRootCauseDetail';
 import { PaymentDashboard } from './features/payments/pages/PaymentDashboard';
@@ -178,14 +180,15 @@ function App() {
                     <Route path="cash-flow" element={<CashFlowPage />} />
                 </Route>
 
-                {/* Denial Analytics */}
+                {/* Denial Analytics — wrapped in ErrorBoundary so one API failure doesn't kill the layout */}
                 <Route path="analytics/denials" element={<DenialAnalyticsLayout />}>
                     <Route index element={<Navigate to="overview" replace />} />
-                    <Route path="overview" element={<DenialAnalytics />} />
-                    <Route path="root-cause" element={<RootCauseIntelligence />} />
-                    <Route path="root-cause/claims" element={<RootCauseClaimsPage />} />
-                    <Route path="root-cause/claim/:claimId" element={<ClaimRootCauseDetail />} />
-                    <Route path="payer-patterns" element={<PayerVariance />} />
+                    <Route path="overview" element={<ErrorBoundary label="Denial Intelligence"><DenialAnalytics /></ErrorBoundary>} />
+                    <Route path="root-cause" element={<ErrorBoundary label="Root Cause Intelligence"><RootCauseIntelligence /></ErrorBoundary>} />
+                    <Route path="root-cause/claims" element={<ErrorBoundary label="Root Cause Claims"><RootCauseClaimsPage /></ErrorBoundary>} />
+                    <Route path="root-cause/claim/:claimId" element={<ErrorBoundary label="Claim RCA Detail"><ClaimRootCauseDetail /></ErrorBoundary>} />
+                    <Route path="payer-patterns" element={<ErrorBoundary label="Payer Patterns"><PayerVariance /></ErrorBoundary>} />
+                    <Route path="trends" element={<ErrorBoundary label="Denial Trends"><DenialTrends /></ErrorBoundary>} />
                 </Route>
 
                 {/* Payment Intelligence */}
@@ -213,7 +216,7 @@ function App() {
                 <Route path="payments/contract-variance" element={<ContractVarianceDashboard />} />
 
                 {/* Payer Health Scorecard */}
-                <Route path="analytics/payer-health" element={<PayerHealthScorecard />} />
+                <Route path="analytics/payer-health" element={<ErrorBoundary label="Payer Health Scorecard"><PayerHealthScorecard /></ErrorBoundary>} />
 
                 {/* Provider Leaderboard */}
                 <Route path="analytics/provider-leaderboard" element={<ProviderLeaderboard />} />
@@ -238,23 +241,27 @@ function App() {
                     <Route path="scrub" element={<ScrubDashboard />} />
                 </Route>
 
-                {/* Denial Work Center — DenialManagement has its own shell (DW-1) */}
-                <Route path="work/denials" element={<DenialManagement />} />
-                <Route path="work/denials/queue" element={<DenialManagement />} />
-                <Route path="work/denials/high-risk" element={<DenialManagement />} />
-                <Route path="work/denials/appeals" element={<DenialManagement />} />
+                {/* Denial Work Center — DenialManagement has its own shell (DW-1) — wrapped in ErrorBoundary */}
+                <Route path="work/denials" element={<ErrorBoundary label="Denial Command"><DenialManagement /></ErrorBoundary>} />
+                <Route path="work/denials/queue" element={<ErrorBoundary label="Denial Command"><DenialManagement /></ErrorBoundary>} />
+                {/* High Risk Claims is now a TAB inside DenialManagement — no separate sidebar entry */}
+                <Route path="work/denials/high-risk" element={<ErrorBoundary label="High Risk Claims"><DenialManagement /></ErrorBoundary>} />
+                {/* Appeal Workbench routes directly to the rebuilt 3-column AppealPipelineTracker */}
+                <Route path="work/denials/appeals" element={<ErrorBoundary label="Appeal Workbench"><AppealPipelineTracker /></ErrorBoundary>} />
                 <Route path="work/denials/workflow-log" element={<DenialWorkflowLog />} />
                 <Route path="work/denials/claim/:id" element={<DenialIntelligence />} />
 
-                {/* Appeal Pipeline */}
-                <Route path="denials/appeal-pipeline" element={<AppealPipelineTracker />} />
+                {/* Legacy alias for deep-links — also renders AppealPipelineTracker */}
+                <Route path="denials/appeal-pipeline" element={<ErrorBoundary label="Appeal Pipeline"><AppealPipelineTracker /></ErrorBoundary>} />
 
                 {/* Collections Work Center */}
                 <Route path="work/collections" element={<CollectionsWorkCenterLayout />}>
-                    <Route index element={<Navigate to="queue" replace />} />
+                    <Route index element={<Navigate to="hub" replace />} />
+                    <Route path="hub" element={<CollectionsHub />} />
                     <Route path="queue" element={<CollectionsQueue />} />
                     <Route path="alerts" element={<AlertsQueue />} />
                     <Route path="portal" element={<PaymentPortal />} />
+                    <Route path="timeline" element={<CollectionsTimeline />} />
                 </Route>
 
                 {/* Payment Work Center */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../../services/api';
 import { KPICard } from '../components/KPICard';
@@ -14,45 +14,30 @@ import {
   AIInsightCard,
   FilterChipGroup,
   DateRangePicker,
+  EmptyState,
+  ErrorBanner,
+  Skeleton,
 } from '../../../components/ui';
+import { fmtCurrency } from '../../../lib/formatters';
+import { DunningTrackerPanel } from '../components/DunningTrackerPanel';
+import { AutoDialerPanel } from '../components/AutoDialerPanel';
+import { SettlementOffersPanel } from '../components/SettlementOffersPanel';
 
-/* ── Extended aging buckets with realistic collectability ───────── */
-const extendedAgingBuckets = [
- { bucket: '0-30d', balance: 6200000, claimCount: 520, collectability: 98, color: '#10b981' },
- { bucket: '31-60d', balance: 3100000, claimCount: 280, collectability: 85, color: '#22d3ee' },
- { bucket: '61-90d', balance: 1900000, claimCount: 165, collectability: 60, color: '#f59e0b' },
- { bucket: '91-120d', balance: 680000, claimCount: 72, collectability: 40, color: '#f97316' },
- { bucket: '121-180d',balance: 380200, claimCount: 38, collectability: 20, color: '#ef4444' },
- { bucket: '180+d', balance: 190000, claimCount: 18, collectability: 10, color: '#991b1b' },
-];
-
-/* ── Corrected high-risk worklist (Medicare → Redetermination) ─── */
-const correctedHighRiskClaims = [
- {
- id: 'CLM-90284', payer: 'Medicare', balance: 42350, aging: 94,
- agingBucket: '91-120', riskScore: 92, riskLevel: 'critical',
- nextAction: 'Medicare Redetermination', dos: '2023-10-15',
- patient: 'John Smith', cpt: '99285',
- },
- {
- id: 'CLM-88122', payer: 'BCBS TX', balance: 18120.50, aging: 72,
- agingBucket: '61-90', riskScore: 74, riskLevel: 'high',
- nextAction: 'Verify Authorization', dos: '2023-11-02',
- patient: 'Sarah Johnson', cpt: '27447',
- },
- {
- id: 'CLM-91203', payer: 'United Health', balance: 12400, aging: 45,
- agingBucket: '31-60', riskScore: 48, riskLevel: 'medium',
- nextAction: 'Payer Status Call', dos: '2023-12-05',
- patient: 'Michael Brown', cpt: '43239',
- },
- {
- id: 'CLM-90041', payer: 'Medicare', balance: 8900, aging: 112,
- agingBucket: '91-120', riskScore: 88, riskLevel: 'critical',
- nextAction: 'Medicare Redetermination', dos: '2023-09-28',
- patient: 'Emily Davis', cpt: '99223',
- },
-];
+/**
+ * Aging-bucket presentation defaults. These are pure presentation hints
+ * (color + collectability heuristic per bucket) — no synthetic balances.
+ * Real numbers come from `arSummary.buckets`; if that is missing we render
+ * an empty state instead of inventing demo data.
+ */
+const BUCKET_VISUALS = {
+    '0-30':    { collectability: 98, color: '#10b981' },
+    '31-60':   { collectability: 85, color: '#22d3ee' },
+    '61-90':   { collectability: 60, color: '#f59e0b' },
+    '91-120':  { collectability: 40, color: '#f97316' },
+    '121-180': { collectability: 20, color: '#ef4444' },
+    '120+':    { collectability: 15, color: '#ef4444' },
+    '180+':    { collectability: 10, color: '#991b1b' },
+};
 
 export function CollectionsHub() {
  const navigate = useNavigate();
@@ -65,6 +50,10 @@ export function CollectionsHub() {
  const [queueItems, setQueueItems] = useState([]);
  const [aiInsights, setAiInsights] = useState([]);
  const [aiLoading, setAiLoading] = useState(false);
+
+ /* Page-level loading + error tracking */
+ const [coreLoading, setCoreLoading] = useState(true);
+ const [coreError, setCoreError] = useState(null);
 
  /* Audit-driven: root cause, diagnostics, prevention */
  const [rootCauseSummary, setRootCauseSummary] = useState(null);
@@ -86,22 +75,10 @@ export function CollectionsHub() {
  /* Worklist sort */
  const [worklistSort, setWorklistSort] = useState('risk');
 
- useEffect(() => {
-   // Load AI insights (non-blocking, Ollama may take 2-5s)
-   setAiLoading(true);
-   api.ai.getInsights('collections').then(r => {
-     setAiInsights(r?.insights || []);
-     setAiLoading(false);
-   });
-
-   /* Audit-driven API calls (non-blocking) */
-   api.rootCause.getSummary().catch(() => null).then(r => r && setRootCauseSummary(r));
-   api.diagnostics.getFindings({ category: 'AR_AGING' }).catch(() => null).then(r => r && setArDiagnostics(r));
-   api.prevention.scan(3).catch(() => null).then(r => r && setPreventionRisk(r));
-   api.ar.getAgingRootCause().catch(() => null).then(r => r && setAgingRootCause(r));
-   api.payments.getPayerStats().catch(() => null).then(r => Array.isArray(r) && setPayerStats(r));
-
-   async function load() {
+ const loadCore = useCallback(async () => {
+   setCoreLoading(true);
+   setCoreError(null);
+   try {
      const [ar, coll, queue, den, pay] = await Promise.all([
        api.ar.getSummary(),
        api.collections.getSummary(),
@@ -109,176 +86,172 @@ export function CollectionsHub() {
        api.denials.getSummary(),
        api.payments.getSummary(),
      ]);
-     if (ar) setArSummary(ar);
-     if (coll) setCollSummary(coll);
-     if (queue?.items) setQueueItems(queue.items);
-     if (den) setDenialsSummary(den);
-     if (pay) setPaymentsSummary(pay);
+     setArSummary(ar || null);
+     setCollSummary(coll || null);
+     setQueueItems(Array.isArray(queue?.items) ? queue.items : []);
+     setDenialsSummary(den || null);
+     setPaymentsSummary(pay || null);
+     if (!ar && !coll) {
+       setCoreError(new Error('Core RCM services unreachable. AR and Collections summaries did not return data.'));
+     }
+   } catch (err) {
+     console.error('CollectionsHub core load error:', err);
+     setCoreError(err);
+   } finally {
+     setCoreLoading(false);
    }
-   load();
  }, []);
 
- /* ── Chart defaults (used when no API source exists) ─────────── */
- // topCPTCodes: No dedicated API endpoint; uses static defaults
- const CHART_DEFAULTS = {
-   topCPTCodes: [
-     { code: '99285', description: 'Emergency Dept Visit', revenue: 1250000, volume: 850, avgReimbursement: 1470 },
-     { code: '27447', description: 'Total Knee Replacement', revenue: 980000, volume: 45, avgReimbursement: 21778 },
-     { code: '99214', description: 'Office Visit Established', revenue: 875000, volume: 1250, avgReimbursement: 700 },
-     { code: '43239', description: 'Upper GI Endoscopy', revenue: 720000, volume: 320, avgReimbursement: 2250 },
-     { code: '93000', description: 'Electrocardiogram', revenue: 580000, volume: 2900, avgReimbursement: 200 },
-     { code: '70450', description: 'CT Head/Brain', revenue: 520000, volume: 280, avgReimbursement: 1857 },
-   ],
- };
+ useEffect(() => {
+   // Load AI insights (non-blocking, Ollama may take 2-5s)
+   setAiLoading(true);
+   api.ai.getInsights('collections').then(r => {
+     setAiInsights(r?.insights || []);
+     setAiLoading(false);
+   }).catch(() => setAiLoading(false));
 
- /* ── Derive arTrend from current AR total (±5-15% for prior months) ── */
- const arTrend = (() => {
-   const base = arSummary?.total_ar || 12450200;
-   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-   return months.map((month, i) => {
-     const factor = 0.88 + (i * 0.012) + (Math.sin(i) * 0.02);
-     const balance = Math.round(base * factor);
-     const collected = Math.round(balance * (0.32 + i * 0.005));
-     return { month, balance, collected, outstanding: balance - collected };
-   });
- })();
+   /* Audit-driven API calls (non-blocking, individually error-tolerant) */
+   api.rootCause.getSummary().catch(() => null).then(r => r && setRootCauseSummary(r));
+   api.diagnostics.getFindings({ category: 'AR_AGING' }).catch(() => null).then(r => r && setArDiagnostics(r));
+   api.prevention.scan(3).catch(() => null).then(r => r && setPreventionRisk(r));
+   api.ar.getAgingRootCause().catch(() => null).then(r => r && setAgingRootCause(r));
+   api.payments.getPayerStats().catch(() => null).then(r => Array.isArray(r) && setPayerStats(r));
 
- /* ── Derive collectionVelocity from AR bucket data ────────────── */
- const collectionVelocity = (() => {
-   const buckets = arSummary?.buckets;
-   if (buckets && buckets.length > 0) {
-     const payers = ['Medicare', 'Aetna', 'BCBS', 'United Health', 'Cigna', 'Humana', 'Tricare'];
-     const baseDays = [24, 32, 48, 54, 61, 38, 28];
-     const totalBal = buckets.reduce((s, b) => s + b.balance, 0) || 1;
-     return payers.map((payer, i) => ({
-       payer,
-       days: baseDays[i],
-       avgBalance: Math.round(totalBal * (0.2 - i * 0.02)),
-       performance: baseDays[i] <= 30 ? 'excellent' : baseDays[i] <= 40 ? 'good' : baseDays[i] <= 50 ? 'fair' : baseDays[i] <= 60 ? 'poor' : 'critical',
-       color: baseDays[i] <= 30 ? '#10b981' : baseDays[i] <= 40 ? '#10b981' : baseDays[i] <= 50 ? '#f59e0b' : baseDays[i] <= 60 ? '#f97316' : '#ef4444',
-     }));
-   }
-   return [
-     { payer: 'Medicare', days: 24, avgBalance: 850000, performance: 'excellent', color: '#10b981' },
-     { payer: 'Aetna', days: 32, avgBalance: 620000, performance: 'good', color: '#10b981' },
-     { payer: 'BCBS', days: 48, avgBalance: 540000, performance: 'fair', color: '#f59e0b' },
-     { payer: 'United Health', days: 54, avgBalance: 480000, performance: 'poor', color: '#f97316' },
-     { payer: 'Cigna', days: 61, avgBalance: 390000, performance: 'critical', color: '#ef4444' },
-   ];
- })();
+   loadCore();
+ }, [loadCore]);
 
- /* ── Derive denialReasons from denials summary top_categories ── */
+ /* ── Derive AR trend from API trend payload only — no fabricated months. ── */
+ const arTrend = Array.isArray(arSummary?.trend) && arSummary.trend.length > 0
+   ? arSummary.trend.map(p => ({
+       month: p.month || p.period || '',
+       balance: Number(p.balance ?? p.total_ar ?? 0),
+       collected: Number(p.collected ?? 0),
+       outstanding: Number(p.outstanding ?? (p.balance ?? 0) - (p.collected ?? 0)),
+     }))
+   : [];
+
+ /* ── Collection velocity comes straight from payer stats. ── */
+ const collectionVelocity = Array.isArray(payerStats) && payerStats.length > 0
+   ? payerStats
+       .filter(p => p.avg_days_to_pay != null || p.days != null)
+       .map(p => {
+         const days = Number(p.avg_days_to_pay ?? p.days ?? 0);
+         const performance = days <= 30 ? 'excellent' : days <= 40 ? 'good' : days <= 50 ? 'fair' : days <= 60 ? 'poor' : 'critical';
+         const color = days <= 30 ? '#10b981' : days <= 40 ? '#10b981' : days <= 50 ? '#f59e0b' : days <= 60 ? '#f97316' : '#ef4444';
+         return {
+           payer: p.name || p.payer || p.payer_name || 'Unknown',
+           days,
+           avgBalance: Number(p.avg_balance ?? p.balance ?? 0),
+           performance,
+           color,
+         };
+       })
+   : [];
+
+ /* ── Denial reasons from denials summary. ── */
  const denialReasons = (() => {
    const cats = denialsSummary?.top_categories;
-   if (cats && cats.length > 0) {
-     const total = cats.reduce((s, c) => s + (c.count || 0), 0) || 1;
-     return cats.map(c => ({
-       reason: c.category,
-       count: c.count || 0,
-       amount: c.amount || Math.round((c.count || 0) * 2800),
-       percentage: Math.round(((c.count || 0) / total) * 100),
-     }));
-   }
-   return [
-     { reason: 'Missing Authorization', count: 145, amount: 425000, percentage: 28 },
-     { reason: 'Coding Error', count: 112, amount: 320000, percentage: 22 },
-     { reason: 'Timely Filing', count: 98, amount: 285000, percentage: 19 },
-     { reason: 'Medical Necessity', count: 87, amount: 245000, percentage: 17 },
-     { reason: 'Duplicate Claim', count: 56, amount: 180000, percentage: 11 },
-     { reason: 'Other', count: 24, amount: 65000, percentage: 3 },
-   ];
+   if (!Array.isArray(cats) || cats.length === 0) return [];
+   const total = cats.reduce((s, c) => s + (c.count || 0), 0) || 1;
+   return cats.map(c => ({
+     reason: c.category || c.name || 'Unknown',
+     count: c.count || 0,
+     amount: c.amount || 0,
+     percentage: Math.round(((c.count || 0) / total) * 100),
+   }));
  })();
 
- /* ── Derive paymentDistribution from payments summary ──────── */
+ /* ── Payment distribution from payments summary. ── */
  const paymentDistribution = (() => {
-   if (paymentsSummary?.payer_breakdown && paymentsSummary.payer_breakdown.length > 0) {
-     const total = paymentsSummary.payer_breakdown.reduce((s, p) => s + (p.amount || 0), 0) || 1;
-     const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#64748b', '#ec4899'];
-     return paymentsSummary.payer_breakdown.map((p, i) => ({
-       method: p.payer || p.name || `Payer ${i + 1}`,
-       amount: p.amount || 0,
-       percentage: Math.round(((p.amount || 0) / total) * 100),
-       color: colors[i % colors.length],
-     }));
-   }
-   return [
-     { method: 'Commercial Insurance', amount: 4200000, percentage: 42, color: '#3b82f6' },
-     { method: 'Medicare', amount: 3100000, percentage: 31, color: '#10b981' },
-     { method: 'Medicaid', amount: 1500000, percentage: 15, color: '#f59e0b' },
-     { method: 'Patient Pay', amount: 800000, percentage: 8, color: '#8b5cf6' },
-     { method: 'Other', amount: 400000, percentage: 4, color: '#64748b' },
-   ];
+   const breakdown = paymentsSummary?.payer_breakdown;
+   if (!Array.isArray(breakdown) || breakdown.length === 0) return [];
+   const total = breakdown.reduce((s, p) => s + (p.amount || 0), 0) || 1;
+   const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#64748b', '#ec4899'];
+   return breakdown.map((p, i) => ({
+     method: p.payer || p.name || `Payer ${i + 1}`,
+     amount: p.amount || 0,
+     percentage: Math.round(((p.amount || 0) / total) * 100),
+     color: colors[i % colors.length],
+   }));
  })();
 
- const topCPTCodes = CHART_DEFAULTS.topCPTCodes;
+ /* ── Top CPT codes from payments summary, otherwise empty. ── */
+ const topCPTCodes = Array.isArray(paymentsSummary?.top_cpt_codes)
+   ? paymentsSummary.top_cpt_codes
+   : [];
 
- /* ── KPI derivation from API data ─────────────────────────── */
- const KPI_DEFAULTS = {
-   totalARBalance: { current: 5240000, previous: 5080000, change: null, trend: 'up' },
-   avgDaysOutstanding: { current: 42, previous: 40.7, change: null, target: 35, trend: 'up' },
-   projected30DCash: { current: 2180000, confidence: 94 },
-   aiRiskFlagged: { count: 184, potentialLoss: 640000 },
- };
-
- // Compute change % from current vs prior; returns null if insufficient data
+ /* ── KPI derivation directly from API. No invented prior values. ── */
  const calcChangePct = (current, previous) => {
    if (current == null || previous == null || previous === 0) return null;
-   return +( ((current - previous) / Math.abs(previous)) * 100 ).toFixed(1);
+   return +(((current - previous) / Math.abs(previous)) * 100).toFixed(1);
  };
 
- const kpis = arSummary && collSummary ? (() => {
-   const curAR = arSummary.total_ar;
-   const prevAR = arSummary.previous_total_ar || (curAR != null ? Math.round(curAR * (1 + (Math.sin(curAR * 7) * 0.03 + 0.01))) : null);
-   const arChange = arSummary.ar_change_pct != null ? arSummary.ar_change_pct : calcChangePct(curAR, prevAR);
+ const kpis = (() => {
+   if (!arSummary && !collSummary) return null;
+   const curAR = arSummary?.total_ar ?? null;
+   const prevAR = arSummary?.previous_total_ar ?? null;
+   const arChange = arSummary?.ar_change_pct ?? calcChangePct(curAR, prevAR);
 
-   const curDays = arSummary.avg_days_outstanding || 42;
-   const prevDays = arSummary.prev_avg_days || (curDays * (1 + (Math.sin(curDays * 7) * 0.03 + 0.01)));
-   const daysChange = arSummary.days_change_pct != null ? arSummary.days_change_pct : calcChangePct(curDays, prevDays);
+   const curDays = arSummary?.avg_days_outstanding ?? null;
+   const prevDays = arSummary?.prev_avg_days ?? null;
+   const daysChange = arSummary?.days_change_pct ?? calcChangePct(curDays, prevDays);
 
    return {
      totalARBalance: {
        current: curAR,
        previous: prevAR,
        change: arChange,
-       trend: arChange != null ? (arChange >= 0 ? 'up' : 'down') : 'up',
+       trend: arChange != null ? (arChange >= 0 ? 'up' : 'down') : null,
      },
      avgDaysOutstanding: {
        current: curDays,
        previous: prevDays,
        change: daysChange,
-       target: 35,
-       trend: daysChange != null ? (daysChange >= 0 ? 'up' : 'down') : 'up',
+       target: arSummary?.days_target ?? 35,
+       trend: daysChange != null ? (daysChange >= 0 ? 'up' : 'down') : null,
      },
      projected30DCash: {
-       current: collSummary.total_collectible || collSummary.projected_30d_cash || 2180000,
-       confidence: collSummary.confidence || 94,
+       current: collSummary?.projected_30d_cash ?? collSummary?.total_collectible ?? null,
+       confidence: collSummary?.confidence ?? null,
      },
      aiRiskFlagged: {
-       count: collSummary.active_alerts || 0,
-       potentialLoss: collSummary.risk_amount || (collSummary.total_collectible * 0.1) || 640000,
+       count: collSummary?.active_alerts ?? null,
+       potentialLoss: collSummary?.risk_amount ?? null,
      },
    };
- })() : KPI_DEFAULTS;
+ })();
 
- const liveAgingBuckets = arSummary?.buckets?.map(b => ({
-   bucket: b.bucket + 'd',
-   balance: b.balance,
-   claimCount: b.count,
-   collectability: Math.max(5, 98 - (['0-30','31-60','61-90','91-120','120+'].indexOf(b.bucket) * 20)),
-   color: ['#10b981','#22d3ee','#f59e0b','#f97316','#ef4444'][['0-30','31-60','61-90','91-120','120+'].indexOf(b.bucket)] || '#ef4444',
- })) || extendedAgingBuckets;
+ /* Helpers for "—" rendering */
+ const fmtMoneyOrDash = (v) => (v == null ? '—' : fmtCurrency(v));
+ const fmtNumOrDash = (v) => (v == null ? '—' : Number(v).toLocaleString());
 
- const liveHighRiskClaims = queueItems.slice(0, 4).map(t => ({
+ /* ── Live aging buckets — strictly from API. Empty otherwise. ── */
+ const liveAgingBuckets = Array.isArray(arSummary?.buckets)
+   ? arSummary.buckets.map(b => {
+       const visual = BUCKET_VISUALS[b.bucket] || { collectability: 50, color: '#94a3b8' };
+       return {
+         bucket: `${b.bucket}d`,
+         balance: Number(b.balance ?? 0),
+         claimCount: Number(b.count ?? 0),
+         collectability: b.collectability ?? visual.collectability,
+         color: visual.color,
+       };
+     })
+   : [];
+
+ const liveHighRiskClaims = (queueItems || []).slice(0, 6).map(t => ({
    id: t.claim_id,
    payer: t.payer_name || t.payer_id,
-   balance: t.balance,
-   aging: t.days_outstanding,
-   agingBucket: t.days_outstanding > 120 ? '120+' : t.days_outstanding > 90 ? '91-120' : '61-90',
+   balance: Number(t.balance ?? 0),
+   aging: Number(t.days_outstanding ?? 0),
+   agingBucket: t.days_outstanding > 120 ? '120+' : t.days_outstanding > 90 ? '91-120' : t.days_outstanding > 60 ? '61-90' : t.days_outstanding > 30 ? '31-60' : '0-30',
    riskScore: 100 - (t.propensity_score || 50),
    riskLevel: t.priority === 'CRITICAL' ? 'critical' : t.priority === 'HIGH' ? 'high' : 'medium',
    nextAction: t.action_type,
    patient: t.patient_name,
- })) || correctedHighRiskClaims;
+   cpt: t.cpt_code,
+   dos: t.date_of_service,
+ }));
 
  /* ── Filter the worklist ──────────────────────────────────── */
  const filteredClaims = liveHighRiskClaims.filter((c) => {
@@ -416,41 +389,75 @@ export function CollectionsHub() {
  </div>
  )}
 
+ {/* ── Page-level error banner ─────────────── */}
+ {coreError && (
+   <ErrorBanner
+     title="Collections Hub data did not load"
+     message={coreError.message || 'Unable to reach core RCM services. Some panels may be empty.'}
+     onRetry={loadCore}
+     className="mb-6"
+   />
+ )}
+
  {/* ── KPI Stats Bar ────────────────────────────── */}
  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
- <KPICard
- title="Total A/R Balance"
- value={`$${(kpis.totalARBalance.current / 1000000).toFixed(2)}M`}
- change={kpis.totalARBalance.change}
- trend={kpis.totalARBalance.trend}
- subtitle={`vs last month ($${(kpis.totalARBalance.previous / 1000000).toFixed(1)}M)`}
- icon="account_balance"
- />
- <KPICard
- title="Avg. Days Outstanding"
- value={`${kpis.avgDaysOutstanding.current} Days`}
- change={kpis.avgDaysOutstanding.change}
- trend={kpis.avgDaysOutstanding.trend}
- subtitle={`Target: ${kpis.avgDaysOutstanding.target} Days`}
- accentColor="border-l-amber-500"
- />
- <div onClick={() => navigate('/collections/recovery-insights')} className="cursor-pointer">
- <KPICard
- title="Projected 30D Cash"
- value={`$${(kpis.projected30DCash.current / 1000000).toFixed(1)}M`}
- subtitle={`Confidence level: ${kpis.projected30DCash.confidence}%`}
- icon="trending_up"
- />
- </div>
- <div onClick={() => navigate('/collections/alerts')} className="cursor-pointer">
- <KPICard
- title="AI Risk Flagged Claims"
- value={kpis.aiRiskFlagged.count}
- subtitle={`Potential Loss: $${(kpis.aiRiskFlagged.potentialLoss / 1000).toFixed(0)}k`}
- accentColor="border-l-red-500"
- icon="warning"
- />
- </div>
+ {coreLoading ? (
+   [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[112px] rounded-xl" />)
+ ) : (
+   <>
+     <KPICard
+       title="Total A/R Balance"
+       value={fmtMoneyOrDash(kpis?.totalARBalance.current)}
+       change={kpis?.totalARBalance.change ?? undefined}
+       trend={kpis?.totalARBalance.trend ?? undefined}
+       subtitle={kpis?.totalARBalance.previous != null
+         ? `vs last month (${fmtCurrency(kpis.totalARBalance.previous)})`
+         : 'No prior period reported'}
+       icon="account_balance"
+     />
+     <KPICard
+       title="Avg. Days Outstanding"
+       value={kpis?.avgDaysOutstanding.current != null ? `${kpis.avgDaysOutstanding.current} Days` : '—'}
+       change={kpis?.avgDaysOutstanding.change ?? undefined}
+       trend={kpis?.avgDaysOutstanding.trend ?? undefined}
+       subtitle={`Target: ${kpis?.avgDaysOutstanding.target ?? 35} Days`}
+       accentColor="border-l-amber-500"
+     />
+     <div
+       onClick={() => navigate('/collections/recovery-insights')}
+       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/collections/recovery-insights'); }}
+       role="button"
+       tabIndex={0}
+       className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-th-primary rounded-xl"
+     >
+       <KPICard
+         title="Projected 30D Cash"
+         value={fmtMoneyOrDash(kpis?.projected30DCash.current)}
+         subtitle={kpis?.projected30DCash.confidence != null
+           ? `Confidence level: ${kpis.projected30DCash.confidence}%`
+           : 'Confidence not reported'}
+         icon="trending_up"
+       />
+     </div>
+     <div
+       onClick={() => navigate('/collections/alerts')}
+       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/collections/alerts'); }}
+       role="button"
+       tabIndex={0}
+       className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-th-primary rounded-xl"
+     >
+       <KPICard
+         title="AI Risk Flagged Claims"
+         value={fmtNumOrDash(kpis?.aiRiskFlagged.count)}
+         subtitle={kpis?.aiRiskFlagged.potentialLoss != null
+           ? `Potential Loss: ${fmtCurrency(kpis.aiRiskFlagged.potentialLoss)}`
+           : 'No loss estimate available'}
+         accentColor="border-l-red-500"
+         icon="warning"
+       />
+     </div>
+   </>
+ )}
  </div>
 
  {/* ── Audit: Root Cause / Diagnostics / Prevention ── */}
@@ -461,7 +468,7 @@ export function CollectionsHub() {
     <span className="material-symbols-outlined text-amber-400 text-sm">troubleshoot</span>
     <span className="text-xs font-bold uppercase tracking-wider text-th-muted">Why Claims Age</span>
    </div>
-   {rootCauseSummary?.top_causes ? (
+   {Array.isArray(rootCauseSummary?.top_causes) && rootCauseSummary.top_causes.length > 0 ? (
     <div className="flex flex-wrap gap-2">
      {rootCauseSummary.top_causes.slice(0, 3).map((c) => (
       <span key={c.code} className="text-xs font-bold text-th-heading bg-th-surface-overlay px-2 py-1 rounded border border-th-border tabular-nums">
@@ -470,13 +477,7 @@ export function CollectionsHub() {
      ))}
     </div>
    ) : (
-    <div className="flex flex-wrap gap-2">
-     {[{ code: 'TIMELY_FILING', pct: 16 }, { code: 'ELIGIBILITY', pct: 17 }, { code: 'MODIFIER', pct: 42 }].map((c) => (
-      <span key={c.code} className="text-xs font-bold text-th-heading bg-th-surface-overlay px-2 py-1 rounded border border-th-border tabular-nums">
-       {c.code} <span className="text-amber-400">{c.pct}%</span>
-      </span>
-     ))}
-    </div>
+    <p className="text-xs text-th-muted">No root-cause data available.</p>
    )}
   </div>
 
@@ -488,7 +489,7 @@ export function CollectionsHub() {
    </div>
    <div className="flex items-center gap-3">
     <span className="text-2xl font-black text-th-heading tabular-nums">
-     {arDiagnostics?.findings?.length ?? 2}
+     {arDiagnostics?.findings?.length ?? '—'}
     </span>
     <span className="text-sm text-th-secondary">aging diagnostics detected</span>
    </div>
@@ -505,7 +506,7 @@ export function CollectionsHub() {
    </div>
    <div className="flex items-center gap-3">
     <span className="text-2xl font-black text-red-400 tabular-nums">
-     {preventionRisk?.at_risk_count ?? 3}
+     {preventionRisk?.at_risk_count ?? '—'}
     </span>
     <span className="text-sm text-th-secondary">claims at risk of becoming uncollectible</span>
    </div>
@@ -642,10 +643,27 @@ export function CollectionsHub() {
  <p className="text-sm text-th-secondary">Current portfolio breakdown by aging category</p>
  </div>
  </div>
- <ARAgingChart data={liveAgingBuckets} onBucketClick={setSelectedBucket} />
+ {coreLoading ? (
+   <Skeleton className="h-72 w-full rounded-lg" />
+ ) : liveAgingBuckets.length > 0 ? (
+   <ARAgingChart data={liveAgingBuckets} onBucketClick={setSelectedBucket} />
+ ) : (
+   <EmptyState
+     icon="bar_chart"
+     title="No AR aging data"
+     description="The AR summary endpoint did not return bucket data. Retry once the upstream service is healthy."
+     action={loadCore}
+     actionLabel="Retry"
+   />
+ )}
  </div>
 
  </div>
+
+ {/* ── NEW: Dunning, Auto-Dialer, Settlements panels ─── */}
+ <DunningTrackerPanel />
+ <AutoDialerPanel />
+ <SettlementOffersPanel />
 
  {/* ── Root Cause of Aging ───────────────────────── */}
  <div className="bg-th-surface-raised border border-th-border p-6 rounded-xl mb-8">
@@ -653,39 +671,46 @@ export function CollectionsHub() {
  <h3 className="text-lg font-bold text-th-heading">Root Cause of Aging</h3>
  </div>
  <p className="text-sm text-th-secondary mb-6">AI-identified drivers of outstanding balances by aging category</p>
- <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
- {(agingRootCause?.causes || agingRootCause?.items || [
- { cause: 'Missing Authorization', pct: 28, bucket: '61-90d', icon: 'shield', color: 'text-amber-400' },
- { cause: 'Payer Processing Delays', pct: 24, bucket: '91-120d', icon: 'schedule', color: 'text-orange-400' },
- { cause: 'Coding / Modifier Errors', pct: 19, bucket: '31-60d', icon: 'code', color: 'text-blue-400' },
- { cause: 'Timely Filing Risk', pct: 15, bucket: '121-180d', icon: 'warning', color: 'text-red-400' },
- { cause: 'Medical Necessity Denials', pct: 9, bucket: '61-90d', icon: 'local_hospital', color: 'text-purple-400' },
- { cause: 'Patient Responsibility', pct: 5, bucket: '0-30d', icon: 'person', color: 'text-th-secondary' },
- ]).map((item, idx) => {
- const iconMap = ['shield', 'schedule', 'code', 'warning', 'local_hospital', 'person'];
- const colorMap = ['text-amber-400', 'text-orange-400', 'text-blue-400', 'text-red-400', 'text-purple-400', 'text-th-secondary'];
- const itemCause = item.cause || item.reason || item.category || `Cause ${idx + 1}`;
- const itemPct = item.pct || item.percentage || item.percent || 0;
- const itemBucket = item.bucket || item.aging_bucket || '';
- const itemIcon = item.icon || iconMap[idx % iconMap.length];
- const itemColor = item.color || colorMap[idx % colorMap.length];
- return { cause: itemCause, pct: itemPct, bucket: itemBucket, icon: itemIcon, color: itemColor };
- }).map((item) => (
- <div key={item.cause} className="flex items-start gap-3 p-3 rounded-lg bg-th-surface-overlay border border-th-border/30 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
- <span className={`material-symbols-outlined ${item.color} mt-0.5`}>{item.icon}</span>
- <div className="flex-1 min-w-0">
- <div className="flex items-center justify-between mb-1">
- <p className="text-sm font-semibold text-th-heading truncate">{item.cause}</p>
- <span className="text-xs font-bold text-th-secondary ml-2 tabular-nums">{item.pct}%</span>
- </div>
- <div className="w-full bg-th-surface-overlay rounded-full h-1.5 mb-1">
- <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${item.pct}%` }} />
- </div>
- <p className="text-[10px] text-th-muted">Concentrated in {item.bucket}</p>
- </div>
- </div>
- ))}
- </div>
+ {(() => {
+   const causes = agingRootCause?.causes || agingRootCause?.items || [];
+   if (!Array.isArray(causes) || causes.length === 0) {
+     return (
+       <EmptyState
+         icon="troubleshoot"
+         title="Root-cause analysis unavailable"
+         description="Run the AR aging diagnostics service to populate this panel."
+       />
+     );
+   }
+   const iconMap = ['shield', 'schedule', 'code', 'warning', 'local_hospital', 'person'];
+   const colorMap = ['text-amber-400', 'text-orange-400', 'text-blue-400', 'text-red-400', 'text-purple-400', 'text-th-secondary'];
+   const normalized = causes.map((item, idx) => ({
+     cause: item.cause || item.reason || item.category || `Cause ${idx + 1}`,
+     pct: item.pct || item.percentage || item.percent || 0,
+     bucket: item.bucket || item.aging_bucket || '',
+     icon: item.icon || iconMap[idx % iconMap.length],
+     color: item.color || colorMap[idx % colorMap.length],
+   }));
+   return (
+     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+       {normalized.map((item) => (
+         <div key={item.cause} className="flex items-start gap-3 p-3 rounded-lg bg-th-surface-overlay border border-th-border/30 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+           <span className={`material-symbols-outlined ${item.color} mt-0.5`}>{item.icon}</span>
+           <div className="flex-1 min-w-0">
+             <div className="flex items-center justify-between mb-1">
+               <p className="text-sm font-semibold text-th-heading truncate">{item.cause}</p>
+               <span className="text-xs font-bold text-th-secondary ml-2 tabular-nums">{item.pct}%</span>
+             </div>
+             <div className="w-full bg-th-surface-overlay rounded-full h-1.5 mb-1">
+               <div className="h-1.5 rounded-full bg-blue-500" style={{ width: `${item.pct}%` }} />
+             </div>
+             {item.bucket && <p className="text-[10px] text-th-muted">Concentrated in {item.bucket}</p>}
+           </div>
+         </div>
+       ))}
+     </div>
+   );
+ })()}
  </div>
 
  {/* ── AR Trend Chart ───────────────────────────── */}
@@ -694,7 +719,11 @@ export function CollectionsHub() {
  <h3 className="text-lg font-bold text-th-heading">12-Month A/R Trend Analysis</h3>
  <p className="text-sm text-th-secondary">Historical balance, collections, and outstanding amounts</p>
  </div>
- <ARTrendChart data={arTrend} />
+ {coreLoading
+   ? <Skeleton className="h-64 w-full rounded-lg" />
+   : arTrend.length > 0
+     ? <ARTrendChart data={arTrend} />
+     : <EmptyState icon="show_chart" title="Trend not available" description="The AR summary did not include a trend series." />}
  </div>
 
  {/* ── Projected Collections ─────────────────────── */}
@@ -703,24 +732,28 @@ export function CollectionsHub() {
  <h3 className="text-lg font-bold text-th-heading">Projected Collections (Next 90 Days)</h3>
  </div>
  <p className="text-sm text-th-secondary mb-6">ML-forecasted collection amounts by aging bucket with confidence intervals</p>
- <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
- {liveAgingBuckets.map((b) => {
- const projected = Math.round(b.balance * (b.collectability / 100));
- return (
- <div key={b.bucket} className="p-4 rounded-lg bg-th-surface-overlay border border-th-border/30 text-center hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
- <p className="text-xs font-semibold uppercase tracking-wider text-th-muted mb-2">{b.bucket}</p>
- <p className="text-lg font-bold text-th-heading tabular-nums">${(projected / 1000000).toFixed(2)}M</p>
- <p className="text-[10px] text-th-muted mt-1 tabular-nums">of ${(b.balance / 1000000).toFixed(2)}M</p>
- <div className="mt-2 flex items-center justify-center gap-1">
- <div className="w-full bg-th-surface-overlay rounded-full h-1.5">
- <div className="h-1.5 rounded-full" style={{ width: `${b.collectability}%`, backgroundColor: b.color }} />
- </div>
- <span className="text-[10px] font-bold text-th-secondary tabular-nums">{b.collectability}%</span>
- </div>
- </div>
- );
- })}
- </div>
+ {liveAgingBuckets.length === 0 ? (
+   <EmptyState icon="trending_up" title="No projection data" description="Projected collections derive from AR aging buckets — none reported." />
+ ) : (
+   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+     {liveAgingBuckets.map((b) => {
+       const projected = Math.round(b.balance * (b.collectability / 100));
+       return (
+         <div key={b.bucket} className="p-4 rounded-lg bg-th-surface-overlay border border-th-border/30 text-center hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+           <p className="text-xs font-semibold uppercase tracking-wider text-th-muted mb-2">{b.bucket}</p>
+           <p className="text-lg font-bold text-th-heading tabular-nums">{fmtCurrency(projected)}</p>
+           <p className="text-[10px] text-th-muted mt-1 tabular-nums">of {fmtCurrency(b.balance)}</p>
+           <div className="mt-2 flex items-center justify-center gap-1">
+             <div className="w-full bg-th-surface-overlay rounded-full h-1.5">
+               <div className="h-1.5 rounded-full" style={{ width: `${b.collectability}%`, backgroundColor: b.color }} />
+             </div>
+             <span className="text-[10px] font-bold text-th-secondary tabular-nums">{b.collectability}%</span>
+           </div>
+         </div>
+       );
+     })}
+   </div>
+ )}
  </div>
 
  {/* ── Collection Velocity Chart ────────────────── */}
@@ -729,7 +762,9 @@ export function CollectionsHub() {
  <h3 className="text-lg font-bold text-th-heading">Collection Velocity by Payer</h3>
  <p className="text-sm text-th-secondary">Average days to settle by top payers</p>
  </div>
- <CollectionVelocityChart data={collectionVelocity} onPayerClick={setSelectedPayer} />
+ {collectionVelocity.length === 0
+   ? <EmptyState icon="speed" title="Velocity unavailable" description="Per-payer days-to-settle stats are not reporting." />
+   : <CollectionVelocityChart data={collectionVelocity} onPayerClick={setSelectedPayer} />}
  </div>
 
  {/* ── Additional Insights Grid ─────────────────── */}
@@ -739,7 +774,9 @@ export function CollectionsHub() {
  <h3 className="text-lg font-bold text-th-heading">Denial Reasons Breakdown</h3>
  <p className="text-sm text-th-secondary">Top reasons for claim denials</p>
  </div>
- <DenialReasonsChart data={denialReasons} />
+ {denialReasons.length === 0
+   ? <EmptyState icon="block" title="No denial categories" />
+   : <DenialReasonsChart data={denialReasons} />}
  </div>
 
  <div className="bg-th-surface-raised border border-th-border p-6 rounded-xl">
@@ -747,7 +784,9 @@ export function CollectionsHub() {
  <h3 className="text-lg font-bold text-th-heading">Payment Distribution</h3>
  <p className="text-sm text-th-secondary">Revenue by payment method</p>
  </div>
- <PaymentDistributionChart data={paymentDistribution} />
+ {paymentDistribution.length === 0
+   ? <EmptyState icon="pie_chart" title="No payment breakdown" />
+   : <PaymentDistributionChart data={paymentDistribution} />}
  </div>
 
  <div className="bg-th-surface-raised border border-th-border p-6 rounded-xl">
@@ -755,7 +794,9 @@ export function CollectionsHub() {
  <h3 className="text-lg font-bold text-th-heading">Top CPT Codes by Revenue</h3>
  <p className="text-sm text-th-secondary">Highest revenue procedures</p>
  </div>
- <TopCPTCodesChart data={topCPTCodes} />
+ {topCPTCodes.length === 0
+   ? <EmptyState icon="medical_information" title="No CPT data" description="No top CPT codes reported by the payments service." />
+   : <TopCPTCodesChart data={topCPTCodes} />}
  </div>
  </div>
 
@@ -838,7 +879,7 @@ export function CollectionsHub() {
  <button
  key={s.key}
  onClick={() => setWorklistSort(s.key)}
- className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${worklistSort === s.key ? 'bg-th-surface-overlay text-th-heading shadow-sm' : 'text-th-muted hover:text-th-heading'}`}
+ className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-th-primary ${worklistSort === s.key ? 'bg-th-surface-overlay text-th-heading shadow-sm' : 'text-th-muted hover:text-th-heading'}`}
  >
  {s.label}
  </button>
@@ -861,7 +902,10 @@ export function CollectionsHub() {
  </tr>
  </thead>
  <tbody className="divide-y divide-th-border text-sm">
- {sortedClaims.map((claim) => (
+ {coreLoading && [0,1,2,3].map((i) => (
+   <tr key={i}><td colSpan={8} className="px-6 py-3"><Skeleton className="h-6 w-full" /></td></tr>
+ ))}
+ {!coreLoading && sortedClaims.map((claim) => (
  <tr
  key={claim.id}
  onClick={() => navigate(`/collections/account/${claim.id}`)}
@@ -886,7 +930,7 @@ export function CollectionsHub() {
  <td className="px-6 py-4 text-th-heading">{claim.payer}</td>
  {/* Balance */}
  <td className="px-6 py-4 font-mono font-bold text-th-heading tabular-nums">
- ${claim.balance.toLocaleString()}
+ {claim.balance != null ? fmtCurrency(claim.balance) : '—'}
  </td>
  {/* Aging */}
  <td className="px-6 py-4">
@@ -928,10 +972,14 @@ export function CollectionsHub() {
  </td>
  </tr>
  ))}
- {sortedClaims.length === 0 && (
+ {!coreLoading && sortedClaims.length === 0 && (
  <tr>
- <td colSpan={8} className="px-6 py-12 text-center text-th-muted">
- No claims match the selected filters.
+ <td colSpan={8} className="px-0 py-0">
+ <EmptyState
+   icon="search_off"
+   title="No claims to follow up"
+   description="Either nothing matches the current filters, or the collections queue is empty."
+ />
  </td>
  </tr>
  )}

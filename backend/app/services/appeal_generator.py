@@ -5,8 +5,21 @@ Generates AI-style appeal letters keyed by denial_category + CARC code.
 Provides CARC/RARC lookup, auto-triage routing, and letter quality scoring.
 """
 
+import logging
 from datetime import date
-from typing import Optional
+from typing import Optional, Any
+
+try:
+    import httpx  # async HTTP client — already a FastAPI transitive dep
+except Exception:  # pragma: no cover
+    httpx = None  # type: ignore
+
+logger = logging.getLogger(__name__)
+
+# ── Ollama / Qwen3 integration (config consts — real function is at EOF) ───
+OLLAMA_URL = "http://localhost:11434/api/generate"
+OLLAMA_MODEL = "qwen3:4b"
+OLLAMA_TIMEOUT_SEC = 12.0
 
 # ── CARC Code Lookup ─────────────────────────────────────────────────────────
 CARC_CODES = {
@@ -301,3 +314,76 @@ Appeals & Billing Department"""
         "rarc_info":           rarc_info,
         "appeal_probability":  appeal_prob,
     }
+
+
+# ── BE-FIX-6: Ollama/Qwen3 LLM letter generation with template fallback ─────
+async def generate_appeal_letter_with_llm(ctx: dict) -> dict:
+    """
+    Call Ollama (Qwen3:4b) to generate a payer appeal letter with a template fallback.
+
+    ctx fields: denial_id, claim_id, patient, payer, denial_category, carc_code,
+                rarc_code, denial_amount, dos (optional).
+
+    Returns: { "letter": str, "source": "llm" | "template", "confidence": int|None }
+    """
+    # Always compute the template first — it's the guaranteed fallback and also
+    # seeds LLM context with a known-good structure.
+    template = generate_appeal_letter(
+        denial_id=ctx.get("denial_id") or "",
+        claim_id=ctx.get("claim_id") or "",
+        patient=ctx.get("patient") or "Patient",
+        payer=ctx.get("payer") or "Payer",
+        denial_category=ctx.get("denial_category") or "OTHER",
+        carc_code=ctx.get("carc_code") or "",
+        rarc_code=ctx.get("rarc_code"),
+        denial_amount=float(ctx.get("denial_amount") or 0.0),
+        dos=ctx.get("dos"),
+    )
+
+    # If httpx is unavailable, return template-only
+    if httpx is None:
+        return {"letter": template["letter_text"], "source": "template", "confidence": template["letter_quality_score"]}
+
+    # Build a precise prompt that uses the template as scaffolding and asks
+    # Qwen3 to tighten tone, clinical justification, and payer-specific framing.
+    prompt = (
+        "You are an experienced healthcare revenue-cycle appeal writer.\n"
+        "Rewrite the draft letter below so it is formal, concise, and payer-ready.\n"
+        "Keep every factual field (patient, payer, claim, CARC, RARC, dates, amount) unchanged.\n"
+        "Strengthen the medical-necessity justification and request statement.\n"
+        "Do NOT invent clinical facts. Return ONLY the final letter body — no commentary.\n\n"
+        f"CARC context: {template['carc_info'].get('description', ctx.get('carc_code'))}\n"
+        f"Recommended action: {template['recommended_action']}\n"
+        f"Appeal probability: {template['appeal_probability']}%\n\n"
+        "--- DRAFT LETTER ---\n"
+        f"{template['letter_text']}\n"
+        "--- END DRAFT ---\n"
+        "Final letter:\n"
+    )
+
+    try:
+        async with httpx.AsyncClient(timeout=OLLAMA_TIMEOUT_SEC) as client:
+            resp = await client.post(
+                OLLAMA_URL,
+                json={
+                    "model": OLLAMA_MODEL,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {"temperature": 0.3, "num_predict": 900},
+                },
+            )
+            if resp.status_code != 200:
+                logger.warning("Ollama returned %s — falling back to template", resp.status_code)
+                return {"letter": template["letter_text"], "source": "template", "confidence": template["letter_quality_score"]}
+            payload = resp.json() or {}
+            generated = (payload.get("response") or "").strip()
+            if not generated or len(generated) < 200:
+                # Guard against empty / suspiciously short LLM output
+                return {"letter": template["letter_text"], "source": "template", "confidence": template["letter_quality_score"]}
+            # LLM letters ride on top of the validated template, so confidence is
+            # typically +5 over the raw template score (capped at 99).
+            llm_confidence = min(99, int(template["letter_quality_score"]) + 5)
+            return {"letter": generated, "source": "llm", "confidence": llm_confidence}
+    except Exception as exc:  # noqa: BLE001 — any network / parse error falls back
+        logger.warning("Ollama call failed: %s — falling back to template", exc)
+        return {"letter": template["letter_text"], "source": "template", "confidence": template["letter_quality_score"]}

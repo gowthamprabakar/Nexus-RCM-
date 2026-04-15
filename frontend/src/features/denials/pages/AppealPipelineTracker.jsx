@@ -1,375 +1,840 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../../services/api';
+import ErrorBanner from '../../../components/ui/ErrorBanner';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
-const APPEAL_DATA = {
-  'CLM-8821': {
-    payer: 'Medicare', amount: 4200, carc: 'CO-16', patient: 'Sarah Johnson',
-    mf: 'confirmed', mfConf: 87,
-    mfReason: '47 agents agree: Prior auth PA-2024-8821 covers DOS 2024-01-15. Denial is administrative non-attachment. Fully recoverable.',
-    arguments: [
-      { color: 'success', title: 'Auth was valid:', body: 'PA-2024-8821 active on DOS. Medicare §1842(l) allows resubmission with auth documentation.' },
-      { color: 'success', title: 'Administrative error:', body: 'Auth not attached due to EHR migration workflow gap. 9 of 11 similar claims appealed successfully.' },
-      { color: 'primary', title: 'Historical precedent:', body: 'Medicare upheld 89% of similar admin CO-16 denials with auth documentation. Graph evidence confirms.' },
-      { color: 'purple', title: 'Medical necessity met:', body: 'CPT 99215 appropriate — 5-component exam documented. No clinical denial basis.' },
-    ],
-    scores: [
-      { label: 'Appeal success', val: 87, color: 'success' },
-      { label: 'Denial recurrence prob', val: 23, color: 'success' },
-      { label: 'Write-off risk if not appealed', val: 42, color: 'warning' },
-    ],
-    docs: [
-      { name: 'Prior Auth PA-2024-8821', status: 'attached' },
-      { name: 'Clinical Notes DOS 2024-01-15', status: 'attached' },
-      { name: 'PAR Letter from Dr. Martinez', status: 'pending' },
-      { name: 'EHR Migration Documentation', status: 'optional' },
-    ],
-    letterConfidence: 91,
-    letter: `April 04, 2026\n\nMedicare Provider Relations\nRe: Appeal of Claim Denial — CLM-8821\n\nDear Medicare Provider Relations,\n\nWe are formally appealing the denial of claim CLM-8821 for services rendered to Sarah Johnson (MRN-10284) on January 15, 2024. The claim was denied under CO-16.\n\nBasis for Appeal: Prior Authorization PA-2024-8821 was obtained and valid for DOS. The authorization was not attached due to EHR migration — an administrative error.\n\nSupporting Documentation Enclosed:\n1. Copy of Prior Authorization PA-2024-8821\n2. Complete clinical notes\n3. Physician attestation from Dr. Martinez\n\nWe respectfully request reconsideration and payment of $4,200.00.\n\nSincerely,\nSarah Patel · Billing Director`,
-  },
-  'CLM-7788': {
-    payer: 'Aetna', amount: 8400, carc: 'CO-97', patient: 'David Park',
-    mf: 'confirmed', mfConf: 74,
-    mfReason: 'Duplicate is a system error from billing migration. Original claim paid. Appeal with migration evidence will be upheld.',
-    arguments: [
-      { color: 'success', title: 'System-generated duplicate:', body: 'EHR migration triggered duplicate. Not a human error.' },
-      { color: 'success', title: 'Original claim paid:', body: 'CLM-7781 (original) was paid in full.' },
-      { color: 'primary', title: 'Historical precedent:', body: 'Aetna accepted 74% of similar system-generated duplicate reversals.' },
-    ],
-    scores: [
-      { label: 'Appeal success', val: 74, color: 'success' },
-      { label: 'Denial recurrence prob', val: 18, color: 'success' },
-      { label: 'Write-off risk', val: 18, color: 'success' },
-    ],
-    docs: [
-      { name: 'Evidence of original payment CLM-7781', status: 'attached' },
-      { name: 'EHR migration documentation', status: 'attached' },
-      { name: 'Letter confirming system-generated dup', status: 'pending' },
-    ],
-    letterConfidence: 82,
-    letter: `April 04, 2026\n\nAetna Provider Relations\nRe: Appeal — CLM-7788 (CO-97 Duplicate)\n\nDear Aetna Provider Relations,\n\nWe are appealing CLM-7788 denied under CO-97. This duplicate was generated automatically during EHR migration. Original claim CLM-7781 was paid.\n\nEnclosed:\n1. Evidence of original payment CLM-7781\n2. EHR migration documentation\n\nWe request reversal and payment of $8,400.00.\n\nSincerely,\nSarah Patel · Billing Director`,
-  },
-  'CLM-6632': {
-    payer: 'Cigna', amount: 3900, carc: 'CO-16', patient: 'James Wilson',
-    mf: 'confirmed', mfConf: 81,
-    mfReason: 'Renewal request initiated before DOS. Cigna policy allows retroactive auth in renewal delay cases. 81% win rate.',
-    arguments: [
-      { color: 'success', title: 'Renewal requested before DOS:', body: 'Auth renewal submitted 2024-02-08, before DOS 2024-02-15.' },
-      { color: 'success', title: 'Ongoing clinical necessity:', body: 'Treatment ongoing — auth lapse was administrative.' },
-      { color: 'primary', title: 'Cigna retroactive auth policy:', body: 'Cigna §12.4 allows retroactive auth when renewal in process.' },
-    ],
-    scores: [
-      { label: 'Appeal success', val: 81, color: 'success' },
-      { label: 'Denial recurrence prob', val: 12, color: 'success' },
-      { label: 'Write-off risk', val: 12, color: 'success' },
-    ],
-    docs: [
-      { name: 'Auth renewal request dated 2024-02-08', status: 'attached' },
-      { name: 'Clinical notes', status: 'attached' },
-      { name: 'Cigna retroactive auth policy citation', status: 'pending' },
-    ],
-    letterConfidence: 85,
-    letter: `April 04, 2026\n\nCigna Provider Relations\nRe: Appeal — CLM-6632 (CO-16 Auth Expired)\n\nDear Cigna Provider Relations,\n\nWe appeal CLM-6632 denied under CO-16. Auth renewal was requested 2024-02-08 before DOS. Under Cigna §12.4, retroactive auth is permitted.\n\nEnclosed:\n1. Auth renewal request\n2. Clinical notes\n3. Cigna policy citation\n\nWe request payment of $3,900.00.\n\nSincerely,\nSarah Patel · Billing Director`,
-  },
-  'CLM-4821': {
-    payer: 'BCBS TX', amount: 4800, carc: 'CO-4', patient: 'Dr Kim Patient',
-    mf: 'confirmed', mfConf: 71,
-    mfReason: 'Modifier-25 required for same-day E&M + procedure under BCBS TX policy. Documentation supports separate evaluation.',
-    arguments: [
-      { color: 'success', title: 'Separate significant evaluation:', body: 'Dr. Kim performed distinct E&M service separate from procedure — documented.' },
-      { color: 'primary', title: 'Modifier-25 appropriate:', body: 'CPT guidelines allow Modifier-25 for separately identifiable E&M on same day as procedure.' },
-    ],
-    scores: [
-      { label: 'Appeal success', val: 71, color: 'success' },
-      { label: 'Denial recurrence prob', val: 22, color: 'success' },
-      { label: 'Write-off risk', val: 22, color: 'success' },
-    ],
-    docs: [
-      { name: 'Clinical notes with Modifier-25 documentation', status: 'attached' },
-      { name: 'CPT Modifier-25 policy reference', status: 'pending' },
-    ],
-    letterConfidence: 78,
-    letter: `April 04, 2026\n\nBCBS TX Provider Relations\nRe: Appeal — CLM-4821 (CO-4 Modifier-25)\n\nDear BCBS TX Provider Relations,\n\nWe appeal CLM-4821. Modifier-25 was appropriate — Dr. Kim performed a separate E&M service documented in clinical notes.\n\nEnclosed:\n1. Clinical notes\n2. CPT Modifier-25 policy reference\n\nWe request payment of $4,800.00.\n\nSincerely,\nSarah Patel · Billing Director`,
-  },
-};
+/* ------------------------------------------------------------------ */
+/* Helpers                                                            */
+/* ------------------------------------------------------------------ */
 
-const IN_FLIGHT_APPEALS = [
-  { id: 'CLM-8821', payer: 'Medicare', amount: 4200, winPct: 87, status: 'Pending review', deadline: 'Jul-15' },
-  { id: 'CLM-6632', payer: 'Cigna', amount: 3900, winPct: 81, status: 'Pending review', deadline: 'Jun-30' },
-  { id: 'CLM-7788', payer: 'Aetna', amount: 8400, winPct: 74, status: 'Under review', deadline: 'May-20' },
-  { id: 'CLM-4821', payer: 'BCBS TX', amount: 4800, winPct: 71, status: 'Draft', deadline: 'Jul-01' },
-  { id: 'CLM-2910', payer: 'Medicare', amount: 1200, winPct: 79, status: 'Submitted', deadline: 'Aug-10' },
-];
-
-export default function AppealPipelineTracker() {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const urlClaim = searchParams.get('claim');
-  const [selectedId, setSelectedId] = useState(urlClaim || 'CLM-8821');
-  const [letterText, setLetterText] = useState('');
-  const [liveAppeals, setLiveAppeals] = useState([]);
-  const [letterLoading, setLetterLoading] = useState(false);
-  const [appealsLoading, setAppealsLoading] = useState(false);
-  const [claimRCA, setClaimRCA] = useState(null);
-  const [rcaLoading, setRcaLoading] = useState(false);
-
-  const claim = APPEAL_DATA[selectedId] || APPEAL_DATA['CLM-8821'];
-
-  // Normalize API appeal rows to the UI shape expected by the table
-  const normalizeAppeal = (a) => ({
+// Normalize API appeal rows to the UI shape used by the in-flight queue + lookups.
+const normalizeAppeal = (a) => ({
     id: a.claim_id || a.id,
     claim_id: a.claim_id,
     appeal_id: a.appeal_id,
     payer: a.payer_name || a.payer || 'Unknown',
     amount: a.denial_amount != null ? a.denial_amount : (a.amount || 0),
     winPct: a.win_pct != null ? a.win_pct : (a.winPct || a.appeal_quality_score || 0),
+    outcome: (a.outcome || '').toUpperCase(),
     status: (() => {
-      const o = (a.outcome || '').toUpperCase();
-      if (o === 'WON' || o === 'APPROVED') return 'Submitted';
-      if (o === 'UNDER_REVIEW') return 'Under review';
-      if (o === 'LOST' || o === 'DENIED') return 'Denied';
-      return a.status || 'Pending review';
+        const o = (a.outcome || '').toUpperCase();
+        if (o === 'WON' || o === 'APPROVED') return 'Submitted';
+        if (o === 'UNDER_REVIEW') return 'Under review';
+        if (o === 'LOST' || o === 'DENIED') return 'Denied';
+        if (o === 'SUBMITTED') return 'Submitted';
+        if (o === 'PENDING') return 'Pending review';
+        return a.status || 'Pending review';
     })(),
+    days_in_status: a.days_in_status != null ? a.days_in_status : a.age_days,
+    created_at: a.created_at,
+    submitted_at: a.submitted_at,
     deadline: a.deadline || '—',
-  });
+    carc_code: a.carc_code,
+    denial_prob: a.denial_prob,
+    write_off: a.write_off,
+});
 
-  // Load real appeals list from backend
-  useEffect(() => {
-    setAppealsLoading(true);
-    api.appeals.list({ page: 1, size: 50 })
-      .then(res => {
-        const list = Array.isArray(res) ? res : (res?.items || res?.appeals || []);
-        if (list.length > 0) setLiveAppeals(list.map(normalizeAppeal));
-      })
-      .catch(() => {})
-      .finally(() => setAppealsLoading(false));
-  }, []);
+// Lightweight in-flight filter: SUBMITTED / UNDER_REVIEW / PENDING
+const isInFlight = (a) => ['SUBMITTED', 'UNDER_REVIEW', 'PENDING'].includes(a.outcome || '');
 
-  // Fetch RCA when selectedId changes
-  useEffect(() => {
-    if (!selectedId) return;
-    setRcaLoading(true);
-    setClaimRCA(null);
-    api.rootCause?.getClaimAnalysis?.(selectedId)
-      .then(res => {
-        if (res?.analysis) setClaimRCA(res.analysis);
-      })
-      .catch(() => {})
-      .finally(() => setRcaLoading(false));
-  }, [selectedId]);
+// Days between two dates (fallback when backend doesn't compute days_in_status)
+const daysBetween = (iso) => {
+    if (!iso) return null;
+    const then = new Date(iso);
+    if (isNaN(then.getTime())) return null;
+    const diff = Date.now() - then.getTime();
+    return Math.max(0, Math.round(diff / 86400000));
+};
 
-  // Compute scores from live appeal data if available
-  const liveAppeal = liveAppeals.find(a => (a.claim_id || a.id) === selectedId);
-  const liveScores = liveAppeal ? [
-    { label: 'Appeal success', val: liveAppeal.win_pct || liveAppeal.winPct || 0, color: (liveAppeal.win_pct || liveAppeal.winPct || 0) >= 70 ? 'success' : (liveAppeal.win_pct || liveAppeal.winPct || 0) >= 50 ? 'warning' : 'danger' },
-    { label: 'Denial recurrence prob', val: Math.round((liveAppeal.denial_prob || 0) * 100) || 0, color: (liveAppeal.denial_prob || 0) <= 0.3 ? 'success' : (liveAppeal.denial_prob || 0) <= 0.6 ? 'warning' : 'danger' },
-    { label: 'Write-off risk', val: Math.round((liveAppeal.write_off || 0) * 100) || 0, color: (liveAppeal.write_off || 0) <= 0.25 ? 'success' : (liveAppeal.write_off || 0) <= 0.5 ? 'warning' : 'danger' },
-  ] : null;
-  const scores = liveScores || claim.scores;
+const STEP_ARG_META = {
+    ELIGIBILITY_CHECK:         { title: 'Eligibility Check',      icon: 'verified_user' },
+    AUTH_TIMELINE_CHECK:       { title: 'Authorization Timeline', icon: 'event_available' },
+    CODING_VALIDATION:         { title: 'Coding Validation',      icon: 'code' },
+    MIROFISH_AGENT_VALIDATION: { title: 'MiroFish Consensus',     icon: 'groups' },
+    PAYER_HISTORY_MATCH:       { title: 'Payer Precedent',        icon: 'history' },
+};
 
-  // Derive MiroFish reason from RCA if available
-  const mfReason = claimRCA?.evidence_summary || claim.mfReason;
-  const mfConf = claimRCA?.confidence_score || claim.mfConf;
+// Required sections used by the compliance checker (regex keywords)
+const COMPLIANCE_SECTIONS = [
+    { id: 'patient',   label: 'Patient Identifier',    re: /\b(patient|mrn|member\s*id|dob|date\s*of\s*birth)\b/i },
+    { id: 'reason',    label: 'Denial Reason',         re: /\b(denial|denied|co-?\d+|pr-?\d+|carc|reason code)\b/i },
+    { id: 'necessity', label: 'Medical Necessity',     re: /\b(medical(ly)?\s*necess|clinic(al)?|diagnos|treatment)\b/i },
+    { id: 'evidence',  label: 'Supporting Evidence',   re: /\b(enclos|attached|supporting|documentation|evidence|exhibit)\b/i },
+    { id: 'request',   label: 'Request Statement',     re: /\b(request|appeal|reconsider|reversal|payment of|respectfully)\b/i },
+];
 
-  // Derive key arguments from RCA steps if available
-  const liveArguments = claimRCA?.steps ? (() => {
-    const STEP_ARG_MAP = {
-      'ELIGIBILITY_CHECK': { color: 'success', title: 'Eligibility verified:' },
-      'AUTH_TIMELINE_CHECK': { color: 'success', title: 'Authorization status:' },
-      'CODING_VALIDATION': { color: 'primary', title: 'Coding analysis:' },
-      'PAYER_HISTORY_MATCH': { color: 'primary', title: 'Historical precedent:' },
-      'MIROFISH_AGENT_VALIDATION': { color: 'success', title: 'MiroFish consensus:' },
-    };
-    return (claimRCA.steps || [])
-      .filter(s => STEP_ARG_MAP[s.step_name])
-      .map(s => ({
-        color: s.finding_status === 'PASS' ? 'success' : s.finding_status === 'FAIL' ? 'warning' : 'primary',
-        title: STEP_ARG_MAP[s.step_name].title,
-        body: s.finding || 'Analysis complete.',
-      }));
-  })() : null;
-  const arguments_ = liveArguments && liveArguments.length > 0 ? liveArguments : claim.arguments;
+const MOBILE_TABS = [
+    { id: 'evidence', label: 'Evidence', icon: 'fact_check' },
+    { id: 'letter',   label: 'Letter',   icon: 'edit_note'  },
+    { id: 'insights', label: 'Insights', icon: 'insights'   },
+];
 
-  // When switching claims: load letter from static data, then try real API
-  useEffect(() => {
-    setLetterText(claim.letter);
-    // Try to load real letter if appeal exists for this claim
-    const matchedAppeal = liveAppeals.find(a => (a.id || a.claim_id) === selectedId);
-    if (matchedAppeal?.appeal_id) {
-      setLetterLoading(true);
-      api.appeals.getLetter(matchedAppeal.appeal_id)
-        .then(res => { if (res?.letter_text) setLetterText(res.letter_text); })
-        .catch(() => {})
-        .finally(() => setLetterLoading(false));
-    }
-  }, [selectedId]);
+/* ------------------------------------------------------------------ */
+/* Small presentational helpers                                       */
+/* ------------------------------------------------------------------ */
 
-  const appeals = liveAppeals.length > 0 ? liveAppeals : IN_FLIGHT_APPEALS;
-  const totalValue = appeals.reduce((s, a) => s + (a.amount || 0), 0);
+const SectionLabel = ({ children, accessory }) => (
+    <div className="flex items-center justify-between mb-2">
+        <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-th-muted">{children}</p>
+        {accessory}
+    </div>
+);
 
-  const barColor = (val, color) => color === 'success' ? 'bg-[rgb(var(--color-success))]' : color === 'warning' ? 'bg-[rgb(var(--color-warning))]' : val >= 70 ? 'bg-[rgb(var(--color-success))]' : val >= 50 ? 'bg-[rgb(var(--color-warning))]' : 'bg-[rgb(var(--color-danger))]';
-  const valColor = (val, color) => color === 'success' ? 'text-[rgb(var(--color-success))]' : color === 'warning' ? 'text-[rgb(var(--color-warning))]' : val >= 70 ? 'text-[rgb(var(--color-success))]' : val >= 50 ? 'text-[rgb(var(--color-warning))]' : 'text-[rgb(var(--color-danger))]';
-  const argBorder = (color) => ({ success:'border-l-[rgb(var(--color-success))]', primary:'border-l-[rgb(var(--color-primary))]', purple:'border-l-purple-500', warning:'border-l-[rgb(var(--color-warning))]' }[color] || 'border-l-th-border');
-  const statusBadge = (status) => status === 'Submitted' ? 'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]' : status === 'Under review' ? 'bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))] border-[rgb(var(--color-info)/0.3)]' : status === 'Draft' ? 'bg-th-surface-overlay text-th-muted border-th-border' : 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]';
+const SkeletonLine = ({ className }) => (
+    <div className={cn('animate-pulse bg-th-surface-overlay rounded', className)} />
+);
 
-  return (
-    <div className="flex-1 flex min-h-0 overflow-hidden" style={{display:'grid', gridTemplateColumns:'1fr 1fr'}}>
-      {/* LEFT: AI EVIDENCE */}
-      <div className="border-r border-th-border overflow-y-auto bg-th-surface-base p-4 space-y-4">
-        <div className="flex items-center gap-2">
-          <p className="text-[8.5px] font-mono font-bold uppercase tracking-widest text-th-muted">AI Evidence · Why the appeal was drafted this way</p>
-          {claimRCA && <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border border-[rgb(var(--color-success)/0.3)]">LIVE</span>}
-          {!claimRCA && !rcaLoading && <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-th-surface-overlay text-th-muted border border-th-border">TEMPLATE</span>}
-        </div>
+const Chip = ({ label, value, mono, accent }) => (
+    <div className="flex-1 min-w-[64px] px-3 py-2 rounded-lg border border-th-border bg-th-surface-overlay">
+        <p className="text-[8px] font-mono text-th-muted uppercase tracking-wider mb-1">{label}</p>
+        <p className={cn('text-[11px] font-bold truncate', mono && 'font-mono', accent || 'text-th-heading')}>{value}</p>
+    </div>
+);
 
-        {/* Claim header chips */}
-        <div className="flex gap-2 flex-wrap">
-          {[
-            { label:'CLAIM', val: selectedId, mono: true, color: 'text-[rgb(var(--color-info))]' },
-            { label:'PAYER', val: claim.payer, mono: false, color: 'text-th-heading' },
-            { label:'AMOUNT', val: `$${claim.amount.toLocaleString()}`, mono: true, color: 'text-th-heading' },
-            { label:'VERDICT', val: null, mono: false, color: '' },
-          ].map((chip, i) => (
-            <div key={i} className={cn('flex-1 min-w-[60px] px-3 py-2 rounded-lg border bg-th-surface-overlay', chip.label === 'VERDICT' ? claim.mf === 'confirmed' ? 'border-[rgb(var(--color-success)/0.3)]' : 'border-[rgb(var(--color-danger)/0.3)]' : 'border-th-border')}>
-              <p className="text-[8px] font-mono text-th-muted uppercase tracking-wider mb-1">{chip.label}</p>
-              {chip.label === 'VERDICT' ? (
-                <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold font-mono border', claim.mf === 'confirmed' ? 'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]' : claim.mf === 'disputed' ? 'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger)/0.3)]' : 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]')}>
-                  {claim.mf === 'confirmed' ? 'CONFIRMED' : claim.mf === 'disputed' ? 'DISPUTED' : 'Pending'}
-                </span>
-              ) : (
-                <p className={cn('text-[11px] font-bold', chip.mono ? 'font-mono' : '', chip.color)}>{chip.val}</p>
-              )}
-            </div>
-          ))}
-        </div>
+/* ------------------------------------------------------------------ */
+/* AppealPipelineTracker — 3-column Appeal Workbench                  */
+/* ------------------------------------------------------------------ */
 
-        {/* MiroFish reason */}
-        <div className={cn('px-3 py-2.5 rounded-lg border text-[10.5px] text-th-secondary leading-relaxed', claim.mf === 'confirmed' ? 'bg-[rgb(var(--color-success-bg))] border-[rgb(var(--color-success)/0.3)]' : 'bg-[rgb(var(--color-danger-bg))] border-[rgb(var(--color-danger)/0.3)]')}>
-          <p className={cn('text-[8px] font-mono font-bold uppercase tracking-wider mb-1.5', claim.mf === 'confirmed' ? 'text-[rgb(var(--color-success))]' : 'text-[rgb(var(--color-danger))]')}>
-            MiroFish {claim.mf.toUpperCase()} · {mfConf}% consensus
-          </p>
-          {mfReason}
-        </div>
+export default function AppealPipelineTracker() {
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
 
-        {/* Key arguments */}
-        <div>
-          <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-th-muted mb-2">Key Arguments</p>
-          <div className="space-y-1.5">
-            {arguments_.map((arg, i) => (
-              <div key={i} className={cn('px-3 py-2 bg-th-surface-overlay border border-th-border rounded border-l-2 text-[10.5px] text-th-secondary leading-relaxed', argBorder(arg.color))}>
-                <strong className="text-th-heading">{arg.title}</strong> {arg.body}
-              </div>
-            ))}
-          </div>
-        </div>
+    // ---- state --------------------------------------------------------
+    const [selectedId, setSelectedId] = useState(searchParams.get('claim') || '');
+    const [letterText, setLetterText] = useState('');
+    const [letterSource, setLetterSource] = useState('TEMPLATE');  // LLM | TEMPLATE | UNSAVED
+    const [letterConfidence, setLetterConfidence] = useState(0);
+    const [letterDirty, setLetterDirty] = useState(false);
+    const [letterSavedAt, setLetterSavedAt] = useState(null);
+    const [saveState, setSaveState] = useState('idle'); // idle | saving | saved | error | unsaved
 
-        {/* ML Scores */}
-        <div>
-          <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-th-muted mb-2">ML Scores</p>
-          <div className="space-y-2">
-            {scores.map((s, i) => (
-              <div key={i}>
-                <div className="flex justify-between text-[9px] text-th-secondary mb-0.5">
-                  <span>{s.label}</span>
-                  <span className={cn('font-bold font-mono', valColor(s.val, s.color))}>{s.val}%</span>
+    const [liveAppeals, setLiveAppeals] = useState([]);
+    const [appealsLoading, setAppealsLoading] = useState(true);
+    const [appealsError, setAppealsError] = useState(null);
+
+    const [rcaData, setRcaData] = useState(null);
+    const [rcaLoading, setRcaLoading] = useState(false);
+    const [rcaError, setRcaError] = useState(null);
+
+    const [precedents, setPrecedents] = useState([]);
+    const [precedentsLoading, setPrecedentsLoading] = useState(false);
+
+    const [regenLoading, setRegenLoading] = useState(false);
+    const [regenError, setRegenError] = useState(null);
+    const [submitLoading, setSubmitLoading] = useState(false);
+    const [submitError, setSubmitError] = useState(null);
+    const [submitBanner, setSubmitBanner] = useState(null);
+
+    const [mobileTab, setMobileTab] = useState('evidence');
+    const [expandedArg, setExpandedArg] = useState(null);
+
+    // ---- live appeal lookup ------------------------------------------
+    const selectedAppeal = useMemo(
+        () => liveAppeals.find(a => a.id === selectedId || a.claim_id === selectedId) || null,
+        [liveAppeals, selectedId]
+    );
+
+    // ---- fetch: appeals list -----------------------------------------
+    const loadAppeals = useCallback(() => {
+        setAppealsLoading(true);
+        setAppealsError(null);
+        return api.appeals.list({ page: 1, size: 100 })
+            .then(res => {
+                const list = Array.isArray(res) ? res : (res?.items || res?.appeals || []);
+                const normalized = list.map(normalizeAppeal);
+                setLiveAppeals(normalized);
+                // Auto-select first appeal if none selected
+                if (!selectedId && normalized.length > 0) {
+                    setSelectedId(normalized[0].id || normalized[0].claim_id);
+                }
+            })
+            .catch(err => {
+                console.error('Appeals list error:', err);
+                setAppealsError('Unable to load appeal list from backend.');
+            })
+            .finally(() => setAppealsLoading(false));
+    }, [selectedId]);
+
+    useEffect(() => { loadAppeals(); /* eslint-disable-next-line */ }, []);
+
+    // ---- fetch: RCA on claim change ----------------------------------
+    useEffect(() => {
+        if (!selectedId) { setRcaData(null); return; }
+        setRcaLoading(true);
+        setRcaError(null);
+        setRcaData(null);
+        api.rootCause.getClaimAnalysis(selectedId)
+            .then(res => {
+                if (res?.analysis) setRcaData(res.analysis);
+                else if (res && (res.steps || res.evidence_summary)) setRcaData(res);
+                else setRcaData(null);
+            })
+            .catch(err => {
+                console.error('RCA fetch error:', err);
+                setRcaError('Unable to load root-cause analysis for this claim.');
+            })
+            .finally(() => setRcaLoading(false));
+    }, [selectedId]);
+
+    // ---- fetch: precedents (arguments library) ------------------------
+    useEffect(() => {
+        if (!selectedId) { setPrecedents([]); return; }
+        const carc = selectedAppeal?.carc_code || rcaData?.carc_code;
+        if (!carc) { setPrecedents([]); return; }
+        setPrecedentsLoading(true);
+        api.rootCause.getSummary({ carc_code: carc })
+            .then(res => {
+                const list = res?.precedents || res?.arguments || res?.root_causes || [];
+                setPrecedents(Array.isArray(list) ? list.slice(0, 6) : []);
+            })
+            .catch(err => {
+                console.error('Precedents fetch error:', err);
+                setPrecedents([]);
+            })
+            .finally(() => setPrecedentsLoading(false));
+    }, [selectedId, selectedAppeal?.carc_code, rcaData?.carc_code]);
+
+    // ---- fetch: existing letter --------------------------------------
+    useEffect(() => {
+        if (!selectedAppeal?.appeal_id) {
+            setLetterText('');
+            setLetterSource('TEMPLATE');
+            setLetterConfidence(0);
+            setLetterDirty(false);
+            setSaveState('idle');
+            return;
+        }
+        let cancelled = false;
+        setLetterDirty(false);
+        setSaveState('idle');
+        api.appeals.getLetter(selectedAppeal.appeal_id)
+            .then(res => {
+                if (cancelled) return;
+                if (res?.letter_text) {
+                    setLetterText(res.letter_text);
+                    setLetterSource(res.source || res.letter_source || 'LLM');
+                    setLetterConfidence(res.confidence != null ? Math.round(res.confidence) : 0);
+                    setLetterSavedAt(res.updated_at || res.generated_at || null);
+                } else {
+                    setLetterText('');
+                    setLetterSource('TEMPLATE');
+                    setLetterConfidence(0);
+                }
+            })
+            .catch(err => {
+                if (!cancelled) {
+                    console.error('getLetter error:', err);
+                    setLetterText('');
+                    setLetterSource('TEMPLATE');
+                }
+            });
+        return () => { cancelled = true; };
+    }, [selectedAppeal?.appeal_id]);
+
+    // ---- URL sync ----------------------------------------------------
+    useEffect(() => {
+        if (selectedId && selectedId !== searchParams.get('claim')) {
+            const p = new URLSearchParams(searchParams);
+            p.set('claim', selectedId);
+            setSearchParams(p, { replace: true });
+        }
+    }, [selectedId]); // eslint-disable-line
+
+    /* ---------- actions: regenerate / save / submit ---------------- */
+
+    const handleRegenerate = useCallback(async () => {
+        if (!selectedId) return;
+        setRegenLoading(true);
+        setRegenError(null);
+        try {
+            const payload = {
+                claim_id: selectedId,
+                carc_code: selectedAppeal?.carc_code || rcaData?.carc_code,
+                payer: selectedAppeal?.payer,
+                amount: selectedAppeal?.amount,
+                evidence_summary: rcaData?.evidence_summary,
+            };
+            const res = await api.ai.draftAppeal(payload);
+            if (res?.letter_text) {
+                setLetterText(res.letter_text);
+                setLetterSource('LLM');
+                setLetterConfidence(res.confidence != null ? Math.round(res.confidence * (res.confidence <= 1 ? 100 : 1)) : 80);
+                setLetterDirty(true);
+                setSaveState('unsaved');
+            } else if (res?.draft) {
+                setLetterText(res.draft);
+                setLetterSource('LLM');
+                setLetterConfidence(res.confidence != null ? Math.round(res.confidence) : 80);
+                setLetterDirty(true);
+                setSaveState('unsaved');
+            } else {
+                setRegenError('AI draft endpoint returned no letter text.');
+            }
+        } catch (err) {
+            console.error('Regenerate error:', err);
+            setRegenError('Unable to regenerate letter via AI. Try again in a moment.');
+        } finally {
+            setRegenLoading(false);
+        }
+    }, [selectedId, selectedAppeal, rcaData]);
+
+    const handleSave = useCallback(async () => {
+        if (!letterText.trim()) return;
+        if (!selectedAppeal?.appeal_id) {
+            // No appeal row exists yet — cannot persist without an appeal_id.
+            setSaveState('unsaved');
+            return;
+        }
+        setSaveState('saving');
+        try {
+            const res = await api.appeals.updateLetter(selectedAppeal.appeal_id, letterText);
+            if (res?.ok) {
+                setSaveState('saved');
+                setLetterDirty(false);
+                setLetterSavedAt(new Date().toISOString());
+            } else {
+                // Endpoint may not be deployed yet — mark unsaved locally but don't block.
+                console.warn('Letter save failed, keeping local copy', res);
+                setSaveState('unsaved');
+            }
+        } catch (err) {
+            console.error('Save letter error:', err);
+            setSaveState('error');
+        }
+    }, [letterText, selectedAppeal]);
+
+    const handleSubmit = useCallback(async () => {
+        if (!selectedId) return;
+        setSubmitLoading(true);
+        setSubmitError(null);
+        setSubmitBanner(null);
+        try {
+            if (selectedAppeal?.appeal_id) {
+                const res = await api.appeals.updateOutcome(selectedAppeal.appeal_id, { outcome: 'SUBMITTED' });
+                if (res) {
+                    setSubmitBanner(`Appeal ${selectedAppeal.appeal_id.slice(0, 8)} marked as Submitted.`);
+                    await loadAppeals();
+                } else {
+                    setSubmitError('Submit failed — backend did not return a result.');
+                }
+            } else {
+                // Create a new appeal for this claim
+                const res = await api.appeals.create({
+                    claim_id: selectedId,
+                    denial_id: selectedId,
+                    appeal_type: 'FIRST_LEVEL',
+                    ai_generated: true,
+                    letter_text: letterText,
+                });
+                if (res) {
+                    setSubmitBanner(`New appeal created for ${selectedId}.`);
+                    await loadAppeals();
+                } else {
+                    setSubmitError('Unable to create appeal — backend returned no result.');
+                }
+            }
+        } catch (err) {
+            console.error('Submit error:', err);
+            setSubmitError('Submit failed — check backend connectivity.');
+        } finally {
+            setSubmitLoading(false);
+        }
+    }, [selectedId, selectedAppeal, letterText, loadAppeals]);
+
+    /* ---------- derived values ------------------------------------- */
+
+    // ML scores: prefer live appeal + RCA, else zero with empty-state
+    const appealSuccess = selectedAppeal?.winPct ?? (rcaData?.appeal_probability != null ? Math.round(rcaData.appeal_probability * 100) : 0);
+    const denialRecurrence = selectedAppeal?.denial_prob != null
+        ? Math.round((selectedAppeal.denial_prob > 1 ? selectedAppeal.denial_prob : selectedAppeal.denial_prob * 100))
+        : (rcaData?.denial_probability != null ? Math.round(rcaData.denial_probability * 100) : 0);
+    const writeOffRisk = selectedAppeal?.write_off != null
+        ? Math.round((selectedAppeal.write_off > 1 ? selectedAppeal.write_off : selectedAppeal.write_off * 100))
+        : (rcaData?.write_off_probability != null ? Math.round(rcaData.write_off_probability * 100) : 0);
+
+    // Baselines for delta indicators (simple historical averages — adjust via props later)
+    const baselines = { appealSuccess: 62, denialRecurrence: 45, writeOffRisk: 35 };
+
+    // MiroFish verdict
+    const mfVerdict = rcaData?.mf_verdict || selectedAppeal?.mf_verdict || null;
+    const mfConfidence = rcaData?.mf_confidence != null
+        ? Math.round(rcaData.mf_confidence * (rcaData.mf_confidence <= 1 ? 100 : 1))
+        : (rcaData?.confidence_score || 0);
+    const mfTone = rcaData?.recommended_tone || (mfVerdict === 'LIKELY_APPROVE' ? 'formal' : mfVerdict === 'LIKELY_DENY' ? 'urgent' : 'data-driven');
+
+    // Evidence summary (MiroFish reason)
+    const evidenceSummary = rcaData?.evidence_summary
+        || (selectedAppeal ? `AI analysis pending for claim ${selectedId}. Submit appeal to trigger full evidence review.` : null);
+
+    // Key arguments from RCA steps
+    const keyArguments = useMemo(() => {
+        if (!rcaData?.steps) return [];
+        const wanted = ['ELIGIBILITY_CHECK', 'AUTH_TIMELINE_CHECK', 'CODING_VALIDATION', 'MIROFISH_AGENT_VALIDATION'];
+        return rcaData.steps
+            .filter(s => wanted.includes(s.step_name))
+            .map(s => ({
+                step: s.step_name,
+                title: STEP_ARG_META[s.step_name]?.title || s.step_name,
+                icon: STEP_ARG_META[s.step_name]?.icon || 'check_circle',
+                status: (s.finding_status || s.status || 'INFO').toUpperCase(),
+                summary: s.finding || s.summary || 'Analysis complete.',
+                details: s.details || s.evidence || s.explanation || null,
+            }));
+    }, [rcaData]);
+
+    // Compliance check (regex scan of letter text)
+    const compliance = useMemo(() => {
+        const text = letterText || '';
+        return COMPLIANCE_SECTIONS.map(s => ({ ...s, present: s.re.test(text) }));
+    }, [letterText]);
+
+    // In-flight queue
+    const inFlight = useMemo(() => {
+        const rows = liveAppeals.filter(isInFlight).map(a => ({
+            ...a,
+            days: a.days_in_status ?? daysBetween(a.submitted_at || a.created_at),
+        }));
+        rows.sort((a, b) => (b.days || 0) - (a.days || 0));
+        return rows;
+    }, [liveAppeals]);
+
+    // Documents list (template for now — backend has no docs endpoint yet)
+    const documents = useMemo(() => {
+        const authRelated = (selectedAppeal?.carc_code || rcaData?.carc_code || '').toUpperCase().includes('CO-16');
+        const base = [
+            { id: 'eob',      name: 'EOB / Denial Notice',          required: true,  status: 'placeholder' },
+            { id: 'claim',    name: 'Claim Copy (CMS-1500 / UB-04)', required: true,  status: 'placeholder' },
+            { id: 'medrec',   name: 'Medical Record Excerpt',       required: true,  status: 'placeholder' },
+        ];
+        if (authRelated) base.push({ id: 'auth', name: 'Authorization Letter', required: true, status: 'missing' });
+        return base;
+    }, [selectedAppeal, rcaData]);
+
+    /* ---------- render helpers ------------------------------------- */
+
+    const scoreBar = (val, label, baseline, color) => {
+        const delta = baseline != null ? val - baseline : null;
+        const col = color || (val >= 70 ? 'success' : val >= 50 ? 'warning' : 'danger');
+        const barBg = col === 'success' ? 'bg-[rgb(var(--color-success))]'
+            : col === 'warning' ? 'bg-[rgb(var(--color-warning))]'
+            : 'bg-[rgb(var(--color-danger))]';
+        const txt = col === 'success' ? 'text-[rgb(var(--color-success))]'
+            : col === 'warning' ? 'text-[rgb(var(--color-warning))]'
+            : 'text-[rgb(var(--color-danger))]';
+        return (
+            <div>
+                <div className="flex justify-between items-baseline text-[9px] text-th-secondary mb-0.5">
+                    <span>{label}</span>
+                    <span className="flex items-baseline gap-1.5">
+                        <span className={cn('font-bold font-mono', txt)}>{val}%</span>
+                        {delta != null && (
+                            <span className={cn('text-[8px] font-mono',
+                                delta > 0 ? 'text-[rgb(var(--color-success))]' : delta < 0 ? 'text-[rgb(var(--color-danger))]' : 'text-th-muted'
+                            )}>{delta > 0 ? '+' : ''}{delta} vs {baseline}</span>
+                        )}
+                    </span>
                 </div>
                 <div className="h-1.5 bg-th-surface-overlay rounded-full overflow-hidden">
-                  <div className={cn('h-full rounded-full', barColor(s.val, s.color))} style={{width:`${s.val}%`}} />
+                    <div className={cn('h-full rounded-full transition-[width] duration-500', barBg)} style={{ width: `${Math.max(0, Math.min(100, val))}%` }} />
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
+            </div>
+        );
+    };
 
-        {/* Documents */}
-        <div>
-          <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-th-muted mb-2">Documents to Attach</p>
-          <div className="space-y-1.5">
-            {claim.docs.map((doc, i) => (
-              <div key={i} className={cn('flex items-center justify-between px-2.5 py-1.5 rounded border text-[10px]', doc.status === 'attached' ? 'bg-[rgb(var(--color-success-bg))] border-[rgb(var(--color-success)/0.2)]' : 'bg-th-surface-overlay border-th-border')}>
-                <span className={doc.status === 'attached' ? 'text-th-heading' : 'text-th-secondary'}>{doc.name}</span>
-                <span className={cn('px-2 py-0.5 rounded text-[9px] font-bold border', doc.status === 'attached' ? 'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]' : doc.status === 'pending' ? 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]' : 'bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))] border-[rgb(var(--color-info)/0.3)]')}>
-                  {doc.status === 'attached' ? 'Attached' : doc.status === 'pending' ? 'Pending' : 'Optional'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+    const argStatusBadge = (status) => {
+        const map = {
+            PASS:  'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]',
+            FAIL:  'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger)/0.3)]',
+            WARN:  'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]',
+            INFO:  'bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))] border-[rgb(var(--color-info)/0.3)]',
+        };
+        return map[status] || map.INFO;
+    };
 
-        {/* Claim selector */}
-        <div className="pt-2 border-t border-th-border">
-          <p className="text-[8.5px] font-mono font-bold uppercase tracking-wider text-th-muted mb-2">Switch Claim</p>
-          <div className="flex flex-wrap gap-1.5">
-            {Object.keys(APPEAL_DATA).map(id => (
-              <button key={id} onClick={() => setSelectedId(id)} className={cn('px-2 py-0.5 rounded text-[9px] font-bold font-mono border transition-colors', selectedId === id ? 'bg-[rgb(var(--color-primary))] text-white border-[rgb(var(--color-primary))]' : 'bg-th-surface-overlay text-th-muted border-th-border hover:text-th-heading')}>
-                {id}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+    /* ---------- column renderers ---------------------------------- */
 
-      {/* RIGHT: LETTER EDITOR + QUEUE */}
-      <div className="overflow-y-auto p-4 flex flex-col gap-4">
-        <div className="flex items-center justify-between shrink-0">
-          <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-th-muted">
-            {letterLoading ? 'Loading letter...' : `AI-Drafted Appeal Letter · Confidence: ${claim.letterConfidence}%`}
-          </p>
-          <div className="flex gap-2">
-            <button onClick={() => {
-              const matched = liveAppeals.find(a => (a.id || a.claim_id) === selectedId);
-              if (matched?.appeal_id) {
-                setLetterLoading(true);
-                api.appeals.getLetter(matched.appeal_id)
-                  .then(res => { if (res?.letter_text) setLetterText(res.letter_text); })
-                  .catch(() => {})
-                  .finally(() => setLetterLoading(false));
-              }
-            }} className="px-2.5 py-1.5 rounded text-[10px] font-medium border border-th-border bg-th-surface-overlay text-th-secondary hover:text-th-heading transition-colors">Regenerate</button>
-            <button className="px-2.5 py-1.5 rounded text-[10px] font-medium border border-th-border bg-th-surface-overlay text-th-secondary hover:text-th-heading transition-colors">Edit</button>
-            <button onClick={() => {
-              const matched = liveAppeals.find(a => (a.id || a.claim_id) === selectedId);
-              if (!matched) {
-                // Create a new appeal for this claim's denial
-                const claimData = APPEAL_DATA[selectedId];
-                if (claimData) {
-                  api.appeals.create({ denial_id: selectedId, claim_id: selectedId, appeal_type: 'FIRST_LEVEL', ai_generated: true })
-                    .then(res => { if (res) setLiveAppeals(prev => [...prev, normalizeAppeal(res)]); })
-                    .catch(() => {});
-                }
-              }
-            }} className="px-2.5 py-1.5 rounded text-[10px] font-semibold bg-[rgb(var(--color-primary))] text-white border border-[rgb(var(--color-primary))] hover:opacity-90 transition-opacity">Submit Appeal</button>
-          </div>
-        </div>
+    const EvidenceColumn = (
+        <div className="overflow-y-auto bg-th-surface-base p-4 space-y-4 border-th-border">
+            <div className="flex items-center gap-2">
+                <p className="text-[8.5px] font-mono font-bold uppercase tracking-widest text-th-muted">AI Evidence Panel</p>
+                {rcaData && <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border border-[rgb(var(--color-success)/0.3)]">LIVE</span>}
+                {!rcaData && !rcaLoading && selectedId && <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-th-surface-overlay text-th-muted border border-th-border">NO RCA</span>}
+                {rcaLoading && <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-th-surface-overlay text-th-muted border border-th-border animate-pulse">LOADING…</span>}
+            </div>
 
-        <textarea value={letterText} onChange={(e) => setLetterText(e.target.value)} className="flex-1 min-h-[280px] bg-th-surface-overlay border border-th-border rounded-lg p-4 text-[10.5px] text-th-secondary leading-relaxed resize-none focus:outline-none focus:border-[rgb(var(--color-primary)/0.5)] font-sans" />
+            {rcaError && <ErrorBanner title="Root cause unavailable" message={rcaError} onRetry={() => { setRcaError(null); setRcaData(null); }} />}
 
-        <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden shrink-0">
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-th-border bg-th-surface-overlay">
-            <h3 className="text-[11px] font-semibold text-th-heading">All Appeals In-Flight</h3>
-            <span className="text-[9px] font-mono text-th-muted">{appeals.length} active · ${(totalValue / 1000).toFixed(0)}K</span>
-          </div>
-          <table className="w-full text-[11px]">
-            <thead><tr className="border-b border-th-border bg-th-surface-overlay">
-              {['Claim','Payer','Amount','Win%','Status','Deadline'].map(h => (<th key={h} className="px-3 py-2 text-left text-[9px] font-mono font-semibold uppercase tracking-wider text-th-muted">{h}</th>))}
-            </tr></thead>
-            <tbody>
-              {appeals.map((a, i) => (
-                <tr key={i} onClick={() => setSelectedId(a.id || a.claim_id)} className={cn('border-b border-th-border last:border-0 hover:bg-th-surface-overlay transition-colors cursor-pointer', (a.id || a.claim_id) === selectedId ? 'bg-[rgb(var(--color-primary-bg))]' : '')}>
-                  <td className="px-3 py-2 font-mono font-bold text-[rgb(var(--color-info))]">{a.id || a.claim_id}</td>
-                  <td className="px-3 py-2 text-th-secondary">{a.payer}</td>
-                  <td className="px-3 py-2 font-mono font-bold text-th-heading">${(a.amount || 0).toLocaleString()}</td>
-                  <td className={cn('px-3 py-2 font-mono font-bold', (a.winPct || 0) >= 75 ? 'text-[rgb(var(--color-success))]' : (a.winPct || 0) >= 50 ? 'text-[rgb(var(--color-warning))]' : 'text-[rgb(var(--color-danger))]')}>{a.winPct || 0}%</td>
-                  <td className="px-3 py-2"><span className={cn('px-2 py-0.5 rounded text-[9px] font-bold border', statusBadge(a.status))}>{a.status}</span></td>
-                  <td className="px-3 py-2 font-mono text-th-muted">{a.deadline || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            {/* Claim chips */}
+            {selectedId ? (
+                <div className="flex gap-2 flex-wrap">
+                    <Chip label="CLAIM"  value={selectedId}                                      mono accent="text-[rgb(var(--color-info))]" />
+                    <Chip label="PAYER"  value={selectedAppeal?.payer || '—'} />
+                    <Chip label="AMOUNT" value={selectedAppeal ? `$${Number(selectedAppeal.amount || 0).toLocaleString()}` : '—'} mono />
+                    <div className="flex-1 min-w-[64px] px-3 py-2 rounded-lg border border-th-border bg-th-surface-overlay">
+                        <p className="text-[8px] font-mono text-th-muted uppercase tracking-wider mb-1">MF VERDICT</p>
+                        <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold font-mono border',
+                            mfVerdict === 'CONFIRMED' || mfVerdict === 'LIKELY_APPROVE' ? 'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]'
+                                : mfVerdict === 'DISPUTED' || mfVerdict === 'LIKELY_DENY' ? 'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger)/0.3)]'
+                                : 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]'
+                        )}>
+                            {mfVerdict ? mfVerdict.replace('_', ' ') : 'PENDING'}
+                        </span>
+                    </div>
+                </div>
+            ) : (
+                <div className="text-center py-6 text-[10.5px] text-th-muted">Select an appeal from the In-Flight Queue.</div>
+            )}
+
+            {/* MiroFish reason */}
+            {selectedId && (
+                <div className={cn('px-3 py-2.5 rounded-lg border text-[10.5px] text-th-secondary leading-relaxed',
+                    mfVerdict === 'CONFIRMED' || mfVerdict === 'LIKELY_APPROVE' ? 'bg-[rgb(var(--color-success-bg))] border-[rgb(var(--color-success)/0.3)]'
+                        : mfVerdict === 'DISPUTED' || mfVerdict === 'LIKELY_DENY' ? 'bg-[rgb(var(--color-danger-bg))] border-[rgb(var(--color-danger)/0.3)]'
+                        : 'bg-th-surface-overlay border-th-border'
+                )}>
+                    <p className="text-[8px] font-mono font-bold uppercase tracking-wider mb-1.5 text-th-muted">
+                        MiroFish Reason {mfConfidence > 0 && <span className="opacity-70">· {mfConfidence}% consensus</span>}
+                    </p>
+                    {rcaLoading ? (
+                        <div className="space-y-1.5"><SkeletonLine className="h-2 w-full" /><SkeletonLine className="h-2 w-4/5" /><SkeletonLine className="h-2 w-2/3" /></div>
+                    ) : (
+                        <span>{evidenceSummary || 'No evidence summary available.'}</span>
+                    )}
+                </div>
+            )}
+
+            {/* Key arguments */}
+            {selectedId && (
+                <div>
+                    <SectionLabel>Key Arguments</SectionLabel>
+                    {rcaLoading && (
+                        <div className="space-y-1.5">{[1,2,3,4].map(i => <SkeletonLine key={i} className="h-10 w-full" />)}</div>
+                    )}
+                    {!rcaLoading && keyArguments.length === 0 && (
+                        <div className="px-3 py-3 bg-th-surface-overlay border border-th-border rounded text-[10.5px] text-th-muted text-center">
+                            No RCA steps available. Trigger root-cause analysis for this claim.
+                        </div>
+                    )}
+                    {!rcaLoading && keyArguments.length > 0 && (
+                        <div className="space-y-1.5">
+                            {keyArguments.map(arg => {
+                                const open = expandedArg === arg.step;
+                                return (
+                                    <div key={arg.step} className="bg-th-surface-overlay border border-th-border rounded overflow-hidden">
+                                        <button
+                                            type="button"
+                                            onClick={() => setExpandedArg(open ? null : arg.step)}
+                                            className="w-full px-3 py-2 flex items-start gap-2 text-left hover:bg-th-surface-raised transition-colors"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px] leading-none text-th-muted mt-0.5" aria-hidden="true">{arg.icon}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <span className="text-[10px] font-bold text-th-heading">{arg.title}</span>
+                                                    <span className={cn('px-1.5 py-0 rounded text-[8px] font-bold font-mono border', argStatusBadge(arg.status))}>{arg.status}</span>
+                                                </div>
+                                                <p className="text-[10.5px] text-th-secondary leading-relaxed">{arg.summary}</p>
+                                            </div>
+                                            <span className="material-symbols-outlined text-[16px] leading-none text-th-muted" aria-hidden="true">
+                                                {open ? 'expand_less' : 'expand_more'}
+                                            </span>
+                                        </button>
+                                        {open && arg.details && (
+                                            <div className="px-3 py-2 border-t border-th-border bg-th-surface-base text-[10px] text-th-secondary leading-relaxed whitespace-pre-wrap">
+                                                {typeof arg.details === 'string' ? arg.details : JSON.stringify(arg.details, null, 2)}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Arguments library — precedents */}
+            {selectedId && (
+                <div>
+                    <SectionLabel accessory={precedents.length > 0 && (
+                        <span className="text-[8px] font-mono text-th-muted">{precedents.length} precedent{precedents.length === 1 ? '' : 's'}</span>
+                    )}>Arguments Library</SectionLabel>
+                    {precedentsLoading && <SkeletonLine className="h-10 w-full" />}
+                    {!precedentsLoading && precedents.length === 0 && (
+                        <div className="px-3 py-2 bg-th-surface-overlay border border-th-border rounded text-[10px] text-th-muted text-center">
+                            No precedent arguments available for this CARC code.
+                        </div>
+                    )}
+                    {!precedentsLoading && precedents.length > 0 && (
+                        <div className="space-y-1">
+                            {precedents.map((p, i) => (
+                                <div key={i} className="px-2.5 py-1.5 bg-th-surface-overlay border border-th-border rounded text-[10px] text-th-secondary">
+                                    <span className="font-bold text-th-heading">{p.title || p.root_cause || p.category || `Precedent ${i + 1}`}</span>
+                                    {p.win_rate != null && <span className="ml-2 font-mono text-[rgb(var(--color-success))]">{Math.round(p.win_rate * (p.win_rate <= 1 ? 100 : 1))}% win</span>}
+                                    {(p.summary || p.description) && <p className="mt-0.5 text-[9.5px] leading-relaxed opacity-90">{p.summary || p.description}</p>}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
-      </div>
-    </div>
-  );
+    );
+
+    const letterSourceBadge = () => {
+        const map = {
+            LLM:      { label: 'LLM',       cls: 'bg-[rgb(var(--color-info-bg))] text-[rgb(var(--color-info))] border-[rgb(var(--color-info)/0.3)]' },
+            TEMPLATE: { label: 'TEMPLATE',  cls: 'bg-th-surface-overlay text-th-muted border-th-border' },
+            UNSAVED:  { label: 'UNSAVED',   cls: 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]' },
+        };
+        const m = map[letterSource] || map.TEMPLATE;
+        return <span className={cn('px-1.5 py-0.5 rounded text-[8px] font-bold font-mono border', m.cls)}>{m.label}</span>;
+    };
+
+    const saveBadge = () => {
+        if (saveState === 'saving') return <span className="text-[9px] font-mono text-th-muted">Saving…</span>;
+        if (saveState === 'saved')  return <span className="text-[9px] font-mono text-[rgb(var(--color-success))]">Saved {letterSavedAt ? new Date(letterSavedAt).toLocaleTimeString() : ''}</span>;
+        if (saveState === 'error')  return <span className="text-[9px] font-mono text-[rgb(var(--color-danger))]">Save error</span>;
+        if (saveState === 'unsaved')return <span className="text-[9px] font-mono text-[rgb(var(--color-warning))]">Unsaved (local)</span>;
+        if (letterDirty)            return <span className="text-[9px] font-mono text-[rgb(var(--color-warning))]">Unsaved changes</span>;
+        return null;
+    };
+
+    const LetterColumn = (
+        <div className="overflow-y-auto p-4 flex flex-col gap-3 border-th-border">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between gap-2 shrink-0 flex-wrap">
+                <div className="flex items-center gap-2">
+                    <p className="text-[9px] font-mono font-bold uppercase tracking-wider text-th-muted">Letter Editor</p>
+                    {letterSourceBadge()}
+                    {saveBadge()}
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        type="button"
+                        onClick={handleRegenerate}
+                        disabled={regenLoading || !selectedId}
+                        className="px-2.5 py-1.5 rounded text-[10px] font-medium border border-th-border bg-th-surface-overlay text-th-secondary hover:text-th-heading disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1"
+                    >
+                        <span className="material-symbols-outlined text-[14px] leading-none" aria-hidden="true">{regenLoading ? 'progress_activity' : 'auto_awesome'}</span>
+                        {regenLoading ? 'Regenerating…' : 'Regenerate with AI'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={saveState === 'saving' || !letterText.trim()}
+                        className="px-2.5 py-1.5 rounded text-[10px] font-medium border border-th-border bg-th-surface-overlay text-th-secondary hover:text-th-heading disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1"
+                    >
+                        <span className="material-symbols-outlined text-[14px] leading-none" aria-hidden="true">save</span>
+                        Save Draft
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={submitLoading || !letterText.trim() || !selectedId}
+                        className="px-2.5 py-1.5 rounded text-[10px] font-semibold bg-[rgb(var(--color-primary))] text-white border border-[rgb(var(--color-primary))] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity inline-flex items-center gap-1"
+                    >
+                        <span className="material-symbols-outlined text-[14px] leading-none" aria-hidden="true">{submitLoading ? 'progress_activity' : 'send'}</span>
+                        Submit Appeal
+                    </button>
+                </div>
+            </div>
+
+            {regenError && <ErrorBanner title="Regenerate failed" message={regenError} onRetry={handleRegenerate} />}
+            {submitError && <ErrorBanner title="Submit failed" message={submitError} onRetry={handleSubmit} />}
+            {submitBanner && (
+                <div className="px-3 py-2 bg-[rgb(var(--color-success-bg))] border border-[rgb(var(--color-success)/0.3)] text-[rgb(var(--color-success))] text-[10.5px] rounded-lg flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px] leading-none" aria-hidden="true">check_circle</span>
+                    {submitBanner}
+                </div>
+            )}
+
+            {/* Textarea */}
+            <textarea
+                value={letterText}
+                onChange={(e) => { setLetterText(e.target.value); setLetterDirty(true); if (saveState === 'saved') setSaveState('idle'); }}
+                placeholder={selectedId ? 'Draft your appeal letter here, or click "Regenerate with AI" to generate one.' : 'Select an appeal from the queue to begin.'}
+                disabled={!selectedId}
+                className="flex-1 min-h-[500px] bg-th-surface-overlay border border-th-border rounded-lg p-4 text-[10.5px] text-th-secondary leading-relaxed resize-none focus:outline-none focus:border-[rgb(var(--color-primary)/0.5)] font-sans disabled:opacity-50"
+            />
+
+            {/* Meta row */}
+            <div className="flex items-center justify-between text-[9px] font-mono text-th-muted shrink-0 flex-wrap gap-2">
+                <span>Source: {letterSource} {letterConfidence > 0 && `· Confidence ${letterConfidence}%`}</span>
+                <span>{letterText.length.toLocaleString()} chars · {letterText.split(/\s+/).filter(Boolean).length.toLocaleString()} words</span>
+            </div>
+
+            {/* Compliance checker */}
+            <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden shrink-0">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-th-border bg-th-surface-overlay">
+                    <h3 className="text-[10px] font-semibold text-th-heading">Compliance Checker</h3>
+                    <span className="text-[9px] font-mono text-th-muted">
+                        {compliance.filter(c => c.present).length} / {compliance.length} sections present
+                    </span>
+                </div>
+                <div className="p-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {compliance.map(c => (
+                        <div key={c.id} className={cn('flex items-center gap-2 px-2 py-1 rounded text-[10px]',
+                            c.present ? 'text-[rgb(var(--color-success))]' : 'text-th-muted'
+                        )}>
+                            <span className="material-symbols-outlined text-[14px] leading-none" aria-hidden="true">
+                                {c.present ? 'check_circle' : 'cancel'}
+                            </span>
+                            {c.label}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+
+    const InsightsColumn = (
+        <div className="overflow-y-auto p-4 space-y-4 bg-th-surface-base">
+            {/* ML Scores */}
+            <div className="bg-th-surface-raised border border-th-border rounded-lg p-3">
+                <SectionLabel accessory={selectedAppeal && <span className="text-[8px] font-mono text-th-muted">LIVE</span>}>ML Scores</SectionLabel>
+                <div className="space-y-2.5">
+                    {scoreBar(appealSuccess, 'Appeal Success Probability', baselines.appealSuccess)}
+                    {scoreBar(denialRecurrence, 'Denial Recurrence Risk', baselines.denialRecurrence,
+                        denialRecurrence <= 30 ? 'success' : denialRecurrence <= 60 ? 'warning' : 'danger')}
+                    {scoreBar(writeOffRisk, 'Write-off Risk if Not Appealed', baselines.writeOffRisk,
+                        writeOffRisk <= 25 ? 'success' : writeOffRisk <= 50 ? 'warning' : 'danger')}
+                </div>
+            </div>
+
+            {/* MiroFish Prediction */}
+            <div className="bg-th-surface-raised border border-th-border rounded-lg p-3">
+                <SectionLabel>MiroFish Prediction</SectionLabel>
+                {rcaLoading ? (
+                    <SkeletonLine className="h-16 w-full" />
+                ) : mfVerdict ? (
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <span className={cn('px-2 py-0.5 rounded text-[10px] font-bold font-mono border',
+                                mfVerdict === 'LIKELY_APPROVE' || mfVerdict === 'CONFIRMED' ? 'bg-[rgb(var(--color-success-bg))] text-[rgb(var(--color-success))] border-[rgb(var(--color-success)/0.3)]'
+                                    : mfVerdict === 'LIKELY_DENY' || mfVerdict === 'DISPUTED' ? 'bg-[rgb(var(--color-danger-bg))] text-[rgb(var(--color-danger))] border-[rgb(var(--color-danger)/0.3)]'
+                                    : 'bg-[rgb(var(--color-warning-bg))] text-[rgb(var(--color-warning))] border-[rgb(var(--color-warning)/0.3)]'
+                            )}>
+                                {mfVerdict.replace('_', ' ')}
+                            </span>
+                            {mfConfidence > 0 && <span className="text-[9px] font-mono text-th-muted">{mfConfidence}% confidence</span>}
+                        </div>
+                        <p className="text-[10.5px] text-th-secondary leading-relaxed">
+                            Simulated payer response: <strong>{mfVerdict.replace('_', ' ').toLowerCase()}</strong>.
+                        </p>
+                        <p className="text-[9.5px] font-mono text-th-muted">
+                            Recommended tone: <strong className="text-th-secondary">{mfTone}</strong>
+                        </p>
+                    </div>
+                ) : (
+                    <div className="text-[10px] text-th-muted text-center py-2">No prediction available.</div>
+                )}
+            </div>
+
+            {/* Documents */}
+            <div className="bg-th-surface-raised border border-th-border rounded-lg p-3">
+                <SectionLabel>Documents</SectionLabel>
+                {selectedId ? (
+                    <div className="space-y-1.5">
+                        {documents.map(d => (
+                            <div key={d.id} className="flex items-center justify-between px-2.5 py-1.5 rounded border border-th-border bg-th-surface-overlay text-[10px]">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <span className={cn('material-symbols-outlined text-[14px] leading-none shrink-0',
+                                        d.status === 'uploaded' ? 'text-[rgb(var(--color-success))]' : d.status === 'missing' ? 'text-[rgb(var(--color-warning))]' : 'text-th-muted'
+                                    )} aria-hidden="true">
+                                        {d.status === 'uploaded' ? 'check_circle' : d.status === 'missing' ? 'warning' : 'attach_file'}
+                                    </span>
+                                    <span className="truncate text-th-secondary">{d.name}</span>
+                                </div>
+                                <button type="button" className="shrink-0 px-2 py-0.5 rounded text-[9px] font-semibold border border-th-border bg-th-surface-base text-th-secondary hover:text-th-heading transition-colors">
+                                    {d.status === 'uploaded' ? 'View' : 'Upload'}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-[10px] text-th-muted text-center py-2">Select an appeal to view documents.</div>
+                )}
+            </div>
+
+            {/* In-Flight Queue */}
+            <div className="bg-th-surface-raised border border-th-border rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-th-border bg-th-surface-overlay">
+                    <h3 className="text-[10px] font-semibold text-th-heading">In-Flight Queue</h3>
+                    <span className="text-[8px] font-mono text-th-muted">{inFlight.length} active</span>
+                </div>
+                {appealsError && <div className="p-3"><ErrorBanner title="Cannot load queue" message={appealsError} onRetry={loadAppeals} /></div>}
+                {!appealsError && appealsLoading && (
+                    <div className="p-3 space-y-1.5">{[1,2,3].map(i => <SkeletonLine key={i} className="h-8 w-full" />)}</div>
+                )}
+                {!appealsError && !appealsLoading && inFlight.length === 0 && (
+                    <div className="p-4 text-[10px] text-th-muted text-center">No in-flight appeals.</div>
+                )}
+                {!appealsError && !appealsLoading && inFlight.length > 0 && (
+                    <div className="max-h-[240px] overflow-y-auto">
+                        {inFlight.map(a => {
+                            const active = (a.id || a.claim_id) === selectedId;
+                            return (
+                                <button
+                                    type="button"
+                                    key={a.appeal_id || a.id}
+                                    onClick={() => setSelectedId(a.id || a.claim_id)}
+                                    className={cn('w-full flex items-center justify-between px-3 py-2 border-b border-th-border last:border-0 text-left hover:bg-th-surface-overlay transition-colors',
+                                        active && 'bg-[rgb(var(--color-primary-bg))]'
+                                    )}
+                                >
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-mono font-bold text-[10px] text-[rgb(var(--color-info))]">{a.id || a.claim_id}</p>
+                                        <p className="text-[9px] text-th-muted truncate">{a.payer}</p>
+                                    </div>
+                                    <div className="text-right shrink-0 ml-2">
+                                        <p className="text-[9px] font-mono text-th-secondary">{a.days != null ? `${a.days}d` : '—'}</p>
+                                        <p className="text-[8px] font-mono text-th-muted uppercase">{a.status}</p>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
+    /* ---------- top-level render ---------------------------------- */
+
+    return (
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-th-surface-base">
+            {/* Mobile tab bar (below md) */}
+            <div className="md:hidden flex border-b border-th-border bg-th-surface-raised shrink-0">
+                {MOBILE_TABS.map(t => (
+                    <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setMobileTab(t.id)}
+                        className={cn('flex-1 px-3 py-2 text-[10px] font-semibold inline-flex items-center justify-center gap-1.5 border-b-2 transition-colors',
+                            mobileTab === t.id
+                                ? 'border-[rgb(var(--color-primary))] text-[rgb(var(--color-primary))] bg-th-surface-base'
+                                : 'border-transparent text-th-muted hover:text-th-heading'
+                        )}
+                    >
+                        <span className="material-symbols-outlined text-[16px] leading-none" aria-hidden="true">{t.icon}</span>
+                        {t.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Desktop: 3 columns. Mobile: single active column. */}
+            <div className="flex-1 min-h-0 overflow-hidden md:grid md:grid-cols-[1fr_1.2fr_1fr]">
+                <div className={cn('md:block md:border-r min-h-0', mobileTab === 'evidence' ? 'block' : 'hidden')}>
+                    {EvidenceColumn}
+                </div>
+                <div className={cn('md:block md:border-r min-h-0', mobileTab === 'letter' ? 'block' : 'hidden')}>
+                    {LetterColumn}
+                </div>
+                <div className={cn('md:block min-h-0', mobileTab === 'insights' ? 'block' : 'hidden')}>
+                    {InsightsColumn}
+                </div>
+            </div>
+        </div>
+    );
 }

@@ -168,7 +168,7 @@ export function ClaimRootCauseDetail() {
   if (!ctx || !ctx.claim) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-full text-th-muted gap-3">
-        <Link to="/analytics/root-cause" className="flex items-center gap-2 text-primary text-sm font-bold hover:underline mb-4">
+        <Link to="/analytics/denials/root-cause" className="flex items-center gap-2 text-primary text-sm font-bold hover:underline mb-4">
           <span className="material-symbols-outlined text-lg">arrow_back</span>
           Back to Root Cause Intelligence
         </Link>
@@ -193,7 +193,7 @@ export function ClaimRootCauseDetail() {
     <div className="bg-th-surface-raised border border-th-border rounded-xl p-5 mb-6">
       <div className="flex flex-wrap items-center gap-4">
         {/* Back */}
-        <Link to="/analytics/root-cause" className="flex items-center justify-center h-9 w-9 rounded-lg bg-th-surface-overlay border border-th-border hover:bg-th-surface-raised transition-colors shrink-0">
+        <Link to="/analytics/denials/root-cause" className="flex items-center justify-center h-9 w-9 rounded-lg bg-th-surface-overlay border border-th-border hover:bg-th-surface-raised transition-colors shrink-0">
           <span className="material-symbols-outlined text-th-heading text-lg">arrow_back</span>
         </Link>
 

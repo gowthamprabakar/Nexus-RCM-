@@ -104,6 +104,13 @@ class EraPayment(Base):
     oa_amount           = Column(Float, default=0)
     pi_amount           = Column(Float, default=0)
 
+    # ERA Processing workflow (added via migration-lite in
+    # era_import_service.ensure_era_exception_columns)
+    status              = Column(String(30), nullable=True, index=True)
+    # STAGED | QUEUED | EXCEPTION | POSTED | REJECTED | ESCALATED | MATCHED
+    exception_notes     = Column(Text, nullable=True)
+    target_claim_id     = Column(String(40), nullable=True, index=True)
+
 
 
 # ---------------------------------------------------------------------------

@@ -63,3 +63,6 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+# graphify tool cache (tool removed, cache dir leftover)
+frontend/src/graphify-out/

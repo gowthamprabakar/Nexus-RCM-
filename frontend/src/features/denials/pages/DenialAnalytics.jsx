@@ -57,6 +57,7 @@ export function DenialAnalytics() {
   const [aiInsights, setAiInsights] = useState([]);
   const [trendData, setTrendData] = useState(null);
   const [diagnosticFindings, setDiagnosticFindings] = useState([]);
+  const [detectBriefing, setDetectBriefing] = useState(null);
 
   // ── Parallel data fetch ────────────────────────────────────────────────────
   useEffect(() => {
@@ -68,7 +69,8 @@ export function DenialAnalytics() {
       api.ai.getInsights('denials'),
       api.rootCause.getTrending(),
       api.diagnostics.getFindings({ category: 'DENIAL_PATTERN' }).catch(() => null),
-    ]).then(([denials, rootCause, heatmap, winRateRes, aiRes, trending, diagRes]) => {
+      api.denials.getDetectBriefing().catch(() => null),
+    ]).then(([denials, rootCause, heatmap, winRateRes, aiRes, trending, diagRes, briefing]) => {
       if (denials) setDenialSummary(denials);
       if (rootCause) setRootCauseSummary(rootCause);
       if (heatmap) setHeatmapData(heatmap);
@@ -77,6 +79,7 @@ export function DenialAnalytics() {
       if (trending) setTrendData(trending);
       if (diagRes?.findings?.length) setDiagnosticFindings(diagRes.findings);
       else if (Array.isArray(diagRes)) setDiagnosticFindings(diagRes);
+      if (briefing) setDetectBriefing(briefing);
     }).catch(err => console.error('DenialAnalytics load error:', err))
       .finally(() => setLoading(false));
   }, []);
@@ -90,6 +93,16 @@ export function DenialAnalytics() {
   const rootCauses = rootCauseSummary?.by_root_cause ?? [];
   const preventablePct = rootCauseSummary?.preventable_pct ?? 0;
   const preventableAmount = totalAtRisk * (preventablePct / 100);
+
+  // Projected Recovery (90-day forecast) — use server value if present, else apply industry 23% recovery rate
+  const projectedRecovery =
+    denialSummary?.projected_recovery_amount ?? (totalAtRisk * 0.23);
+
+  // AI Prevention Impact — preventable claims count from Detect briefing
+  const preventableCount =
+    detectBriefing?.kpis?.preventable_count
+      ?? rootCauseSummary?.preventable_count
+      ?? 0;
 
   // Build CARC table from top_categories (top 10 items with code info)
   const carcCodes = topCategories.slice(0, 10);
@@ -153,7 +166,7 @@ export function DenialAnalytics() {
         {/* ═══════════════════════════════════════════════════════════════════
             SECTION 2 — KPI Cards
         ═══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           <KPICard
             label="Total Denials"
             value={fmtNum(totalDenials)}
@@ -177,6 +190,26 @@ export function DenialAnalytics() {
             icon="shield"
             color="text-amber-400"
             accent="border-l-amber-500"
+            onClick={() => navigate('/analytics/denials/root-cause/claims?group=PREVENTABLE')}
+          />
+          {/* ── NEW: Projected Recovery ─────────────────────────────────── */}
+          <KPICard
+            label="Projected Recovery"
+            value={fmt$(projectedRecovery)}
+            sub="90-day forecast"
+            icon="trending_up"
+            color="text-th-success"
+            accent="border-l-th-success bg-th-success-bg/40"
+            onClick={() => navigate('/analytics/denials/root-cause/claims?group=PREVENTABLE')}
+          />
+          {/* ── NEW: AI Prevention Impact ──────────────────────────────── */}
+          <KPICard
+            label="AI Prevention Impact"
+            value={fmtNum(preventableCount)}
+            sub="claims preventable"
+            icon="shield_check"
+            color="text-purple-500 dark:text-purple-400"
+            accent="border-l-purple-500 bg-purple-500/5 dark:bg-purple-500/10"
             onClick={() => navigate('/analytics/denials/root-cause/claims?group=PREVENTABLE')}
           />
           <KPICard

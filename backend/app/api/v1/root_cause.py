@@ -4,7 +4,7 @@ GET  /root-cause/summary              — aggregate root cause breakdown
 GET  /root-cause/trending             — weekly trending over N weeks
 GET  /root-cause/claim/{claim_id}     — root cause detail for one claim
 """
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, Optional
 
@@ -19,6 +19,8 @@ router = APIRouter()
 async def get_summary(
     payer_id: Optional[str] = None,
     root_cause_group: Optional[str] = None,
+    carc_code: Optional[str] = Query(None, description="Filter precedents by CARC code"),
+    days: Optional[int] = Query(None, ge=1, le=730, description="Lookback window in days"),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     """Aggregate root cause summary with counts by cause and group."""
@@ -27,6 +29,10 @@ async def get_summary(
         filters["payer_id"] = payer_id
     if root_cause_group:
         filters["root_cause_group"] = root_cause_group
+    if carc_code:
+        filters["carc_code"] = carc_code
+    if days:
+        filters["days"] = days
     return await root_cause_service.get_root_cause_summary(db, filters)
 
 
@@ -53,9 +59,22 @@ async def get_claim_root_cause(
 
 # ── GET /root-cause/tree ────────────────────────────────────────────────
 @router.get("/tree")
-async def get_tree(db: AsyncSession = Depends(get_db)) -> Any:
-    """Hierarchical root cause tree for frontend visualization."""
-    return await root_cause_service.get_root_cause_tree(db)
+async def get_tree(
+    payer_id: Optional[str] = Query(None),
+    root_cause_group: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Hierarchical root cause tree for frontend visualization.
+
+    Applies optional filters on payer_id and root_cause_group; limits top claims per leaf.
+    """
+    return await root_cause_service.get_root_cause_tree(
+        db,
+        payer_id=payer_id,
+        root_cause_group=root_cause_group,
+        limit=limit,
+    )
 
 
 # ── POST /root-cause/validate/{claim_id} ─────────────────────────────────
@@ -78,7 +97,7 @@ async def validate_claim_root_cause(claim_id: str, db: AsyncSession = Depends(ge
 
     row = result.first()
     if not row:
-        return {"error": "No root cause analysis found for this claim"}
+        raise HTTPException(status_code=404, detail="No root cause analysis found for this claim")
 
     rca_id, root_cause, conf, impact, category, carc, payer = row
     validation = await validate_root_cause(db, claim_id, root_cause, category, carc or "", payer, int(conf or 0), float(impact or 0))

@@ -119,6 +119,8 @@ async def get_forecast_summary(
         PaymentForecast.week_start_date,
         PaymentForecast.payer_group,
         func.sum(PaymentForecast.forecasted_amount).label("total"),
+        func.sum(PaymentForecast.forecast_range_low).label("low"),
+        func.sum(PaymentForecast.forecast_range_high).label("high"),
         func.count(PaymentForecast.forecast_id).label("payer_count"),
         func.avg(PaymentForecast.model_confidence).label("avg_confidence"),
     ).where(
@@ -136,6 +138,10 @@ async def get_forecast_summary(
 
     # Aggregate
     week_totals: dict = {}
+    week_low: dict = {}
+    week_high: dict = {}
+    week_conf: dict = {}  # weighted by amount
+    week_conf_denom: dict = {}
     group_totals: dict = {}
     grand_total = 0.0
 
@@ -143,10 +149,33 @@ async def get_forecast_summary(
         wk  = str(row.week_start_date)
         grp = row.payer_group
         amt = float(row.total or 0)
+        lo  = float(row.low or 0)
+        hi  = float(row.high or 0)
+        conf = float(row.avg_confidence or 0)
 
         week_totals[wk] = week_totals.get(wk, 0) + amt
+        week_low[wk]    = week_low.get(wk, 0) + lo
+        week_high[wk]   = week_high.get(wk, 0) + hi
+        week_conf[wk]   = week_conf.get(wk, 0) + conf * amt
+        week_conf_denom[wk] = week_conf_denom.get(wk, 0) + amt
         group_totals[grp] = group_totals.get(grp, 0) + amt
         grand_total += amt
+
+    # Confidence bands per week
+    confidence_bands = []
+    for wk in sorted(week_totals.keys()):
+        mid = week_totals[wk]
+        lo  = week_low.get(wk) or (mid * 0.85)
+        hi  = week_high.get(wk) or (mid * 1.15)
+        denom = week_conf_denom.get(wk, 0)
+        avg_conf = (week_conf.get(wk, 0) / denom) if denom else 0.0
+        confidence_bands.append({
+            "week_start": wk,
+            "confidence_low":  round(lo, 2),
+            "confidence_mid":  round(mid, 2),
+            "confidence_high": round(hi, 2),
+            "model_confidence_pct": round(avg_conf * 100, 1),
+        })
 
     return {
         "period": f"{this_week} to {next_4}",
@@ -161,6 +190,7 @@ async def get_forecast_summary(
             }
             for k, v in sorted(group_totals.items(), key=lambda x: -x[1])
         },
+        "confidence_bands": confidence_bands,
     }
 
 

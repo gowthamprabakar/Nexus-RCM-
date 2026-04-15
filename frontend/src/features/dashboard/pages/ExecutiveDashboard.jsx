@@ -489,7 +489,7 @@ export function ExecutiveDashboard() {
      const fmt = (v) => v >= 1e9 ? `$${(v/1e9).toFixed(1)}B` : v >= 1e6 ? `$${(v/1e6).toFixed(1)}M` : v >= 1e3 ? `$${(v/1e3).toFixed(0)}K` : `$${v}`;
      return (
        <button
-         onClick={() => navigate('/analytics/root-cause')}
+         onClick={() => navigate('/analytics/denials/root-cause')}
          className="flex-1 min-w-0 flex items-center gap-3 px-4 py-3 bg-th-surface-raised border border-th-border rounded-xl hover:border-purple-500/40 transition-all group"
        >
          <span className="material-symbols-outlined text-lg text-purple-400">hub</span>
