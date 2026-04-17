@@ -106,7 +106,7 @@ async def execute_real_action(
             action.action_id,
         )
         action.status = "EXECUTED"
-        action.executed_at = datetime.now(timezone.utc)
+        action.executed_at = datetime.utcnow()
         action.outcome = f"No handler registered for {rule_id}"
         return {
             "success": True,
@@ -118,7 +118,7 @@ async def execute_real_action(
         result = await handler(db, action)
         # Stamp the action as executed
         action.status = "EXECUTED"
-        action.executed_at = datetime.now(timezone.utc)
+        action.executed_at = datetime.utcnow()
         action.outcome = json.dumps(result.get("details", {}))[:200]
         logger.info(
             "Action %s (rule %s) executed successfully: %s",
@@ -130,7 +130,7 @@ async def execute_real_action(
 
     except Exception as exc:
         action.status = "FAILED"
-        action.executed_at = datetime.now(timezone.utc)
+        action.executed_at = datetime.utcnow()
         action.outcome = f"Error: {str(exc)[:180]}"
         logger.exception(
             "Action %s (rule %s) failed", action.action_id, rule_id
@@ -528,7 +528,7 @@ async def _handle_timely_filing_escalation(
     days_threshold = trigger.get("days_threshold", 75)
     remaining_days = trigger.get("remaining_days", 15)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     cutoff_start = now - timedelta(days=days_threshold)
     cutoff_end = now - timedelta(days=days_threshold - remaining_days)
 

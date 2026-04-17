@@ -241,7 +241,7 @@ async def resolve_finding(finding_id: str, db: AsyncSession = Depends(get_db)):
                 "resolved_at": str(finding.resolved_at) if finding.resolved_at else None,
             }
         finding.status = "RESOLVED"
-        finding.resolved_at = datetime.now(timezone.utc)
+        finding.resolved_at = datetime.utcnow()
         await db.commit()
         return {
             "finding_id": finding_id,

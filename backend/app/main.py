@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.v1 import auth, claims, denials, forecast, crs, payments, ar, collections, collections_extended, collections_automation, reconciliation, ai, analytics, root_cause, diagnostics, graph, simulation, prevention, lida, predictions, coding, evv, patient_access, admin, compliance, dashboard, finance
+from app.api.v1 import auth, claims, denials, forecast, crs, payments, ar, collections, collections_extended, collections_automation, reconciliation, ai, analytics, root_cause, diagnostics, graph, simulation, prevention, lida, predictions, coding, evv, patient_access, admin, compliance, dashboard, finance, prevent_nav, automation_rules
 
 # Register all models so Alembic/SQLAlchemy sees them
 import app.models.payer           # noqa
@@ -17,6 +17,7 @@ import app.models.code_reference  # noqa  (CARC / RARC reference tables)
 import app.models.dunning         # noqa  (dunning sequences + letters + templates)
 import app.models.auto_dialer     # noqa  (call campaigns + call logs + agent stats)
 import app.models.settlement      # noqa  (settlement offers + payment plans)
+import app.models.prevent_persistence  # noqa  (Sprint Q D1: prevention_alerts, crs_audit, automation_rules_db)
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,20 @@ async def lifespan(app: FastAPI):
         logger.info("Governance store: ml_prediction_log table ready.")
     except Exception as exc:
         logger.warning("Governance store setup failed (non-fatal): %s", exc)
+
+    # ── Sprint Q Track D persistence tables ─────────────────────────
+    try:
+        from app.db.session import AsyncSessionLocal
+        from app.scripts.seed_automation_rules import (
+            ensure_tables as ensure_d_tables, seed_automation_rules,
+        )
+        async with AsyncSessionLocal() as db:
+            await ensure_d_tables(db)
+            await seed_automation_rules(db)
+            await db.commit()
+        logger.info("Sprint Q Track D: prevention_alerts / crs_audit / automation_rules_db ready.")
+    except Exception as exc:
+        logger.warning("Sprint Q Track D setup failed (non-fatal): %s", exc)
 
     # ── ERA Processing tables (CARC/RARC, staging, exception cols) ──
     try:
@@ -149,6 +164,7 @@ app.include_router(diagnostics.router,   prefix=f"{settings.API_V1_STR}/diagnost
 app.include_router(graph.router,         prefix=f"{settings.API_V1_STR}",                  tags=["graph", "automation"])
 app.include_router(simulation.router,   prefix=f"{settings.API_V1_STR}/simulation",       tags=["simulation"])
 app.include_router(prevention.router,  prefix=f"{settings.API_V1_STR}/prevention",       tags=["prevention"])
+app.include_router(prevent_nav.router, prefix=f"{settings.API_V1_STR}/prevent",          tags=["prevent"])
 app.include_router(lida.router,       prefix=f"{settings.API_V1_STR}/lida",              tags=["lida"])
 app.include_router(predictions.router, prefix=f"{settings.API_V1_STR}/predictions",     tags=["predictions"])
 app.include_router(coding.router,      prefix=f"{settings.API_V1_STR}/coding",          tags=["coding"])
@@ -158,6 +174,7 @@ app.include_router(admin.router,       prefix=f"{settings.API_V1_STR}/admin",   
 app.include_router(compliance.router,  prefix=f"{settings.API_V1_STR}/compliance",       tags=["compliance"])
 app.include_router(dashboard.router,   prefix=f"{settings.API_V1_STR}/dashboard",        tags=["dashboard"])
 app.include_router(finance.router,     prefix=f"{settings.API_V1_STR}/finance",          tags=["finance"])
+app.include_router(automation_rules.router, prefix=f"{settings.API_V1_STR}", tags=["automation-rules"])  # Sprint Q D3
 
 # Neo4j health endpoint
 @app.get("/api/v1/neo4j/health")

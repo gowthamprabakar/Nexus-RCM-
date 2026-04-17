@@ -33,6 +33,8 @@ class VisualizeRequest(BaseModel):
 class AskRequest(BaseModel):
     question: str
     dataset: str = "auto"
+    start_date: Optional[str] = None  # YYYY-MM-DD
+    end_date: Optional[str] = None    # YYYY-MM-DD
 
 
 # ── Dataset metadata ─────────────────────────────────────────────────────────
@@ -93,12 +95,14 @@ async def summarize_dataset(
 async def generate_goals(
     dataset: str = Query("denials", description="Dataset to analyze"),
     n: int = Query(5, ge=1, le=10, description="Number of goals"),
+    start_date: Optional[str] = Query(None, description="Start date YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="End date YYYY-MM-DD"),
     db: AsyncSession = Depends(get_db),
 ):
     """Generate visualization goals from RCM data."""
     if dataset not in DATASET_DESCRIPTIONS:
         raise HTTPException(status_code=400, detail=f"Unknown dataset: {dataset}")
-    return await lida_service.generate_goals(db, dataset, n)
+    return await lida_service.generate_goals(db, dataset, n, start_date=start_date, end_date=end_date)
 
 
 @router.post("/visualize")
@@ -120,7 +124,10 @@ async def ask_question(
     """Answer a natural language question about RCM data."""
     if not body.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
-    return await lida_service.answer_question(db, body.question, body.dataset)
+    return await lida_service.answer_question(
+        db, body.question, body.dataset,
+        start_date=body.start_date, end_date=body.end_date,
+    )
 
 
 @router.get("/report/{report_type}")

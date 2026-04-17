@@ -32,7 +32,7 @@ async def log_prediction_to_db(db: AsyncSession, model_name: str, prediction: fl
             INSERT INTO ml_prediction_log (model_name, prediction, actual_outcome, features_hash, logged_at)
             VALUES (:model, :pred, :actual, :fhash, :ts)
         """), {"model": model_name, "pred": prediction, "actual": actual_outcome,
-               "fhash": features_hash, "ts": datetime.now(timezone.utc)})
+               "fhash": features_hash, "ts": datetime.utcnow()})
     except Exception as e:
         logger.warning("Failed to log prediction: %s", e)
 

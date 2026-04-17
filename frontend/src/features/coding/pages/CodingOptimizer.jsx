@@ -36,18 +36,21 @@ export function CodingOptimizer() {
  const [error, setError] = useState(null);
  const [auditData, setAuditData] = useState(null);
  const [suggestionsData, setSuggestionsData] = useState(null);
+ const [carcPrediction, setCarcPrediction] = useState(null);
 
  useEffect(() => {
    async function load() {
      setLoading(true);
      setError(null);
      try {
-       const [audit, suggestions] = await Promise.all([
+       const [audit, suggestions, carc] = await Promise.all([
          api.coding.getAudit(),
          api.coding.getSuggestions(activeEncounter.id),
+         api.predictions.getCarcPrediction(activeEncounter.id),
        ]);
        setAuditData(audit);
        setSuggestionsData(suggestions);
+       setCarcPrediction(carc);
      } catch (err) {
        console.error('Failed to load coding optimizer data:', err);
        setError(err.message || 'Failed to load data');
@@ -66,6 +69,25 @@ export function CodingOptimizer() {
    ? `$${(auditData.denials_by_carc.reduce((sum, d) => sum + (d.total_amount || 0), 0) / 1000).toFixed(1)}k`
    : '$0';
  const lineSuggestions = suggestionsData?.line_suggestions || [];
+
+ // Denial risk chip — derive a single headline probability from the CARC predictor
+ const topCarc = Array.isArray(carcPrediction?.top_3_carc) && carcPrediction.top_3_carc.length > 0
+   ? carcPrediction.top_3_carc[0]
+   : null;
+ const rawRiskPct = topCarc?.probability != null
+   ? (topCarc.probability <= 1 ? topCarc.probability * 100 : topCarc.probability)
+   : null;
+ const denialRiskPct = rawRiskPct != null ? Math.round(rawRiskPct) : null;
+ const denialRiskLabel = denialRiskPct == null
+   ? '--'
+   : denialRiskPct < 10 ? `Low (${denialRiskPct}%)`
+   : denialRiskPct < 25 ? `Medium (${denialRiskPct}%)`
+   : `High (${denialRiskPct}%)`;
+ const denialRiskClass = denialRiskPct == null
+   ? 'text-th-muted'
+   : denialRiskPct < 10 ? 'text-green-400'
+   : denialRiskPct < 25 ? 'text-amber-400'
+   : 'text-rose-400';
 
  const handleEncounterSearch = (e) => {
  if (e.key === 'Enter' && encounterSearch.trim()) {
@@ -199,43 +221,89 @@ export function CodingOptimizer() {
  </div>
  </div>
  <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
- {/* Suggestion Card 1 */}
- <div className="bg-th-surface-raised border border-th-border border-l-[3px] border-l-blue-500 rounded-xl p-4 shadow-sm hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
+ {loading && (
+ <div className="text-center py-12 text-th-muted text-sm">Loading coding suggestions…</div>
+ )}
+
+ {!loading && lineSuggestions.length === 0 && (
+ <div className="text-center py-12">
+ <span className="material-symbols-outlined text-[40px] text-th-muted mb-2">code_off</span>
+ <p className="text-sm font-bold text-th-heading mb-1">No coding suggestions for this encounter</p>
+ <p className="text-xs text-th-muted">Encounter {activeEncounter.id} has no claim lines, or no historical paid patterns were found.</p>
+ </div>
+ )}
+
+ {!loading && lineSuggestions.map((line, idx) => {
+ const topPattern = Array.isArray(line.similar_paid_patterns) && line.similar_paid_patterns.length > 0
+ ? line.similar_paid_patterns[0]
+ : null;
+ const confidencePct = topPattern?.frequency
+ ? Math.min(99, Math.round((topPattern.frequency / (topPattern.frequency + (line.denial_risk_count || 0))) * 100))
+ : null;
+ const denialCount = line.denial_risk_count || 0;
+ return (
+ <div key={`${line.current_cpt}-${idx}`} className="bg-th-surface-raised border border-th-border border-l-[3px] border-l-blue-500 rounded-xl p-4 shadow-sm hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
  <div className="flex justify-between items-start mb-3">
  <div>
  <div className="flex items-center gap-2 mb-1">
- <span className="bg-blue-900/50 text-blue-400 px-2 py-0.5 rounded text-[10px] font-bold uppercase">ICD-10 (Suggested)</span>
+ <span className="bg-blue-900/50 text-blue-400 px-2 py-0.5 rounded text-[10px] font-bold uppercase">CPT {line.current_cpt}</span>
  {AI_LEVEL_BADGES.descriptive}
  </div>
- <h3 className="text-lg font-bold text-th-heading">I20.9</h3>
- <p className="text-sm text-th-secondary">Angina pectoris, unspecified</p>
+ <h3 className="text-lg font-bold text-th-heading">{line.current_icd10 || '—'}</h3>
+ <p className="text-sm text-th-secondary">
+ {line.current_modifier ? `Modifier: ${line.current_modifier}` : 'No modifier on current line'}
+ </p>
  </div>
  <div className="text-right">
+ {confidencePct != null ? (
+ <>
  <div className="flex items-center gap-1 text-green-400 font-bold text-sm">
  <span className="material-symbols-outlined text-[16px]">trending_up</span>
- <span className="tabular-nums">98%</span> Confidence
+ <span className="tabular-nums">{confidencePct}%</span> Match
  </div>
  <div className="w-24 bg-th-surface-overlay h-1.5 rounded-full mt-1 overflow-hidden">
- <div className="bg-green-500 h-full w-[98%]"></div>
+ <div className="bg-green-500 h-full" style={{ width: `${confidencePct}%` }}></div>
+ </div>
+ </>
+ ) : (
+ <div className="text-xs text-th-muted">No pattern match</div>
+ )}
  </div>
  </div>
- </div>
+ {topPattern && (
  <div className="bg-th-surface-overlay/50 p-2 rounded-lg mb-3">
  <div className="flex items-center gap-2 mb-1">
- <p className="text-xs text-th-heading font-medium">Why this code:</p>
+ <p className="text-xs text-th-heading font-medium">Historical paid pattern:</p>
  {AI_LEVEL_BADGES.diagnostic}
  </div>
- <p className="text-xs text-th-secondary italic">"Substernal pressure localized and radiating to left arm is pathognomonic for angina pectoris."</p>
+ <p className="text-xs text-th-secondary italic">
+ {topPattern.frequency} paid claims with CPT {topPattern.cpt_code}
+ {topPattern.modifier_1 ? ` + modifier ${topPattern.modifier_1}` : ''}
+ {topPattern.icd10_primary ? ` + ICD ${topPattern.icd10_primary}` : ''}
+ {topPattern.avg_paid_amount ? ` — avg paid $${topPattern.avg_paid_amount.toFixed(2)}` : ''}
+ </p>
  </div>
- <div className="flex items-center gap-2 mb-3 px-2">
+ )}
+ <div className="flex items-center gap-2 mb-3 px-2 flex-wrap">
  <span className="text-[10px] text-th-muted">Denial Risk:</span>
  {AI_LEVEL_BADGES.predictive}
- <span className="text-xs font-bold text-green-400 tabular-nums">Low (4%)</span>
+ <span className={`text-xs font-bold tabular-nums ${denialRiskClass}`}>{denialRiskLabel}</span>
+ {/* Sprint Q Track C3 — ML-predicted CARC code */}
+ {topCarc?.carc_code && (
+ <span className="text-[10px] font-bold text-th-muted px-1.5 py-0.5 rounded bg-th-surface-overlay/60 border border-th-border flex items-center gap-1"
+ title={topCarc.prevention_action || 'Predicted top CARC denial code'}>
+ <span className="material-symbols-outlined text-[10px]">smart_toy</span>
+ Predicted CARC: <span className="text-amber-400 tabular-nums">{topCarc.carc_code}</span>
+ </span>
+ )}
+ {denialCount > 0 && (
+ <span className="text-[10px] text-th-muted ml-2">({denialCount} historical denials on this combo)</span>
+ )}
  </div>
  <div className="flex justify-between items-center">
  <div className="flex items-center gap-2">
- <span className="material-symbols-outlined text-green-400 text-[16px]">verified</span>
- <span className="text-[10px] text-green-400 font-bold">NCCI/CCI: No edits found</span>
+ <span className="material-symbols-outlined text-th-muted text-[16px]">schedule</span>
+ <span className="text-[10px] text-th-muted font-bold">NCCI/CCI: Not yet connected</span>
  </div>
  <div className="flex gap-2">
  <button className="px-3 py-1.5 border border-th-border rounded text-xs font-bold text-th-heading hover:bg-th-surface-overlay transition-colors">Compare</button>
@@ -243,91 +311,8 @@ export function CodingOptimizer() {
  </div>
  </div>
  </div>
-
- {/* Suggestion Card 2 (Optimization Alert) */}
- <div className="bg-th-surface-raised border-2 border-amber-800/50 rounded-xl p-4 shadow-sm relative hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
- <div className="absolute -top-3 left-4 bg-amber-500 text-white px-2 py-0.5 rounded text-[9px] font-bold uppercase flex items-center gap-1">
- <span className="material-symbols-outlined text-[12px]">bolt</span>
- Specificity Improvement
- </div>
- <div className="flex justify-between items-start mb-3 mt-1">
- <div>
- <div className="flex items-center gap-2 mb-1">
- <span className="bg-blue-900/50 text-blue-400 px-2 py-0.5 rounded text-[10px] font-bold uppercase">ICD-10 (Optimized)</span>
- {AI_LEVEL_BADGES.prescriptive}
- </div>
- <h3 className="text-lg font-bold text-th-heading">I50.32</h3>
- <p className="text-sm text-th-secondary">Chronic diastolic (left ventricular) heart failure</p>
- </div>
- <div className="text-right">
- <div className="flex items-center gap-1 text-amber-400 font-bold text-sm">
- <span className="material-symbols-outlined text-[16px]">priority_high</span>
- <span className="tabular-nums">82%</span> Confidence
- </div>
- <div className="w-24 bg-th-surface-overlay h-1.5 rounded-full mt-1 overflow-hidden">
- <div className="bg-amber-500 h-full w-[82%]"></div>
- </div>
- </div>
- </div>
- <div className="bg-amber-900/10 p-2 rounded-lg mb-3">
- <div className="flex items-center gap-2 mb-1">
- <p className="text-xs text-amber-300 font-medium italic">Replaces: I50.9 (Heart failure, unspecified)</p>
- </div>
- <div className="flex items-center gap-2 mt-1">
- <span className="text-[10px] text-th-muted">Why this code:</span>
- {AI_LEVEL_BADGES.diagnostic}
- </div>
- <p className="text-xs text-th-secondary mt-1">Based on "bilateral basal rales" in clinical exam documentation.</p>
- </div>
- <div className="flex items-center gap-2 mb-3 px-2">
- <span className="text-[10px] text-th-muted">Denial Risk:</span>
- {AI_LEVEL_BADGES.predictive}
- <span className="text-xs font-bold text-amber-400 tabular-nums">Medium (18%)</span>
- </div>
- <div className="flex justify-between items-center">
- <div className="flex items-center gap-2">
- <span className="material-symbols-outlined text-amber-400 text-[16px]">info</span>
- <span className="text-[10px] text-amber-400 font-bold">NCCI/CCI: Review modifier pairing</span>
- </div>
- <div className="flex gap-2">
- <button className="px-4 py-1.5 bg-cyan-500 text-white rounded text-xs font-bold hover:bg-cyan-600 shadow-lg shadow-cyan-500/20 transition-all">Replace Current Code</button>
- </div>
- </div>
- </div>
-
- {/* Suggestion Card 3 (CPT) */}
- <div className="bg-th-surface-raised border border-th-border border-l-[3px] border-l-purple-500 rounded-xl p-4 shadow-sm hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
- <div className="flex justify-between items-start mb-3">
- <div>
- <div className="flex items-center gap-2 mb-1">
- <span className="bg-purple-900/50 text-purple-400 px-2 py-0.5 rounded text-[10px] font-bold uppercase">CPT (Procedure)</span>
- {AI_LEVEL_BADGES.descriptive}
- </div>
- <h3 className="text-lg font-bold text-th-heading">93000</h3>
- <p className="text-sm text-th-secondary">Electrocardiogram, routine ECG with at least 12 leads</p>
- </div>
- <div className="text-right">
- <div className="flex items-center gap-1 text-green-400 font-bold text-sm">
- <span className="material-symbols-outlined text-[16px]">check_circle</span>
- Validated
- </div>
- </div>
- </div>
- <div className="flex items-center gap-2 mb-3 px-2">
- <span className="text-[10px] text-th-muted">Denial Risk:</span>
- {AI_LEVEL_BADGES.predictive}
- <span className="text-xs font-bold text-green-400 tabular-nums">Low (2%)</span>
- </div>
- <div className="flex justify-between items-center">
- <div className="flex items-center gap-2">
- <span className="material-symbols-outlined text-green-400 text-[16px]">verified</span>
- <span className="text-[10px] text-green-400 font-bold">NCCI/CCI: No edits found</span>
- </div>
- <div className="flex gap-2">
- <button className="px-4 py-1.5 bg-th-surface-overlay text-th-muted rounded text-xs font-bold cursor-not-allowed" disabled>Already Added</button>
- </div>
- </div>
- </div>
+ );
+ })}
  </div>
  </section>
 
@@ -347,54 +332,13 @@ export function CodingOptimizer() {
  </div>
  </div>
  <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
- <div className="flex gap-3 items-start">
- <div className="size-6 rounded-full bg-green-900/40 flex items-center justify-center shrink-0">
- <span className="material-symbols-outlined text-green-400 text-[16px]">check</span>
- </div>
- <div>
- <p className="text-xs font-bold text-th-heading">Medical Necessity Found</p>
- <p className="text-[11px] text-th-muted mt-0.5">ICD-10 I20.9 is a covered diagnosis for CPT 93000 under LCD L34636.</p>
- </div>
- </div>
- <div className="flex gap-3 items-start">
- <div className="size-6 rounded-full bg-green-900/40 flex items-center justify-center shrink-0">
- <span className="material-symbols-outlined text-green-400 text-[16px]">check</span>
- </div>
- <div>
- <p className="text-xs font-bold text-th-heading">NCD Compliance</p>
- <p className="text-[11px] text-th-muted mt-0.5">Met billing frequency requirements (1 per 12 months).</p>
- </div>
- </div>
- <div className="flex gap-3 items-start">
- <div className="size-6 rounded-full bg-red-900/40 flex items-center justify-center shrink-0">
- <span className="material-symbols-outlined text-red-400 text-[16px]">warning</span>
- </div>
- <div>
- <p className="text-xs font-bold text-th-heading">Modifier Required</p>
- <p className="text-[11px] text-th-muted mt-0.5">Add Modifier -25 to E/M code as a separate procedure (EKG) was performed.</p>
- <button className="mt-1 text-[10px] text-cyan-400 font-bold hover:underline">Apply Modifier -25</button>
- </div>
- </div>
- <div className="flex gap-3 items-start">
- <div className="size-6 rounded-full bg-cyan-900/40 flex items-center justify-center shrink-0">
- <span className="material-symbols-outlined text-cyan-400 text-[16px]">fact_check</span>
- </div>
- <div>
- <div className="flex items-center gap-2 mb-0.5">
- <p className="text-xs font-bold text-th-heading">NCCI/CCI Edit Check</p>
- {AI_LEVEL_BADGES.predictive}
- </div>
- <p className="text-[11px] text-th-muted mt-0.5">No unbundling conflicts detected for current code set. CPT 93000 + E/M is compliant with modifier -25.</p>
- </div>
- </div>
- <div className="flex gap-3 items-start opacity-50">
- <div className="size-6 rounded-full bg-th-surface-overlay flex items-center justify-center shrink-0">
- <span className="material-symbols-outlined text-th-secondary text-[16px]">hourglass_empty</span>
- </div>
- <div>
- <p className="text-xs font-bold text-th-heading">MUE Validation</p>
- <p className="text-[11px] text-th-muted mt-0.5">Pending acceptance of suggested codes.</p>
- </div>
+ <div className="flex flex-col items-center justify-center text-center py-12 px-4">
+ <span className="material-symbols-outlined text-[40px] text-th-muted mb-3">rule</span>
+ <p className="text-xs font-bold text-th-heading mb-1">Rule validation not yet connected</p>
+ <p className="text-[11px] text-th-muted leading-relaxed max-w-[220px]">
+ NCCI / MUE / LCD / NCD rule engine will light up here once the
+ payer policy connector is wired in a future sprint.
+ </p>
  </div>
  </div>
  </section>

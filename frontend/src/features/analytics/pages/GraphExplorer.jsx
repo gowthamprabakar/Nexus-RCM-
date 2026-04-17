@@ -192,21 +192,10 @@ function GraphExplorer() {
     let cancelled = false;
     async function load() {
       try {
-        const data = await api.graph.getRevenueToPayers();
+        const data = await api.graph.explore({ level: 'overview' });
         if (!cancelled && data && data.nodes && data.nodes.length > 0) {
-          const nodes = data.nodes.map(n => ({
-            id: n.id || n.name,
-            type: n.type || n.label || 'Payer',
-            name: n.name || n.id,
-            props: n.properties || n.props || {},
-          }));
-          const edges = (data.edges || data.relationships || data.links || []).map(e => ({
-            source: e.source || e.from,
-            target: e.target || e.to,
-            label: e.type || e.label || 'RELATED',
-          }));
-          setAllNodes(nodes);
-          setAllEdges(edges);
+          setAllNodes(data.nodes);
+          setAllEdges(data.edges || []);
           setLoading(false);
           return;
         }
@@ -257,9 +246,46 @@ function GraphExplorer() {
     };
   }, [simNodes.length]); // restart animation when node set changes
 
-  const handleNodeClick = useCallback((node) => {
+  const handleNodeClick = useCallback(async (node) => {
     setSelectedNode(node);
-  }, []);
+
+    // Drill-down: fetch deeper data and merge into existing graph
+    let drillData = null;
+    try {
+      if (node.type === 'Payer') {
+        drillData = await api.graph.explore({ level: 'payer', payer_id: node.id });
+      } else if (node.type === 'Category') {
+        // Find the payer this category connects to
+        const parentEdge = allEdges.find(e => e.target === node.id);
+        const payerId = parentEdge ? parentEdge.source : null;
+        if (payerId) {
+          drillData = await api.graph.explore({ level: 'category', payer_id: payerId, category: node.name });
+        }
+      } else if (node.type === 'RootCause') {
+        // Find payer via edges: Category -> RootCause, Payer -> Category
+        const catEdge = allEdges.find(e => e.target === node.id && e.label === 'CAUSED_BY');
+        const catId = catEdge ? catEdge.source : null;
+        const payerEdge = catId ? allEdges.find(e => e.target === catId) : null;
+        const payerId = payerEdge ? payerEdge.source : null;
+        if (payerId) {
+          drillData = await api.graph.explore({ level: 'claims', payer_id: payerId, root_cause: node.name });
+        }
+      }
+    } catch { /* ignore drill errors */ }
+
+    if (drillData && drillData.nodes && drillData.nodes.length > 0) {
+      setAllNodes(prev => {
+        const existingIds = new Set(prev.map(n => n.id));
+        const newNodes = drillData.nodes.filter(n => !existingIds.has(n.id));
+        return newNodes.length > 0 ? [...prev, ...newNodes] : prev;
+      });
+      setAllEdges(prev => {
+        const existingKeys = new Set(prev.map(e => `${e.source}|${e.target}|${e.label}`));
+        const newEdges = (drillData.edges || []).filter(e => !existingKeys.has(`${e.source}|${e.target}|${e.label}`));
+        return newEdges.length > 0 ? [...prev, ...newEdges] : prev;
+      });
+    }
+  }, [allEdges]);
 
   const toggleFilter = useCallback((type) => {
     setFilters(prev => ({ ...prev, [type]: !prev[type] }));
@@ -346,7 +372,7 @@ function GraphExplorer() {
         <div className="flex gap-6">
 
           {/* SVG Graph Canvas */}
-          <div className="flex-1 bg-gray-900 border border-th-border rounded-xl overflow-hidden">
+          <div className="flex-1 bg-th-surface border border-th-border rounded-xl overflow-hidden">
             <svg
               ref={svgRef}
               viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
@@ -446,7 +472,7 @@ function GraphExplorer() {
           </div>
 
           {/* Detail Panel */}
-          <div className="w-[300px] shrink-0 bg-gray-900 border border-th-border rounded-xl p-5 self-start">
+          <div className="w-[300px] shrink-0 bg-th-surface border border-th-border rounded-xl p-5 self-start">
             {selectedNode ? (
               <div>
                 <div className="flex items-center gap-2 mb-4">

@@ -80,21 +80,21 @@ export function RevenueForecast() {
       setLoading(true);
       setError(null);
       try {
-        const [acc, wk, dy, l3, ai] = await Promise.all([
+        // Core data (fast): block rendering on these
+        const [acc, wk, dy, l3] = await Promise.all([
           api.forecast.prophetAccuracy().catch(() => null),
           api.forecast.prophetWeekly(weeksAhead).catch(() => null),
           api.forecast.prophetDaily(30).catch(() => null),
-          api.forecast.get3Layer(weeksAhead).catch(() => null),
-          api.ai.getInsights('forecast').catch(() => null),
+          api.forecast.get3Layer(Math.min(weeksAhead, 12)).catch(() => null),
         ]);
         if (cancelled) return;
         setAccuracy(acc);
         setWeekly(wk);
         setDaily(dy);
         setLayer3(l3);
-        setAiInsights(ai);
 
-        // Non-blocking: diagnostics + prevention
+        // Non-blocking: AI insights (slow Ollama call), diagnostics, prevention
+        api.ai.getInsights('forecast').then(ai => { if (!cancelled) setAiInsights(ai); }).catch(() => null);
         api.diagnostics.getFindings({ severity: 'critical' }).then(d => { if (!cancelled) setDiagnosticFindings(d); }).catch(() => null);
         api.prevention.scan(3).then(d => { if (!cancelled) setPreventionData(d); }).catch(() => null);
 
@@ -159,34 +159,26 @@ export function RevenueForecast() {
   }, [weekly]);
 
   const historicalAccuracy = useMemo(() => {
-    // Build week-by-week from per_payer data or generate from overall metrics
-    if (accuracy?.holdout_data) return accuracy.holdout_data;
-    // Synthesize 12-week history from overall metrics for display
-    const om = accuracy?.overall_metrics || {};
-    if (!om.total_actual) return [];
-    const weeklyActual = om.total_actual / (accuracy?.holdout_weeks || 4);
-    const mapeVal = (om.mape || 10) / 100;
-    const weeks = [];
-    const now = new Date();
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now); d.setDate(d.getDate() - i * 7);
-      const actual = weeklyActual * (0.92 + Math.random() * 0.16);
-      const predicted = actual * (1 + (Math.random() - 0.5) * mapeVal * 2);
-      weeks.push({
-        week_start: d.toISOString().split('T')[0],
-        ds: d.toISOString().split('T')[0],
-        predicted, actual,
-        variance: Math.abs(predicted - actual),
-        error_pct: Math.abs((predicted - actual) / actual) * 100,
-      });
+    // Use real holdout week-by-week data from the Prophet backend
+    const holdout = accuracy?.holdout_weeks_detail;
+    if (Array.isArray(holdout) && holdout.length > 0) {
+      return holdout.map(h => ({
+        week_start: h.week_start,
+        ds: h.week_start,
+        predicted: h.predicted,
+        actual: h.actual,
+        variance: Math.abs(h.predicted - h.actual),
+        error_pct: h.error_pct,
+      }));
     }
-    return weeks;
+    // No holdout data available -- return empty (shows empty state)
+    return [];
   }, [accuracy]);
 
   const totalProjection = useMemo(() => {
     if (weeklyRows.length) return weeklyRows.reduce((s, w) => s + (w.net_expected || 0), 0);
     if (layer3?.summary?.expected_cash_4wk) return layer3.summary.expected_cash_4wk;
-    return fallbackSummary?.total || null;
+    return fallbackSummary?.grand_total_forecasted || fallbackSummary?.total || null;
   }, [weeklyRows, layer3, fallbackSummary]);
 
   // API returns { overall_metrics: { mape, mae, r_squared } }
@@ -477,7 +469,7 @@ export function RevenueForecast() {
             {fallbackSummary ? (
               <div>
                 <p className="text-sm text-th-muted mb-3">Prophet model not available &mdash; showing legacy forecast summary</p>
-                <p className="text-2xl font-bold text-blue-400 tabular-nums">{fmt(fallbackSummary.total || fallbackSummary.expected_revenue)}</p>
+                <p className="text-2xl font-bold text-blue-400 tabular-nums">{fmt(fallbackSummary.grand_total_forecasted || fallbackSummary.total || fallbackSummary.expected_revenue)}</p>
                 <p className="text-xs text-th-muted mt-1">Estimated total revenue</p>
               </div>
             ) : (
@@ -675,7 +667,7 @@ export function RevenueForecast() {
         <div className="px-6 py-4 border-b border-th-border bg-th-surface-overlay/30 flex items-center gap-2">
           <span className="material-symbols-outlined text-purple-400 text-sm">compare_arrows</span>
           <h3 className="text-sm font-bold text-th-heading">Forecast vs Actuals</h3>
-          <span className="text-[10px] text-th-muted ml-2">Last 12 weeks accuracy</span>
+          <span className="text-[10px] text-th-muted ml-2">Holdout validation ({historicalAccuracy.length} weeks)</span>
         </div>
         {historicalAccuracy.length > 0 ? (
           <div className="p-6">
@@ -754,7 +746,8 @@ export function RevenueForecast() {
         ) : (
           <div className="p-8 text-center text-th-muted">
             <span className="material-symbols-outlined text-3xl mb-2 block">compare_arrows</span>
-            <p className="text-sm">Historical accuracy data not yet available. The model needs at least 12 weeks of actuals.</p>
+            <p className="text-sm">Holdout validation data not yet available.</p>
+            <p className="text-xs mt-1">The model needs at least 8 weeks of training data to run holdout accuracy checks.</p>
           </div>
         )}
       </div>

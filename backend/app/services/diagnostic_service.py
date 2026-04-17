@@ -67,7 +67,7 @@ async def _persist_findings(db: AsyncSession, findings: list[dict]) -> None:
             root_cause=f.get("root_causes", [None])[0] if f.get("root_causes") else None,
             recommended_action=json.dumps(f.get("recommended_actions", [])),
             status="ACTIVE",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.utcnow(),
         ).on_conflict_do_update(
             index_elements=["finding_id"],
             set_={

@@ -249,7 +249,7 @@ export function ClaimsWorkQueue() {
             <button
               disabled={selectedIds.size === 0}
               onClick={handleBatchAction}
-              className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-th-heading px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2"
+              className="bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2"
             >
               <span className="material-symbols-outlined">send</span>
               Batch Submit ({selectedIds.size})
@@ -478,7 +478,7 @@ export function ClaimsWorkQueue() {
                     className={cn(
                       "px-3 py-1 rounded text-xs font-bold transition-colors tabular-nums",
                       currentPage === pageNum
-                        ? "bg-primary text-th-heading"
+                        ? "bg-primary text-white"
                         : "text-th-secondary hover:text-th-heading hover:bg-th-surface-overlay"
                     )}
                   >

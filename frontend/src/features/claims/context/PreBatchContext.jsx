@@ -35,7 +35,12 @@ export function PreBatchProvider({ children }) {
       api.crs.getErrorCategories(),
     ]);
     if (summary) {
-      setMetrics({ ...summary, errorCategories: categories });
+      setMetrics({
+        ...DEFAULT_METRICS,
+        ...summary,
+        statusBreakdown: { ...DEFAULT_METRICS.statusBreakdown, ...(summary.statusBreakdown || {}) },
+        errorCategories: Array.isArray(categories) ? categories : [],
+      });
     }
   }, [filters.payer, filters.claimType]);
 

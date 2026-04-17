@@ -1,7 +1,12 @@
 """
 Sprint 20 — Coding Accuracy & Compliance Router
 Endpoints for coding audit, compliance patterns, suggestions, and provider analysis.
+
+Sprint Q Track C3: adds ``GET /coding/predicted-carc/{claim_id}`` which uses
+the trained CARC multi-label classifier to predict which CARC denial code(s)
+the claim is most likely to receive if denied.
 """
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -9,10 +14,32 @@ from typing import Any, Optional
 
 from app.core.deps import get_db
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # CARC codes related to coding errors
 CODING_ERROR_CARCS = ("CO-4", "CO-16", "CO-97", "4", "16", "97")
+
+# Lazy-loaded CARC prediction model singleton
+_CARC_MODEL = None
+
+
+def _get_carc_model():
+    global _CARC_MODEL
+    if _CARC_MODEL is not None:
+        return _CARC_MODEL
+    try:
+        from app.ml.carc_prediction import CARCPredictionModel
+        model = CARCPredictionModel()
+        model._load()
+        if not model.is_fitted:
+            logger.warning("CARC prediction artifact not loaded")
+            return None
+        _CARC_MODEL = model
+        return _CARC_MODEL
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("CARC prediction model unavailable: %s", exc)
+        return None
 
 
 @router.get("/audit")
@@ -325,3 +352,49 @@ async def provider_coding_patterns(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Provider patterns error: {str(e)}")
+
+
+# ---------------------------------------------------------------------------
+# Sprint Q Track C3 — CARC Prediction
+# ---------------------------------------------------------------------------
+@router.get("/predicted-carc/{claim_id}")
+async def predicted_carc(claim_id: str, db: AsyncSession = Depends(get_db)) -> Any:
+    """Predict which CARC denial code this claim is most likely to receive.
+
+    Returns the single top-scoring CARC plus a ranked ``top_3`` list with
+    per-code probability and prevention-action hint.  Falls back gracefully
+    to ``{predicted_carc: None, ...}`` if the model artifact is missing or
+    the claim has no extractable features.
+    """
+    model = _get_carc_model()
+    if model is None:
+        return {
+            "claim_id": claim_id,
+            "predicted_carc": None,
+            "confidence": None,
+            "top_3": [],
+            "note": "CARC prediction model not available",
+        }
+
+    try:
+        result = await model.predict_claim(db, claim_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("CARC predict_claim(%s) failed: %s", claim_id, exc)
+        return {
+            "claim_id": claim_id,
+            "predicted_carc": None,
+            "confidence": None,
+            "top_3": [],
+            "note": f"Prediction failed: {exc}",
+        }
+
+    top_3 = result.get("top_3_carc", []) if isinstance(result, dict) else []
+    predicted = top_3[0] if top_3 else None
+    return {
+        "claim_id": claim_id,
+        "predicted_carc": predicted.get("carc_code") if predicted else None,
+        "confidence":    predicted.get("probability") if predicted else None,
+        "prevention_action": predicted.get("prevention_action") if predicted else None,
+        "top_3": top_3,
+        "note": result.get("note") if isinstance(result, dict) else None,
+    }

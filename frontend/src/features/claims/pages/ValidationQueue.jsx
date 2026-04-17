@@ -52,10 +52,10 @@ export function ValidationQueue() {
 
  <button
  onClick={applyAllHighConfidenceFixes}
- className="h-10 px-4 bg-primary text-th-heading rounded-lg font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center gap-2"
+ className="h-10 px-4 bg-primary text-white rounded-lg font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center gap-2"
  >
  <span className="material-symbols-outlined text-sm">auto_fix_high</span>
- Applied High-Confidence Fixes
+ Apply High-Confidence Fixes
  </button>
  </div>
 
@@ -74,7 +74,7 @@ export function ValidationQueue() {
  <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-th-muted text-right">Actions</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-slate-700/30 bg-th-surface-raised/50">
+ <tbody className="divide-y divide-th-border/40 bg-th-surface-raised/50">
  {filteredClaims.length === 0 ? (
  <tr>
  <td colSpan="8" className="px-6 py-12 text-center text-th-muted">
@@ -85,7 +85,7 @@ export function ValidationQueue() {
  filteredClaims.map((claim) => (
  <tr
  key={claim.id}
- onClick={() => navigate(`/claims/pre-batch-scrub/claim/${claim.id}`)}
+ onClick={() => navigate(`/analytics/claims/claim/${claim.id}`)}
  className="hover:bg-th-surface-overlay/50 transition-colors group cursor-pointer"
  >
  <td className="px-6 py-4 font-mono text-xs font-bold text-th-secondary">{claim.id}</td>
@@ -100,8 +100,8 @@ export function ValidationQueue() {
  </td>
  <td className="px-6 py-4">
  {claim.issues.length > 0 ? (
- <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-red-900/10 text-red-400 text-xs font-bold">
- <span className="material-symbols-outlined text-[14px]">warning</span>
+ <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-th-danger/10 text-th-danger text-xs font-bold">
+ <span className="material-symbols-outlined text-[14px]" aria-hidden="true">warning</span>
  <span className="tabular-nums">{claim.issues.length}</span> Issues
  </span>
  ) : (
@@ -109,7 +109,7 @@ export function ValidationQueue() {
  )}
  </td>
  <td className="px-6 py-4 text-right">
- <button className="text-primary hover:text-primary-dark font-bold text-xs hover:underline">
+ <button className="text-primary hover:text-th-primary-hover font-bold text-xs hover:underline">
  {claim.status === 'Review Required' ? 'Fix Now' : 'View Details'}
  </button>
  </td>

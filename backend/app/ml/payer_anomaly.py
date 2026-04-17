@@ -188,7 +188,7 @@ class PayerAnomalyModel:
                 COALESCE(p.payment_count, 0) AS payment_count,
                 COALESCE(p.avg_payment, 0) AS avg_payment_amount,
                 COALESCE((
-                    SELECT at.actual_days - at.expected_days
+                    SELECT at.actual_adtp_days - at.expected_adtp_days
                     FROM adtp_trend at
                     WHERE at.payer_id = pw.payer_id
                       AND at.period_start <= pw.week
@@ -243,7 +243,7 @@ class PayerAnomalyModel:
                 COALESCE(rp.payment_count, 0),
                 COALESCE(rp.avg_payment, 0),
                 COALESCE((
-                    SELECT at.actual_days - at.expected_days
+                    SELECT at.actual_adtp_days - at.expected_adtp_days
                     FROM adtp_trend at
                     WHERE at.payer_id = pm.payer_id
                     ORDER BY at.period_start DESC

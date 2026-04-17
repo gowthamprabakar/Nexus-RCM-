@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../../../services/api';
 import { usePreBatch } from '../context/PreBatchContext';
 import { BatchReadinessMeter } from '../components/BatchReadinessMeter';
@@ -9,44 +10,11 @@ import {
   FilterChipGroup,
 } from '../../../components/ui';
 
-const STATIC_FALLBACK_SCRUB_INSIGHTS = [
-  {
-    title: 'Auto-Fix Success Rate Improving',
-    description: 'AI auto-fix accuracy reached 96.8% this week — up from 94.1% last month. Model retrained on 2,840 new approved corrections.',
-    confidence: 97,
-    impact: 'high',
-    category: 'Descriptive',
-    action: 'Expand auto-fix ruleset',
-    value: '96.8% accuracy',
-    icon: 'trending_up',
-  },
-  {
-    title: 'New Payer Rule Detected',
-    description: 'BCBS Illinois updated modifier requirements for telehealth codes. 142 pending claims affected. Rule auto-applied to new claims.',
-    confidence: 89,
-    impact: 'medium',
-    category: 'Diagnostic',
-    action: 'Review affected claims',
-    value: '142 claims affected',
-    icon: 'policy',
-  },
-  {
-    title: 'Projected Weekly Savings',
-    description: 'At current auto-fix rate, AI scrubbing will save 68 FTE hours and prevent $2.1M in denials this week.',
-    confidence: 85,
-    impact: 'high',
-    category: 'Predictive',
-    action: 'Review projection report',
-    value: '$2.1M denial prevention',
-    icon: 'savings',
-  },
-];
-
 export function ScrubDashboard() {
   const { metrics } = usePreBatch();
 
-  const [scrubAiInsights, setScrubAiInsights] = useState(STATIC_FALLBACK_SCRUB_INSIGHTS);
-  const [aiLoading, setAiLoading] = useState(false);
+  const [scrubAiInsights, setScrubAiInsights] = useState([]);
+  const [aiLoading, setAiLoading] = useState(true);
   const [dateRange, setDateRange] = useState('This Month');
 
   /* Audit-driven: denial pattern diagnostics */
@@ -55,9 +23,12 @@ export function ScrubDashboard() {
   useEffect(() => {
     setAiLoading(true);
     api.ai.getInsights('crs').then(r => {
-      if (r?.insights?.length) setScrubAiInsights(r.insights);
+      setScrubAiInsights(Array.isArray(r?.insights) ? r.insights : []);
       setAiLoading(false);
-    }).catch(() => setAiLoading(false));
+    }).catch(() => {
+      setScrubAiInsights([]);
+      setAiLoading(false);
+    });
 
     api.diagnostics.getFindings({ category: 'DENIAL_PATTERN' }).catch(() => null).then(r => r && setDenialDiagnostics(r));
   }, []);
@@ -134,8 +105,8 @@ export function ScrubDashboard() {
                 <div className="text-2xl font-black text-th-heading tabular-nums">{metrics.totalClaims}</div>
               </div>
               <div>
-                <div className="text-sm text-th-secondary">Est. Revenue</div>
-                <div className="text-2xl font-black text-emerald-400 tabular-nums">${(metrics.totalClaims * 450).toLocaleString()}</div>
+                <div className="text-sm text-th-secondary">Avg CRS Score</div>
+                <div className="text-2xl font-black text-th-success tabular-nums">{metrics.avgCrsScore != null ? Math.round(metrics.avgCrsScore) : '—'}</div>
               </div>
             </div>
           </div>
@@ -176,22 +147,22 @@ export function ScrubDashboard() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 rounded-lg bg-emerald-900/10 border border-emerald-900/30 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
                 <ValidationStatusBadge status="Passed" />
-                <div className="mt-2 text-2xl font-black text-th-heading tabular-nums">{metrics.statusBreakdown.passed}</div>
+                <div className="mt-2 text-2xl font-black text-th-heading tabular-nums">{(metrics.statusBreakdown?.passed ?? 0)}</div>
                 <div className="text-xs text-th-secondary">Clean Claims</div>
               </div>
               <div className="p-4 rounded-lg bg-blue-900/10 border border-blue-900/30 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
                 <ValidationStatusBadge status="Auto-Fixed" />
-                <div className="mt-2 text-2xl font-black text-th-heading tabular-nums">{metrics.statusBreakdown.autoFixed}</div>
+                <div className="mt-2 text-2xl font-black text-th-heading tabular-nums">{(metrics.statusBreakdown?.autoFixed ?? 0)}</div>
                 <div className="text-xs text-th-secondary">AI Corrected</div>
               </div>
               <div className="p-4 rounded-lg bg-amber-900/10 border border-amber-900/30 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
                 <ValidationStatusBadge status="Review Required" />
-                <div className="mt-2 text-2xl font-black text-th-heading tabular-nums">{metrics.statusBreakdown.reviewRequired}</div>
+                <div className="mt-2 text-2xl font-black text-th-heading tabular-nums">{(metrics.statusBreakdown?.reviewRequired ?? 0)}</div>
                 <div className="text-xs text-th-secondary">Manual Attention</div>
               </div>
               <div className="p-4 rounded-lg bg-red-900/10 border border-red-900/30 hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200">
                 <ValidationStatusBadge status="Blocked" />
-                <div className="mt-2 text-2xl font-black text-th-heading tabular-nums">{metrics.statusBreakdown.blocked}</div>
+                <div className="mt-2 text-2xl font-black text-th-heading tabular-nums">{(metrics.statusBreakdown?.blocked ?? 0)}</div>
                 <div className="text-xs text-th-secondary">Fatal Errors</div>
               </div>
             </div>
@@ -201,7 +172,7 @@ export function ScrubDashboard() {
           <div className="bg-th-surface-raised border border-th-border rounded-xl p-6">
             <h3 className="text-lg font-bold text-th-heading mb-6">Top Error Categories</h3>
             <div className="space-y-4">
-              {metrics.errorCategories.map(cat => (
+              {(metrics.errorCategories || []).map(cat => (
                 <div key={cat.id}>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="font-medium text-th-heading">{cat.label}</span>
@@ -219,14 +190,14 @@ export function ScrubDashboard() {
           </div>
         </div>
 
-        {/* ROI Banner */}
-        <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl p-6 text-th-heading shadow-lg flex items-center justify-between">
+        {/* ROI Banner — flat, terminal aesthetic */}
+        <div className="bg-th-surface-raised border border-th-border border-l-[3px] border-l-violet-500 rounded-xl p-6 flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-bold mb-1">Prevented Denial Revenue</h3>
-            <p className="text-violet-100 text-sm">Potential lost revenue caught by pre-batch Scrub this week.</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-th-muted mb-1">Prevented Denial Revenue</p>
+            <p className="text-th-secondary text-xs">Potential lost revenue caught by pre-batch Scrub this week.</p>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-black tabular-nums">${metrics.denialsPreventedValue.toLocaleString()}</div>
+            <div className="text-3xl font-black text-th-heading tabular-nums">${(metrics.denialsPreventedValue || 0).toLocaleString()}</div>
           </div>
         </div>
 
@@ -255,21 +226,37 @@ export function ScrubDashboard() {
             <span className="material-icons text-primary text-base">auto_awesome</span>
             <span className="text-th-secondary text-xs font-semibold uppercase tracking-wider">AI Intelligence</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {aiLoading ? (
-              [1, 2, 3].map(i => (
+          {aiLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {[1, 2, 3].map(i => (
                 <div key={i} className="bg-th-surface-raised border border-th-border rounded-xl p-5 space-y-3 animate-pulse">
                   <div className="h-4 w-3/4 bg-th-surface-overlay rounded" />
                   <div className="h-3 w-full bg-th-surface-overlay rounded" />
                   <div className="h-3 w-1/2 bg-th-surface-overlay rounded" />
                 </div>
-              ))
-            ) : (
-              scrubAiInsights.map((insight, i) => (
+              ))}
+            </div>
+          ) : scrubAiInsights.length === 0 ? (
+            <div className="bg-th-surface-raised border border-th-border rounded-xl p-8 flex flex-col items-center text-center">
+              <span className="material-symbols-outlined text-[40px] text-th-muted mb-3">insights</span>
+              <p className="text-sm font-bold text-th-heading mb-1">No AI insights available yet</p>
+              <p className="text-xs text-th-muted mb-4 max-w-md">
+                Run a scrub scan against the current batch to generate insights. Results will appear here once the pipeline produces them.
+              </p>
+              <Link
+                to="/analytics/claims/queue"
+                className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-all"
+              >
+                Review Validation Queue
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {scrubAiInsights.map((insight, i) => (
                 <AIInsightCard key={i} {...insight} onClick={() => {}} />
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>

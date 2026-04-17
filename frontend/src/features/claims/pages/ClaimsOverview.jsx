@@ -28,11 +28,16 @@ function DenialRiskBadge({ claimId, compact }) {
 
   const prob = risk.probability ?? risk.denial_probability ?? 0;
   const pct = Math.round(prob * 100);
-  const color = prob > 0.7 ? 'red' : prob > 0.4 ? 'amber' : 'emerald';
-  const label = prob > 0.7 ? 'HIGH' : prob > 0.4 ? 'MED' : 'LOW';
+  const variants = {
+    high:   'bg-th-danger/10 text-th-danger border-th-danger/30',
+    medium: 'bg-th-warning/10 text-th-warning border-th-warning/30',
+    low:    'bg-th-success/10 text-th-success border-th-success/30',
+  };
+  const tier = prob > 0.7 ? 'high' : prob > 0.4 ? 'medium' : 'low';
+  const label = tier.toUpperCase().slice(0, tier === 'medium' ? 3 : 4);
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-${color}-500/10 text-${color}-400 border-${color}-500/30`}>
-      {compact ? `${pct}%` : `${label} ${pct}%`}
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${variants[tier]}`}>
+      {compact ? `${pct}%` : `${label === 'MED' ? 'MED' : label} ${pct}%`}
     </span>
   );
 }
@@ -190,17 +195,19 @@ export function ClaimsOverview() {
     <div className="flex h-full font-sans text-th-heading overflow-auto p-6 custom-scrollbar">
       <div className="flex flex-col gap-6 max-w-[1600px] mx-auto w-full">
 
-        {/* ── Prevention Alert Banner ── */}
-        <div className="bg-amber-900/20 border border-amber-500/30 rounded-xl px-5 py-3 flex items-center gap-3">
-          <span className="material-symbols-outlined text-amber-400">warning</span>
-          <span className="text-sm font-bold text-amber-300">
-            {preventionRisk?.at_risk_count ?? 5} claims at risk before submission
+        {/* ── Prevention Alert Banner (only when there's something to warn about) ── */}
+        {preventionRisk && preventionRisk.at_risk_count > 0 && (
+        <div className="bg-th-warning/10 border border-th-warning/30 rounded-xl px-5 py-3 flex items-center gap-3">
+          <span className="material-symbols-outlined text-th-warning" aria-hidden="true">warning</span>
+          <span className="text-sm font-bold text-th-warning">
+            {preventionRisk.at_risk_count} claims at risk before submission
           </span>
           <span className="text-th-muted text-sm mx-1">&mdash;</span>
-          <button onClick={() => navigate('/claims/prevention')} className="text-xs font-bold text-primary hover:underline">
+          <button onClick={() => navigate('/analytics/prevention')} className="text-xs font-bold text-primary hover:underline">
             Review in Prevention Dashboard
           </button>
         </div>
+        )}
 
         {/* Header */}
         <div className="flex justify-between items-end">
@@ -498,7 +505,7 @@ export function ClaimsOverview() {
         {/* ── AI Insights ── */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <span className="material-icons text-primary text-base">auto_awesome</span>
+            <span className="material-symbols-outlined text-primary text-base" aria-hidden="true">auto_awesome</span>
             <span className="text-th-secondary text-xs font-semibold uppercase tracking-wider">AI Intelligence</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

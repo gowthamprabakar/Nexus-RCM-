@@ -107,12 +107,20 @@ export function SimulationDashboard() {
 
   const fetchPayerAgents = useCallback(async () => {
     try {
-      const data = await api.simulation.getRCMAgents();
-      if (!data) return;
-      const agents = data.agents || data || [];
-      if (Array.isArray(agents) && agents.length > 0) {
-        setPayerAgents(agents);
+      // Primary: MiroFish direct (port 5001). Empty on fresh start.
+      const rcm = await api.simulation.getRCMAgents();
+      const rcmAgents = Array.isArray(rcm?.agents) ? rcm.agents : (Array.isArray(rcm) ? rcm : []);
+
+      // Fallback: NEXUS backend live payer agents (port 8000).
+      if (rcmAgents.length === 0) {
+        const live = await api.simulation.getLivePayerAgents();
+        const liveAgents = Array.isArray(live?.agents) ? live.agents : [];
+        if (liveAgents.length > 0) {
+          setPayerAgents(liveAgents);
+          return;
+        }
       }
+      if (rcmAgents.length > 0) setPayerAgents(rcmAgents);
     } catch (err) {
       console.error('Payer agents fetch failed:', err);
     }

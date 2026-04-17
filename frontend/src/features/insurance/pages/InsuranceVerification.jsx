@@ -17,10 +17,15 @@ export function InsuranceVerification() {
      setLoading(true);
      setError(null);
      try {
+       // Resolve a real patient_id from the prior-auth queue before fetching eligibility
+       const paList = await api.patientAccess.getPriorAuth({ size: 1 }).catch(() => null);
+       const items = paList?.items || (Array.isArray(paList) ? paList : []);
+       const firstPatientId = items[0]?.patient_id || null;
+
        const [crs, denials, eligibility] = await Promise.allSettled([
          api.crs.getSummary(),
          api.denials.getSummary(),
-         api.patientAccess.getEligibility('default'),
+         firstPatientId ? api.patientAccess.getEligibility(firstPatientId) : Promise.resolve(null),
        ]);
        if (crs.status === 'fulfilled') setCrsSummary(crs.value);
        if (denials.status === 'fulfilled') setDenialsSummary(denials.value);

@@ -110,8 +110,6 @@ import { AuditLog } from './features/finance/pages/AuditLog';
 // ── Remaining pages used by legacy redirects or deep links ─────────────
 import { ClaimDenialDetail } from './features/denials/pages/ClaimDenialDetail';
 import { DenialPredictionAnalysis } from './features/denials/pages/DenialPredictionAnalysis';
-import { DenialPreventionDashboard } from './features/denials/pages/DenialPreventionDashboard';
-import { PreventionWorkspace } from './features/denials/pages/PreventionWorkspace';
 import { COBAutoManager } from './features/denials/pages/COBAutoManager';
 import { CollectionsHub } from './features/collections/pages/CollectionsHub';
 import { AccountDetailsPage } from './features/collections/pages/AccountDetailsPage';
@@ -128,7 +126,6 @@ import { AIInsightDetail } from './features/finance/pages/AIInsightDetail';
 import { PayerPaymentIntelligence } from './features/payments/pages/PayerPaymentIntelligence';
 import { ClaimsAnalytics } from './features/analytics/pages/ClaimsAnalytics';
 import { PreventionDashboard } from './features/analytics/pages/PreventionDashboard';
-import { ClaimScrubbing } from './features/claims/pages/ClaimScrubbing';
 import { ClaimValidationDetail } from './features/claims/pages/ClaimValidationDetail';
 import { ValidationQueue } from './features/claims/pages/ValidationQueue';
 import { MassScrub } from './features/claims/pages/MassScrub';
@@ -226,6 +223,9 @@ function App() {
                     <Route index element={<Navigate to="overview" replace />} />
                     <Route path="overview" element={<ClaimsOverview />} />
                     <Route path="scrub-analytics" element={<ScrubDashboard />} />
+                    <Route path="queue" element={<ValidationQueue />} />
+                    <Route path="claim/:claimId" element={<ClaimValidationDetail />} />
+                    <Route path="mass-scrub" element={<MassScrub />} />
                 </Route>
 
                 {/* ════════════════════════════════════════════════════════
@@ -279,13 +279,13 @@ function App() {
                     INTELLIGENCE
                    ════════════════════════════════════════════════════════ */}
 
-                {/* LIDA AI */}
+                {/* LIDA AI — wrapped in ErrorBoundary so one failure doesn't kill the layout */}
                 <Route path="intelligence/lida" element={<LidaLayout />}>
                     <Route index element={<Navigate to="dashboard" replace />} />
-                    <Route path="dashboard" element={<LidaDashboard />} />
-                    <Route path="chat" element={<LidaChat />} />
-                    <Route path="reports" element={<MECEReportBuilder />} />
-                    <Route path="tickets" element={<TicketHub />} />
+                    <Route path="dashboard" element={<ErrorBoundary label="LIDA Dashboard"><LidaDashboard /></ErrorBoundary>} />
+                    <Route path="chat" element={<ErrorBoundary label="LIDA Chat"><LidaChat /></ErrorBoundary>} />
+                    <Route path="reports" element={<ErrorBoundary label="MECE Report Builder"><MECEReportBuilder /></ErrorBoundary>} />
+                    <Route path="tickets" element={<ErrorBoundary label="Ticket Hub"><TicketHub /></ErrorBoundary>} />
                 </Route>
 
                 {/* Revenue Forecast */}

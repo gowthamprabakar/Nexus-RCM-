@@ -76,15 +76,12 @@ export function MassScrub() {
  </div>
  </section>
 
- {/* Dry Run Outcome */}
- <section className="bg-gradient-to-br from-[#111827] to-th-surface-overlay/50 border border-th-border rounded-xl p-6 relative overflow-hidden">
- <div className="absolute top-0 right-0 p-4 opacity-10">
- <span className="material-symbols-outlined text-9xl">science</span>
- </div>
- <h3 className="text-lg font-bold mb-6 flex items-center gap-2 relative z-10 text-th-heading">
- <span className="material-symbols-outlined text-primary">view_in_ar</span> Simulation Results (Dry Run)
+ {/* Dry Run Outcome — flat, terminal aesthetic */}
+ <section className="bg-th-surface-raised border border-th-border border-l-[3px] border-l-primary rounded-xl p-6">
+ <h3 className="text-xs font-bold uppercase tracking-wider text-th-muted mb-4 flex items-center gap-2">
+ <span className="material-symbols-outlined text-primary text-base" aria-hidden="true">view_in_ar</span> Simulation Results (Dry Run)
  </h3>
- <div className="grid grid-cols-3 gap-6 relative z-10">
+ <div className="grid grid-cols-3 gap-6">
  <div>
  <p className="text-xs font-semibold uppercase tracking-wider text-th-muted mb-1">Impacted Claims</p>
  <p className="text-3xl font-black text-th-heading tabular-nums">4,821</p>
@@ -98,12 +95,12 @@ export function MassScrub() {
  <p className="text-3xl font-black text-rose-500 tabular-nums">128</p>
  </div>
  </div>
- <div className="mt-6 pt-6 border-t border-th-border relative z-10">
- <p className="text-sm text-th-secondary italic mb-4">
- <span className="font-bold text-primary">Note:</span> Running this job will lock the selected claims for approximately 45 minutes.
+ <div className="mt-6 pt-6 border-t border-th-border">
+ <p className="text-xs text-th-secondary mb-4">
+ <span className="font-bold text-th-heading">Heads up —</span> this job locks the selected claims for ~45 minutes.
  </p>
- <button className="w-full py-4 bg-primary text-[#0B1120] rounded-xl font-bold text-lg shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:brightness-110 hover:scale-[1.01] transition-all flex items-center justify-center gap-2">
- <span className="material-symbols-outlined">play_circle</span> Execute Mass Scrub
+ <button className="w-full py-3 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+ <span className="material-symbols-outlined text-base" aria-hidden="true">play_circle</span> Execute Mass Scrub
  </button>
  </div>
  </section>
@@ -119,7 +116,7 @@ export function MassScrub() {
  {[1, 2, 3, 4, 5].map((i) => (
  <div key={i} className="flex gap-3">
  <div className="flex flex-col items-center gap-1">
- <div className="size-2 rounded-full bg-th-surface-overlay/300"></div>
+ <div className="size-2 rounded-full bg-th-muted/30"></div>
  <div className="w-px h-full bg-th-surface-overlay"></div>
  </div>
  <div className="pb-4">

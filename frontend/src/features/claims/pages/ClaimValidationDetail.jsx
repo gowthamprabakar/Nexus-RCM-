@@ -107,6 +107,34 @@ export function ClaimValidationDetail() {
                   {Math.round(claim.confidenceScore * 100)}%
                 </div>
               </div>
+              {/* ML-predicted denial risk — Sprint Q Track C1 */}
+              {typeof claim.predicted_denial_probability === 'number' && (() => {
+                const pct = Math.round(claim.predicted_denial_probability * 100);
+                const color = pct >= 70
+                  ? 'text-red-400'
+                  : pct >= 30
+                    ? 'text-amber-400'
+                    : 'text-emerald-400';
+                const bg = pct >= 70
+                  ? 'bg-red-900/20 border-red-800/40'
+                  : pct >= 30
+                    ? 'bg-amber-900/20 border-amber-800/40'
+                    : 'bg-emerald-900/20 border-emerald-800/40';
+                return (
+                  <div className={`text-center px-3 py-1.5 rounded-lg border ${bg}`} title="ML-predicted denial probability based on 25 features">
+                    <div className="text-[9px] font-bold text-th-secondary uppercase tracking-widest mb-0.5 flex items-center justify-center gap-1">
+                      <span className="material-symbols-outlined text-[11px]">smart_toy</span>
+                      Predicted Denial Risk
+                    </div>
+                    <div className={`text-2xl font-black tabular-nums ${color}`}>{pct}%</div>
+                    {claim.predicted_denial_risk_level && (
+                      <div className={`text-[9px] font-bold uppercase tracking-wider ${color}`}>
+                        {claim.predicted_denial_risk_level}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="flex gap-2">
@@ -116,7 +144,7 @@ export function ClaimValidationDetail() {
               >
                 Close
               </button>
-              <button className="h-9 px-6 bg-primary text-th-heading rounded-lg font-bold text-xs shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center gap-2 active:scale-95">
+              <button className="h-9 px-6 bg-primary text-white rounded-lg font-bold text-xs shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center gap-2 active:scale-95">
                 <span className="material-symbols-outlined text-sm">save</span>
                 Save Changes
               </button>

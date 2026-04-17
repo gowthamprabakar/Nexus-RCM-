@@ -226,8 +226,8 @@ async def run_scenario(
                 COUNT(DISTINCT c.claim_id) AS total_claims,
                 COUNT(DISTINCT d.denial_id) AS total_denials,
                 COALESCE(SUM(d.denial_amount), 0) AS total_denied_amount,
-                COALESCE(SUM(c.amount), 0) AS total_claim_amount,
-                COALESCE(AVG(c.amount), 0) AS avg_claim_amount
+                COALESCE(SUM(c.total_charges), 0) AS total_claim_amount,
+                COALESCE(AVG(c.total_charges), 0) AS avg_claim_amount
             FROM claims c
             LEFT JOIN denials d ON c.claim_id = d.claim_id
         """))

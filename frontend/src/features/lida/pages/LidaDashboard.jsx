@@ -72,6 +72,29 @@ export function LidaDashboard() {
   const [filterPayer, setFilterPayer] = useState('All');
   const [filterInsightType, setFilterInsightType] = useState('All');
 
+  // Compute start_date and end_date from the filterDateRange label
+  const computeDateRange = (label) => {
+    const end = new Date();
+    const start = new Date();
+    switch (label) {
+      case 'Last 7 Days':   start.setDate(end.getDate() - 7); break;
+      case 'Last 14 Days':  start.setDate(end.getDate() - 14); break;
+      case 'Last 30 Days':  start.setDate(end.getDate() - 30); break;
+      case 'Last 60 Days':  start.setDate(end.getDate() - 60); break;
+      case 'Last 90 Days':  start.setDate(end.getDate() - 90); break;
+      case 'Last 6 Months': start.setMonth(end.getMonth() - 6); break;
+      case 'Last 12 Months': start.setFullYear(end.getFullYear() - 1); break;
+      case 'Year to Date':  start.setMonth(0, 1); break;
+      default:              start.setDate(end.getDate() - 30); break;
+    }
+    return {
+      start_date: start.toISOString().split('T')[0],
+      end_date:   end.toISOString().split('T')[0],
+    };
+  };
+
+  const dateRange = computeDateRange(filterDateRange);
+
   // ── Load LIDA health + datasets on mount ──
   useEffect(() => {
     api.lida.health().then(r => {
@@ -85,40 +108,42 @@ export function LidaDashboard() {
     }).catch(() => setDatasetsLoading(false));
   }, []);
 
-  // ── Load quick stats from existing APIs ──
+  // ── Load quick stats from existing APIs (re-fetch when date changes) ──
   useEffect(() => {
+    setStatsLoading(true);
     Promise.all([
-      api.denials.getSummary(),
-      api.payments.getSummary(),
-      api.ar.getSummary(),
+      api.denials.getSummary(dateRange.start_date, dateRange.end_date),
+      api.payments.getSummary(dateRange.start_date, dateRange.end_date),
+      api.ar.getSummary(dateRange.start_date, dateRange.end_date),
     ]).then(([d, p, a]) => {
       setDenialsSummary(d);
       setPaymentsSummary(p);
       setArSummary(a);
       setStatsLoading(false);
     }).catch(() => setStatsLoading(false));
-  }, []);
+  }, [dateRange.start_date, dateRange.end_date]);
 
-  // ── Load AI insights ──
+  // ── Load AI insights (re-fetch when date changes) ──
   useEffect(() => {
     setAiLoading(true);
-    api.ai.getInsights('lida').then(r => {
+    api.ai.getInsights('lida', dateRange.start_date, dateRange.end_date).then(r => {
       if (r?.insights?.length) setLidaAiInsights(r.insights);
+      else setLidaAiInsights([]);
       setAiLoading(false);
     }).catch(() => setAiLoading(false));
-  }, []);
+  }, [dateRange.start_date, dateRange.end_date]);
 
-  // ── Load goals when selectedDataset changes ──
+  // ── Load goals when selectedDataset or date range changes ──
   useEffect(() => {
     setGoalsLoading(true);
-    api.lida.goals(selectedDataset, 5).then(r => {
+    api.lida.goals(selectedDataset, 5, dateRange.start_date, dateRange.end_date).then(r => {
       setGoals(r?.goals || []);
       setGoalsLoading(false);
     }).catch(() => {
       setGoals([]);
       setGoalsLoading(false);
     });
-  }, [selectedDataset]);
+  }, [selectedDataset, dateRange.start_date, dateRange.end_date]);
 
   const fmt = (v) => {
     if (v == null) return '--';
@@ -285,7 +310,7 @@ export function LidaDashboard() {
       <button
         onClick={() => {
           setGoalsLoading(true);
-          api.lida.goals(selectedDataset, 5).then(r => {
+          api.lida.goals(selectedDataset, 5, dateRange.start_date, dateRange.end_date).then(r => {
             setGoals(r?.goals || []);
             setGoalsLoading(false);
           }).catch(() => setGoalsLoading(false));
@@ -318,7 +343,7 @@ export function LidaDashboard() {
             ].map((g) => (
               <button
                 key={g.label}
-                onClick={() => navigate(`/intelligence/lida/chat?q=${encodeURIComponent(g.q)}`)}
+                onClick={() => navigate(`/intelligence/lida/chat?q=${encodeURIComponent(g.q)}&start_date=${dateRange.start_date}&end_date=${dateRange.end_date}`)}
                 className="text-left bg-th-surface-raised border border-th-border rounded-xl p-4 hover:-translate-y-0.5 hover:shadow-lg hover:border-purple-500/50 transition-all duration-200 cursor-pointer group"
               >
                 <div className="flex items-center gap-2 mb-1">
@@ -334,7 +359,7 @@ export function LidaDashboard() {
         goals.map((goal, idx) => (
           <button
             key={idx}
-            onClick={() => navigate(`/intelligence/lida/chat?q=${encodeURIComponent(goal.question)}`)}
+            onClick={() => navigate(`/intelligence/lida/chat?q=${encodeURIComponent(goal.question)}&start_date=${dateRange.start_date}&end_date=${dateRange.end_date}`)}
             className="text-left bg-th-surface-raised border border-th-border rounded-xl p-4 hover:-translate-y-0.5 hover:shadow-lg hover:border-purple-500/50 transition-all duration-200 cursor-pointer group"
           >
             <div className="flex items-start gap-2 mb-2">

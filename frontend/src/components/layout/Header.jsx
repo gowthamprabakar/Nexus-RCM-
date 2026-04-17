@@ -21,6 +21,17 @@ const ROUTE_META = {
     '/insurance-verification/benefits': { title: 'Benefit Analytics', section: 'Patient Access' },
     '/insurance-verification/history': { title: 'Verification History', section: 'Patient Access' },
     '/patient-accounts': { title: 'Patient Accounts', section: 'Patient Access' },
+    // Canonical Phase 3 Prevent / Patient Access paths
+    '/specialty/patient-access': { title: 'Patient Access Hub', section: 'Prevent' },
+    '/specialty/patient-access/overview': { title: 'Patient Access Hub', section: 'Prevent' },
+    '/specialty/patient-access/eligibility': { title: 'Eligibility Verification', section: 'Prevent', subtitle: '270/271 Transactions' },
+    '/specialty/patient-access/auths': { title: 'Prior Authorization', section: 'Prevent' },
+    '/specialty/patient-access/benefits': { title: 'Benefit Analytics', section: 'Prevent' },
+    '/specialty/patient-access/history': { title: 'Verification History', section: 'Prevent' },
+    '/specialty/patient-access/accounts': { title: 'Patient Accounts', section: 'Prevent' },
+    '/analytics/claims/queue': { title: 'Validation Queue', section: 'Prevent' },
+    '/analytics/claims/scrub': { title: 'Claim Scrubbing', section: 'Prevent' },
+    '/analytics/claims/mass-scrub': { title: 'Mass Scrub', section: 'Prevent' },
 
     '/ai-coding': { title: 'AI Coding Optimizer', section: 'Coding & Charge' },
     '/ai-coding/audit': { title: 'Coding Audit & Review', section: 'Coding & Charge' },

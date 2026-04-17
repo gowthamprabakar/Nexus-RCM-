@@ -737,6 +737,7 @@ async def get_forecast_accuracy(
     per_payer_metrics: List[Dict] = []
     all_actuals = []
     all_preds = []
+    all_holdout_weeks_detail: List[Dict] = []
 
     for pid in payer_ids:
         pdf = df[df["payer_id"] == pid].copy().reset_index(drop=True)
@@ -769,6 +770,29 @@ async def get_forecast_accuracy(
         if min_len == 0:
             continue
 
+        # Collect per-week holdout detail (predicted vs actual)
+        payer_holdout_detail: List[Dict] = []
+        for wi in range(min_len):
+            ds = test_df["ds"].iloc[wi]
+            if isinstance(ds, pd.Timestamp):
+                ds = ds.date()
+            actual_val = float(actuals[wi])
+            pred_val = float(preds[wi])
+            error_pct = (
+                abs(pred_val - actual_val) / abs(actual_val) * 100
+                if actual_val != 0
+                else 0.0
+            )
+            week_detail = {
+                "week_start": str(ds),
+                "predicted": round(pred_val, 2),
+                "actual": round(actual_val, 2),
+                "error_pct": round(error_pct, 2),
+                "payer_id": pid,
+            }
+            payer_holdout_detail.append(week_detail)
+            all_holdout_weeks_detail.append(week_detail)
+
         mae = float(np.mean(np.abs(actuals - preds)))
         mape = float(
             np.mean(np.abs((actuals - preds) / np.where(actuals == 0, 1, actuals)))
@@ -788,6 +812,7 @@ async def get_forecast_accuracy(
             "mae": round(mae, 2),
             "mape": round(mape, 2),
             "r_squared": round(r2, 4),
+            "holdout_weeks_detail": payer_holdout_detail,
         })
 
         all_actuals.extend(actuals.tolist())
@@ -813,11 +838,39 @@ async def get_forecast_accuracy(
             "total_predicted": round(float(np.sum(p)), 2),
         }
 
+    # Aggregate holdout detail across payers by week_start
+    # (sum predicted/actual for each week, recalculate error_pct)
+    agg_holdout: Dict[str, Dict[str, float]] = {}
+    for hw in all_holdout_weeks_detail:
+        ws = hw["week_start"]
+        if ws not in agg_holdout:
+            agg_holdout[ws] = {"predicted": 0.0, "actual": 0.0}
+        agg_holdout[ws]["predicted"] += hw["predicted"]
+        agg_holdout[ws]["actual"] += hw["actual"]
+
+    holdout_weeks_agg: List[Dict] = []
+    for ws in sorted(agg_holdout.keys()):
+        entry = agg_holdout[ws]
+        actual_val = entry["actual"]
+        pred_val = entry["predicted"]
+        error_pct = (
+            abs(pred_val - actual_val) / abs(actual_val) * 100
+            if actual_val != 0
+            else 0.0
+        )
+        holdout_weeks_agg.append({
+            "week_start": ws,
+            "predicted": round(pred_val, 2),
+            "actual": round(actual_val, 2),
+            "error_pct": round(error_pct, 2),
+        })
+
     result = {
         "status": "ok",
         "model_backend": _MODEL_BACKEND,
         "payer_id": payer_id,
         "holdout_weeks": holdout_weeks,
+        "holdout_weeks_detail": holdout_weeks_agg,
         "generated_at": str(date.today()),
         "overall_metrics": overall_metrics,
         "per_payer": per_payer_metrics,

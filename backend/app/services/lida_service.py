@@ -224,17 +224,40 @@ def _prepare_dataframe_for_csv(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-async def get_rcm_dataframe(db: AsyncSession, dataset: str = "denials") -> pd.DataFrame:
+async def get_rcm_dataframe(
+    db: AsyncSession, dataset: str = "denials",
+    start_date: Optional[str] = None, end_date: Optional[str] = None,
+) -> pd.DataFrame:
     """Extract RCM data as a pandas DataFrame for LIDA analysis.
     Uses DataFrame cache (TTL=5 min) to avoid redundant DB queries.
+    When start_date/end_date are provided, the query is filtered by the
+    appropriate date column for each dataset.
     """
-    # FIX 4: Check DataFrame cache first
-    key = dataset
+    # FIX 4: Check DataFrame cache first (include date range in key)
+    key = f"{dataset}:{start_date or ''}:{end_date or ''}"
     if key in _df_cache and (datetime.now() - _df_cache[key]['ts']).total_seconds() < 300:
         return _df_cache[key]['df']
 
+    # Build optional date WHERE clause per dataset
+    date_col_map = {
+        "denials": "d.denial_date",
+        "payments": "e.payment_date",
+        "claims": "c.date_of_service",
+        "ar": "c.date_of_service",
+        "reconciliation": "br.week_start_date",
+    }
+    date_col = date_col_map.get(dataset, "d.denial_date")
+    date_filter = ""
+    params = {}
+    if start_date:
+        date_filter += f" AND {date_col} >= :start_date"
+        params["start_date"] = start_date
+    if end_date:
+        date_filter += f" AND {date_col} <= :end_date"
+        params["end_date"] = end_date
+
     queries = {
-        "denials": """
+        "denials": f"""
             SELECT d.denial_id, d.denial_category, d.carc_code, d.denial_amount,
                    d.denial_date, c.payer_id, pm.payer_name, pm.payer_group,
                    c.total_charges, c.status, c.date_of_service,
@@ -243,44 +266,48 @@ async def get_rcm_dataframe(db: AsyncSession, dataset: str = "denials") -> pd.Da
             JOIN claims c ON d.claim_id = c.claim_id
             JOIN payer_master pm ON c.payer_id = pm.payer_id
             LEFT JOIN root_cause_analysis rca ON d.denial_id = rca.denial_id
+            WHERE 1=1{date_filter}
             ORDER BY d.denial_date DESC NULLS LAST LIMIT 5000
         """,
-        "payments": """
+        "payments": f"""
             SELECT e.era_id, e.payment_amount, e.payment_date, e.allowed_amount,
                    e.co_amount, e.pr_amount, e.oa_amount,
                    pm.payer_name, pm.payer_group
             FROM era_payments e
             JOIN payer_master pm ON e.payer_id = pm.payer_id
+            WHERE 1=1{date_filter}
             ORDER BY e.payment_date DESC NULLS LAST LIMIT 5000
         """,
-        "claims": """
+        "claims": f"""
             SELECT c.claim_id, c.status, c.total_charges, c.date_of_service,
                    c.submission_date, c.crs_score, c.crs_passed,
                    pm.payer_name, pm.payer_group
             FROM claims c
             JOIN payer_master pm ON c.payer_id = pm.payer_id
+            WHERE 1=1{date_filter}
             ORDER BY c.date_of_service DESC NULLS LAST LIMIT 5000
         """,
-        "ar": """
+        "ar": f"""
             SELECT c.claim_id, c.total_charges, c.status, c.date_of_service,
                    c.submission_date, pm.payer_name,
                    CURRENT_DATE - c.date_of_service AS days_outstanding
             FROM claims c
             JOIN payer_master pm ON c.payer_id = pm.payer_id
-            WHERE c.status NOT IN ('PAID', 'WRITTEN_OFF', 'VOIDED')
+            WHERE c.status NOT IN ('PAID', 'WRITTEN_OFF', 'VOIDED'){date_filter}
             ORDER BY c.date_of_service ASC NULLS LAST LIMIT 5000
         """,
-        "reconciliation": """
+        "reconciliation": f"""
             SELECT br.payer_name, br.era_received_amount, br.bank_deposit_amount,
                    br.era_bank_variance, br.reconciliation_status, br.float_days,
                    br.week_start_date
             FROM bank_reconciliation br
+            WHERE 1=1{date_filter}
             ORDER BY br.week_start_date DESC NULLS LAST LIMIT 2000
         """
     }
 
     query = queries.get(dataset, queries["denials"])
-    result = await db.execute(text(query))
+    result = await db.execute(text(query), params)
     rows = result.all()
     columns = result.keys()
     df = pd.DataFrame(rows, columns=columns)
@@ -290,13 +317,16 @@ async def get_rcm_dataframe(db: AsyncSession, dataset: str = "denials") -> pd.Da
     return df
 
 
-async def summarize_dataset(db: AsyncSession, dataset: str = "denials") -> dict:
+async def summarize_dataset(
+    db: AsyncSession, dataset: str = "denials",
+    start_date: Optional[str] = None, end_date: Optional[str] = None,
+) -> dict:
     """Generate LIDA statistical summary of an RCM dataset."""
     manager = get_lida_manager()
     if not manager:
         return {"error": "LIDA not available", "available": False}
 
-    df = await get_rcm_dataframe(db, dataset)
+    df = await get_rcm_dataframe(db, dataset, start_date=start_date, end_date=end_date)
     if df.empty:
         return {"error": "No data", "dataset": dataset}
 
@@ -322,13 +352,16 @@ async def summarize_dataset(db: AsyncSession, dataset: str = "denials") -> dict:
         os.unlink(tmp.name)
 
 
-async def generate_goals(db: AsyncSession, dataset: str = "denials", n: int = 5) -> dict:
+async def generate_goals(
+    db: AsyncSession, dataset: str = "denials", n: int = 5,
+    start_date: Optional[str] = None, end_date: Optional[str] = None,
+) -> dict:
     """Generate visualization goals from RCM data."""
     manager = get_lida_manager()
     if not manager:
         return {"error": "LIDA not available"}
 
-    df = await get_rcm_dataframe(db, dataset)
+    df = await get_rcm_dataframe(db, dataset, start_date=start_date, end_date=end_date)
     import tempfile, os
     tmp = tempfile.NamedTemporaryFile(suffix='.csv', delete=False)
     clean_df = _prepare_dataframe_for_csv(df)
@@ -347,10 +380,13 @@ async def generate_goals(db: AsyncSession, dataset: str = "denials", n: int = 5)
         os.unlink(tmp.name)
 
 
-async def generate_visualization(db: AsyncSession, dataset: str = "denials", question: str = None) -> dict:
+async def generate_visualization(
+    db: AsyncSession, dataset: str = "denials", question: str = None,
+    start_date: Optional[str] = None, end_date: Optional[str] = None,
+) -> dict:
     """Generate a visualization for a specific question."""
     manager = get_lida_manager()
-    df = await get_rcm_dataframe(db, dataset)
+    df = await get_rcm_dataframe(db, dataset, start_date=start_date, end_date=end_date)
 
     if df.empty:
         return {"error": "No data", "dataset": dataset, "charts": []}
@@ -598,7 +634,10 @@ async def _generate_fallback_chart(df: pd.DataFrame, question: str) -> Optional[
         return None
 
 
-async def answer_question(db: AsyncSession, question: str, dataset: str = "auto") -> dict:
+async def answer_question(
+    db: AsyncSession, question: str, dataset: str = "auto",
+    start_date: Optional[str] = None, end_date: Optional[str] = None,
+) -> dict:
     """Answer a natural language question about RCM data using our ontology + LIDA."""
 
     # Step 1: Auto-detect dataset FIRST (needed for cache key)

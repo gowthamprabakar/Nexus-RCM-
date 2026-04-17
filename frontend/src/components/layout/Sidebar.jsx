@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useCollectionsSummary } from '../../hooks/useCollectionsSummary';
+import { usePreventSummary } from '../../hooks/usePreventSummary';
 
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
@@ -50,6 +51,7 @@ const SectionHeader = ({ label }) => (
 export function Sidebar() {
     const { badgeText: collectionsBadge, loading: collectionsLoading } = useCollectionsSummary({ pollMs: 60000 });
     const collectionsBadgeText = collectionsLoading ? '—' : collectionsBadge;
+    const preventSummary = usePreventSummary();
 
     return (
         <aside className="w-[240px] bg-th-surface-sidebar border-r border-th-border flex flex-col h-screen shrink-0 font-sans z-20 transition-colors duration-200">
@@ -81,11 +83,11 @@ export function Sidebar() {
                 {/* ── PREVENT ── */}
                 <SectionHeader label="🛡 Prevent" />
                 <div className="space-y-0.5 mb-1">
-                    <SidebarLink to="/analytics/claims"       icon="fact_check"     label="Claim Readiness"    badge="8" />
-                    <SidebarLink to="/analytics/prevention"   icon="health_and_safety" label="Prevention Engine" badge="12" />
-                    <SidebarLink to="/specialty/patient-access" icon="person_check"  label="Patient Access" />
-                    <SidebarLink to="/specialty/coding"        icon="code"           label="Coding Optimizer"   isNew />
-                    <SidebarLink to="/work/automation"         icon="smart_toy"      label="Automation Rules"   badge="14" />
+                    <SidebarLink to="/analytics/claims"       icon="fact_check"     label="Claim Readiness"    badge={preventSummary?.claim_readiness?.count} />
+                    <SidebarLink to="/analytics/prevention"   icon="health_and_safety" label="Prevention Engine" badge={preventSummary?.prevention_engine?.count} />
+                    <SidebarLink to="/specialty/patient-access" icon="person_check"  label="Patient Access"     badge={preventSummary?.patient_access?.count} />
+                    <SidebarLink to="/specialty/coding"        icon="code"           label="Coding Optimizer"   badge={preventSummary?.coding_optimizer?.count} isNew={!preventSummary?.coding_optimizer?.count} />
+                    <SidebarLink to="/work/automation"         icon="smart_toy"      label="Automation Rules"   badge={preventSummary?.automation_rules?.active} />
                 </div>
 
                 <div className="mx-3 my-2 h-px bg-th-border" />

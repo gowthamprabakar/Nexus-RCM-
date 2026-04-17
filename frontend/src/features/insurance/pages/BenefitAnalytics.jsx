@@ -13,10 +13,15 @@ export function BenefitAnalytics() {
      setLoading(true);
      setError(null);
      try {
+       // Resolve a real patient_id from the prior-auth queue before fetching benefits
+       const paList = await api.patientAccess.getPriorAuth({ size: 1 }).catch(() => null);
+       const items = paList?.items || (Array.isArray(paList) ? paList : []);
+       const firstPatientId = items[0]?.patient_id || null;
+
        const [ar, payments, benefits] = await Promise.allSettled([
          api.ar.getSummary(),
          api.payments.getSummary(),
-         api.patientAccess.getBenefits('default'),
+         firstPatientId ? api.patientAccess.getBenefits(firstPatientId) : Promise.resolve(null),
        ]);
        if (ar.status === 'fulfilled') setArSummary(ar.value);
        if (payments.status === 'fulfilled') setPaymentsSummary(payments.value);

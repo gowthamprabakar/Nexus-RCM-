@@ -5,26 +5,42 @@ import { cn } from '../../../lib/utils';
 import { AIInsightCard } from '../../../components/ui';
 
 // ── Severity helpers ────────────────────────────────────────────────────────
+// Use semantic th-* tokens where possible for WCAG AA + auto light/dark.
 const SEVERITY_CONFIG = {
-    CRITICAL: { bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500', dot: 'bg-red-500', label: 'Critical' },
-    WARNING:  { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500', dot: 'bg-amber-500', label: 'Warning' },
-    INFO:     { bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-blue-500', dot: 'bg-blue-500', label: 'Info' },
+    CRITICAL: { bg: 'bg-th-danger/15',  text: 'text-th-danger',  dot: 'bg-th-danger',  icon: 'error',    label: 'Critical' },
+    WARNING:  { bg: 'bg-th-warning/15', text: 'text-th-warning', dot: 'bg-th-warning', icon: 'warning',  label: 'Warning'  },
+    INFO:     { bg: 'bg-th-info/15',    text: 'text-th-info',    dot: 'bg-th-info',    icon: 'info',     label: 'Info'     },
 };
 
 const TYPE_CONFIG = {
-    ELIGIBILITY_RISK:     { icon: 'person_off',     label: 'Eligibility Risk',       color: 'red' },
-    AUTH_EXPIRY:          { icon: 'schedule',        label: 'Auth Expiry',            color: 'amber' },
-    TIMELY_FILING_RISK:   { icon: 'timer_off',      label: 'Timely Filing Risk',     color: 'orange' },
-    DUPLICATE_CLAIM:      { icon: 'content_copy',    label: 'Duplicate Claim',        color: 'purple' },
-    HIGH_RISK_PAYER_CPT:  { icon: 'warning',         label: 'High-Risk Payer/CPT',   color: 'rose' },
+    ELIGIBILITY_RISK:     { icon: 'person_off',    label: 'Eligibility Risk',    color: 'red'    },
+    AUTH_EXPIRY:          { icon: 'schedule',      label: 'Auth Expiry',         color: 'amber'  },
+    TIMELY_FILING_RISK:   { icon: 'timer_off',     label: 'Timely Filing Risk',  color: 'orange' },
+    DUPLICATE_CLAIM:      { icon: 'content_copy',  label: 'Duplicate Claim',     color: 'purple' },
+    HIGH_RISK_PAYER_CPT:  { icon: 'warning',       label: 'High-Risk Payer/CPT', color: 'rose'   },
+    // Sprint Q Track C2 — ML-powered rule types
+    PAYER_ANOMALY:        { icon: 'insights',      label: 'Payer Anomaly',       color: 'violet', ml: true },
+    HIGH_DENIAL_RISK:     { icon: 'bolt',          label: 'High Denial Risk',    color: 'cyan',   ml: true },
 };
 
 const TYPE_COLORS = {
-    red:    { bg: 'bg-red-500/10',    border: 'border-red-500/30',    text: 'text-red-400',    hoverBorder: 'hover:border-red-500/60' },
-    amber:  { bg: 'bg-amber-500/10',  border: 'border-amber-500/30',  text: 'text-amber-400',  hoverBorder: 'hover:border-amber-500/60' },
+    red:    { bg: 'bg-red-500/10',    border: 'border-red-500/30',    text: 'text-red-400',    hoverBorder: 'hover:border-red-500/60'    },
+    amber:  { bg: 'bg-amber-500/10',  border: 'border-amber-500/30',  text: 'text-amber-400',  hoverBorder: 'hover:border-amber-500/60'  },
     orange: { bg: 'bg-orange-500/10', border: 'border-orange-500/30', text: 'text-orange-400', hoverBorder: 'hover:border-orange-500/60' },
     purple: { bg: 'bg-purple-500/10', border: 'border-purple-500/30', text: 'text-purple-400', hoverBorder: 'hover:border-purple-500/60' },
-    rose:   { bg: 'bg-rose-500/10',   border: 'border-rose-500/30',   text: 'text-rose-400',   hoverBorder: 'hover:border-rose-500/60' },
+    rose:   { bg: 'bg-rose-500/10',   border: 'border-rose-500/30',   text: 'text-rose-400',   hoverBorder: 'hover:border-rose-500/60'   },
+    violet: { bg: 'bg-violet-500/10', border: 'border-violet-500/30', text: 'text-violet-400', hoverBorder: 'hover:border-violet-500/60' },
+    cyan:   { bg: 'bg-cyan-500/10',   border: 'border-cyan-500/30',   text: 'text-cyan-400',   hoverBorder: 'hover:border-cyan-500/60'   },
+};
+
+// Static accent map for KPI cards — Tailwind JIT needs full literal class strings
+const KPI_ACCENT = {
+    red:     { rail: 'border-l-red-500',     icon: 'text-red-400'     },
+    amber:   { rail: 'border-l-amber-500',   icon: 'text-amber-400'   },
+    emerald: { rail: 'border-l-emerald-500', icon: 'text-emerald-400' },
+    blue:    { rail: 'border-l-blue-500',    icon: 'text-blue-400'    },
+    violet:  { rail: 'border-l-violet-500',  icon: 'text-violet-400'  },
+    cyan:    { rail: 'border-l-cyan-500',    icon: 'text-cyan-400'    },
 };
 
 const fmt = (v) => {
@@ -35,11 +51,12 @@ const fmt = (v) => {
 };
 
 // ── Severity Badge ──────────────────────────────────────────────────────────
+// Uses semantic th-* tokens (auto-theme-aware, WCAG AA) + icon for non-color distinction
 function SeverityBadge({ severity }) {
     const cfg = SEVERITY_CONFIG[severity] || SEVERITY_CONFIG.INFO;
     return (
         <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide', cfg.bg, cfg.text)}>
-            <span className={cn('size-1.5 rounded-full', cfg.dot)} />
+            <span className="material-symbols-outlined text-[12px]" aria-hidden="true">{cfg.icon}</span>
             {cfg.label}
         </span>
     );
@@ -47,14 +64,15 @@ function SeverityBadge({ severity }) {
 
 // ── KPI Card ────────────────────────────────────────────────────────────────
 function KPICard({ label, value, icon, accentColor, subtitle }) {
+    const accent = KPI_ACCENT[accentColor] || KPI_ACCENT.blue;
     return (
         <div className={cn(
             'flex flex-col gap-2 rounded-xl p-5 bg-th-surface-raised border border-th-border border-l-[3px] hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200',
-            `border-l-${accentColor}-500`
+            accent.rail
         )}>
             <div className="flex items-center justify-between">
                 <p className="text-th-secondary text-sm font-medium">{label}</p>
-                <span className={cn('material-symbols-outlined text-lg', `text-${accentColor}-400`)}>{icon}</span>
+                <span className={cn('material-symbols-outlined text-lg', accent.icon)} aria-hidden="true">{icon}</span>
             </div>
             <p className="text-th-heading text-2xl font-bold tabular-nums">{value}</p>
             {subtitle && <p className="text-th-muted text-xs">{subtitle}</p>}
@@ -104,6 +122,8 @@ export function PreventionDashboard() {
     const [filters, setFilters] = useState({ prevention_type: '', severity: '', payer: '' });
     const [aiInsights, setAiInsights] = useState([]);
     const [rootCauseDist, setRootCauseDist] = useState(null);
+    const [undoToast, setUndoToast] = useState(null); // { alert_id, timer, label }
+    const [liveStatus, setLiveStatus] = useState(''); // aria-live announcement
 
     // ── Data fetching ────────────────────────────────────────────────────
     const fetchData = useCallback(async () => {
@@ -151,10 +171,33 @@ export function PreventionDashboard() {
         }
     };
 
-    // ── Dismiss ──────────────────────────────────────────────────────────
+    // ── Dismiss (optimistic + undo) ──────────────────────────────────────
     const handleDismiss = async (alertId) => {
-        await api.prevention.dismiss(alertId);
+        // 1. Optimistic UI: mark dismissed immediately
         setAlerts((prev) => prev.map((a) => a.alert_id === alertId ? { ...a, dismissed: true } : a));
+        setLiveStatus('Alert dismissed. Undo available for 8 seconds.');
+
+        // 2. Show undo toast with 8-second window
+        if (undoToast?.timer) clearTimeout(undoToast.timer);
+        const timer = setTimeout(() => {
+            setUndoToast(null);
+            // After undo window expires, persist to server
+            api.prevention.dismiss(alertId).catch((err) => {
+                console.error('Dismiss persist failed:', err);
+                // Revert local state on failure
+                setAlerts((prev) => prev.map((a) => a.alert_id === alertId ? { ...a, dismissed: false } : a));
+                setLiveStatus('Dismiss failed. Alert restored.');
+            });
+        }, 8000);
+        setUndoToast({ alert_id: alertId, timer });
+    };
+
+    const handleUndoDismiss = () => {
+        if (!undoToast) return;
+        clearTimeout(undoToast.timer);
+        setAlerts((prev) => prev.map((a) => a.alert_id === undoToast.alert_id ? { ...a, dismissed: false } : a));
+        setLiveStatus('Dismiss undone. Alert restored.');
+        setUndoToast(null);
     };
 
     // ── Derived data ─────────────────────────────────────────────────────
@@ -166,10 +209,10 @@ export function PreventionDashboard() {
             map[key] = { count: 0, revenue: 0 };
         }
         activeAlerts.forEach((a) => {
-            if (map[a.prevention_type]) {
-                map[a.prevention_type].count += 1;
-                map[a.prevention_type].revenue += a.revenue_at_risk || 0;
-            }
+            // Auto-register any backend type not in TYPE_CONFIG so counts are never silently dropped
+            if (!map[a.prevention_type]) map[a.prevention_type] = { count: 0, revenue: 0 };
+            map[a.prevention_type].count += 1;
+            map[a.prevention_type].revenue += a.revenue_at_risk || 0;
         });
         return map;
     }, [activeAlerts]);
@@ -228,14 +271,10 @@ export function PreventionDashboard() {
                 {/* ── Header ───────────────────────────────────────────── */}
                 <div className="flex flex-wrap justify-between items-end gap-4">
                     <div className="flex flex-col gap-1">
-                        <h1 className="text-th-heading text-3xl font-black leading-tight tracking-tight flex items-center gap-3">
+                        <h1 className="text-th-heading text-3xl font-black leading-tight tracking-tight">
                             Prevention Intelligence
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                LIVE
-                            </span>
                         </h1>
-                        <p className="text-th-secondary text-base">Proactive claim risk detection across eligibility, authorizations, filing deadlines, duplicates, and payer patterns.</p>
+                        <p className="text-th-secondary text-base">Proactive claim risk detection across eligibility, authorizations, filing deadlines, duplicates, payer patterns, and ML-flagged anomalies.</p>
                     </div>
                     <button
                         onClick={handleScan}
@@ -303,22 +342,25 @@ export function PreventionDashboard() {
 
                 {/* ── Filter Bar ────────────────────────────────────────── */}
                 <div className="flex flex-wrap items-center gap-3 p-3 rounded-xl bg-th-surface-raised border border-th-border">
-                    <span className="material-symbols-outlined text-th-muted text-lg">filter_list</span>
+                    <span className="material-symbols-outlined text-th-muted text-lg" aria-hidden="true">filter_list</span>
 
                     <select
                         value={filters.prevention_type}
                         onChange={(e) => updateFilter('prevention_type', e.target.value)}
+                        aria-label="Filter by prevention type"
                         className="h-8 rounded-lg px-3 text-sm bg-th-surface-base border border-th-border text-th-heading focus:outline-none focus:ring-1 focus:ring-primary"
                     >
                         <option value="">All Types</option>
-                        {Object.entries(TYPE_CONFIG).map(([k, v]) => (
-                            <option key={k} value={k}>{v.label}</option>
-                        ))}
+                        {Object.entries(TYPE_CONFIG).map(([k, v]) => {
+                            const n = byType[k]?.count || 0;
+                            return <option key={k} value={k}>{v.label}{v.ml ? ' (ML)' : ''}{n > 0 ? ` (${n})` : ''}</option>;
+                        })}
                     </select>
 
                     <select
                         value={filters.severity}
                         onChange={(e) => updateFilter('severity', e.target.value)}
+                        aria-label="Filter by severity"
                         className="h-8 rounded-lg px-3 text-sm bg-th-surface-base border border-th-border text-th-heading focus:outline-none focus:ring-1 focus:ring-primary"
                     >
                         <option value="">All Severities</option>
@@ -330,6 +372,7 @@ export function PreventionDashboard() {
                     <select
                         value={filters.payer}
                         onChange={(e) => updateFilter('payer', e.target.value)}
+                        aria-label="Filter by payer"
                         className="h-8 rounded-lg px-3 text-sm bg-th-surface-base border border-th-border text-th-heading focus:outline-none focus:ring-1 focus:ring-primary"
                     >
                         <option value="">All Payers</option>
@@ -341,9 +384,9 @@ export function PreventionDashboard() {
                     {(filters.prevention_type || filters.severity || filters.payer) && (
                         <button
                             onClick={() => setFilters({ prevention_type: '', severity: '', payer: '' })}
-                            className="ml-auto text-xs font-semibold text-red-400 hover:text-red-300 flex items-center gap-1"
+                            className="ml-auto text-xs font-semibold text-th-danger hover:text-th-danger/80 flex items-center gap-1"
                         >
-                            <span className="material-symbols-outlined text-sm">restart_alt</span>
+                            <span className="material-symbols-outlined text-sm" aria-hidden="true">restart_alt</span>
                             Reset Filters
                         </button>
                     )}
@@ -365,16 +408,20 @@ export function PreventionDashboard() {
                                     ].map((col) => (
                                         <th
                                             key={col.key}
-                                            onClick={() => toggleSort(col.key)}
+                                            aria-sort={sortField === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
                                             className={cn(
-                                                'px-4 py-3 text-left text-xs font-bold text-th-muted uppercase tracking-wider cursor-pointer select-none hover:text-th-heading transition-colors',
+                                                'px-4 py-3 text-left text-xs font-bold text-th-muted uppercase tracking-wider',
                                                 col.w
                                             )}
                                         >
-                                            <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleSort(col.key)}
+                                                className="flex items-center gap-1 hover:text-th-heading focus:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded transition-colors uppercase tracking-wider font-bold"
+                                            >
                                                 {col.label}
                                                 <SortIcon field={col.key} />
-                                            </div>
+                                            </button>
                                         </th>
                                     ))}
                                     <th className="px-4 py-3 text-right text-xs font-bold text-th-muted uppercase tracking-wider w-40">Actions</th>
@@ -391,9 +438,25 @@ export function PreventionDashboard() {
                                 ) : sortedAlerts.length === 0 ? (
                                     <tr>
                                         <td colSpan={7} className="px-4 py-16 text-center">
-                                            <span className="material-symbols-outlined text-3xl text-emerald-400">verified_user</span>
-                                            <p className="text-th-heading font-semibold mt-2">No active alerts</p>
-                                            <p className="text-th-muted text-xs mt-1">All clear. Run a scan to check for new risks.</p>
+                                            {Object.values(filters).some(Boolean) ? (
+                                                <>
+                                                    <span className="material-symbols-outlined text-3xl text-th-muted" aria-hidden="true">filter_alt_off</span>
+                                                    <p className="text-th-heading font-semibold mt-2">No alerts match these filters</p>
+                                                    <p className="text-th-muted text-xs mt-1">Try adjusting or clearing the filters to see more alerts.</p>
+                                                    <button
+                                                        onClick={() => setFilters({ prevention_type: '', severity: '', payer: '' })}
+                                                        className="mt-3 text-xs font-semibold text-primary hover:underline"
+                                                    >
+                                                        Clear all filters
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="material-symbols-outlined text-3xl text-th-success" aria-hidden="true">verified_user</span>
+                                                    <p className="text-th-heading font-semibold mt-2">No active alerts</p>
+                                                    <p className="text-th-muted text-xs mt-1">All clear. Run a scan to check for new risks.</p>
+                                                </>
+                                            )}
                                         </td>
                                     </tr>
                                 ) : sortedAlerts.map((alert) => {
@@ -466,11 +529,8 @@ export function PreventionDashboard() {
                 {aiInsights.length > 0 && (
                     <div>
                         <div className="flex items-center gap-2 mb-3">
-                            <span className="material-symbols-outlined text-purple-400 text-base">auto_awesome</span>
-                            <span className="text-sm font-bold text-purple-300 uppercase tracking-wider">AI Insights</span>
-                            <span className="text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ml-1">
-                                Live
-                            </span>
+                            <span className="material-symbols-outlined text-primary text-base" aria-hidden="true">auto_awesome</span>
+                            <span className="text-sm font-bold text-th-secondary uppercase tracking-wider">AI Insights</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                             {aiInsights.slice(0, 3).map((ins, i) => (
@@ -490,6 +550,26 @@ export function PreventionDashboard() {
                     </div>
                 )}
             </div>
+
+            {/* ── aria-live region for screen readers (visually hidden) ── */}
+            <div aria-live="polite" aria-atomic="true" className="sr-only">{liveStatus}</div>
+
+            {/* ── Undo toast ── */}
+            {undoToast && (
+                <div
+                    role="status"
+                    className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-lg bg-th-surface-raised border border-th-border shadow-xl"
+                >
+                    <span className="material-symbols-outlined text-th-muted text-lg" aria-hidden="true">check_circle</span>
+                    <span className="text-sm text-th-heading font-medium">Alert dismissed</span>
+                    <button
+                        onClick={handleUndoDismiss}
+                        className="ml-2 px-3 py-1 rounded text-xs font-bold text-primary hover:bg-primary/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary transition-colors"
+                    >
+                        Undo
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

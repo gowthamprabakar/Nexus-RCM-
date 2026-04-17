@@ -1589,6 +1589,18 @@ export const api = {
                 return await res.json();
             } catch (err) { console.error('Graph browse claims error:', err); return { claims: [], total: 0 }; }
         },
+        explore: async (params = {}) => {
+            try {
+                const qs = new URLSearchParams();
+                if (params.level) qs.set('level', params.level);
+                if (params.payer_id) qs.set('payer_id', params.payer_id);
+                if (params.category) qs.set('category', params.category);
+                if (params.root_cause) qs.set('root_cause', params.root_cause);
+                const res = await fetch(`${BASE_URL}/graph/explore?${qs}`);
+                if (!res.ok) throw new Error('graph explore failed');
+                return await res.json();
+            } catch (err) { console.error('Graph explore error:', err); return null; }
+        },
     },
 
     // ------------------------------------------------------------------------
@@ -1896,9 +1908,12 @@ export const api = {
                 return await res.json();
             } catch (err) { console.error('LIDA summarize error:', err); return null; }
         },
-        goals: async (dataset = 'denials', n = 5) => {
+        goals: async (dataset = 'denials', n = 5, start_date = null, end_date = null) => {
             try {
-                const res = await fetch(`${BASE_URL}/lida/goals?dataset=${dataset}&n=${n}`);
+                const params = new URLSearchParams({ dataset, n });
+                if (start_date) params.append('start_date', start_date);
+                if (end_date) params.append('end_date', end_date);
+                const res = await fetch(`${BASE_URL}/lida/goals?${params}`);
                 if (!res.ok) throw new Error('LIDA goals failed');
                 return await res.json();
             } catch (err) { console.error('LIDA goals error:', err); return null; }
@@ -1914,14 +1929,14 @@ export const api = {
                 return await res.json();
             } catch (err) { console.error('LIDA visualize error:', err); return null; }
         },
-        ask: async (question, dataset = 'auto') => {
+        ask: async (question, dataset = 'auto', start_date = null, end_date = null) => {
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 90000);
                 const res = await fetch(`${BASE_URL}/lida/ask`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question, dataset }),
+                    body: JSON.stringify({ question, dataset, start_date, end_date }),
                     signal: controller.signal,
                 });
                 clearTimeout(timeoutId);
@@ -1969,6 +1984,19 @@ export const api = {
     },
 
     // ------------------------------------------------------------------------
+    // Prevent  (Sprint Q — sidebar nav summary rollup)
+    // ------------------------------------------------------------------------
+    prevent: {
+        getNavSummary: async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/prevent/nav-summary`);
+                if (!res.ok) throw new Error('nav summary failed');
+                return await res.json();
+            } catch (err) { console.error('Prevent nav summary error:', err); return null; }
+        },
+    },
+
+    // ------------------------------------------------------------------------
     // Coding  (Sprint 19)
     // ------------------------------------------------------------------------
     coding: {
@@ -1999,6 +2027,14 @@ export const api = {
                 if (!res.ok) throw new Error(`provider patterns failed for ${providerId}`);
                 return await res.json();
             } catch (err) { console.error('Provider patterns error:', err); return null; }
+        },
+        // Sprint Q Track C3 — ML CARC prediction
+        getPredictedCarc: async (claimId) => {
+            try {
+                const res = await fetch(`${BASE_URL}/coding/predicted-carc/${claimId}`);
+                if (!res.ok) throw new Error('predicted carc failed');
+                return await res.json();
+            } catch (err) { console.error('Predicted CARC error:', err); return null; }
         },
     },
 

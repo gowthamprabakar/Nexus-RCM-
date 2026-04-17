@@ -37,7 +37,7 @@ def _gen_action_id() -> str:
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.utcnow()
 
 
 def _safe_json(obj) -> str:

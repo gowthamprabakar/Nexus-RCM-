@@ -1,7 +1,11 @@
 """
 Sprint 20 — Patient Access Router
 Endpoints for eligibility, prior auth, benefits, and cost estimates.
+
+Sprint Q Track C4: cost-estimate response is augmented with
+``patient_payment_probability`` from the trained propensity-to-pay model.
 """
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
@@ -9,7 +13,26 @@ from typing import Any, Optional
 
 from app.core.deps import get_db
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Lazy-loaded Propensity-to-Pay model singleton
+_PROPENSITY_MODEL = None
+
+
+def _get_propensity_model():
+    global _PROPENSITY_MODEL
+    if _PROPENSITY_MODEL is not None:
+        return _PROPENSITY_MODEL
+    try:
+        from app.ml.propensity_to_pay import PropensityToPayModel
+        model = PropensityToPayModel()
+        model._load()
+        _PROPENSITY_MODEL = model
+        return _PROPENSITY_MODEL
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Propensity-to-pay model unavailable: %s", exc)
+        return None
 
 
 @router.get("/eligibility/{patient_id}")
@@ -271,6 +294,25 @@ async def cost_estimate(
         # Payer responsibility
         estimated_payer = allowed - estimated_oop
 
+        # Sprint Q Track C4 — patient propensity-to-pay prediction
+        patient_payment_probability: Optional[float] = None
+        patient_payment_tier: Optional[str] = None
+        patient_payment_action: Optional[str] = None
+        try:
+            model = _get_propensity_model()
+            if model is not None and patient_id:
+                prediction = await model.predict_patient(db, patient_id)
+                if isinstance(prediction, dict):
+                    prob = prediction.get("probability")
+                    if prob is not None:
+                        patient_payment_probability = float(prob)
+                    patient_payment_tier = prediction.get("risk_tier")
+                    patient_payment_action = prediction.get("recommended_action")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "propensity_to_pay predict_patient(%s) failed: %s", patient_id, exc
+            )
+
         return {
             "claim_id": claim_id,
             "patient_id": patient_id,
@@ -285,6 +327,10 @@ async def cost_estimate(
             "estimated_patient_oop": round(estimated_oop, 2),
             "estimated_payer_payment": round(estimated_payer, 2),
             "oop_remaining_after": round(max(oop_remaining - estimated_oop, 0), 2),
+            # ML — Sprint Q Track C4
+            "patient_payment_probability": patient_payment_probability,
+            "patient_payment_tier": patient_payment_tier,
+            "patient_payment_recommended_action": patient_payment_action,
             "note": "Estimate based on current coverage data. Actual amounts may vary.",
         }
     except HTTPException:

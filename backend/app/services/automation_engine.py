@@ -179,11 +179,58 @@ RULES = AUTOMATION_RULES
 # Rule evaluation
 # ---------------------------------------------------------------------------
 
+async def _overlay_db_rule_state(db: AsyncSession) -> dict:
+    """Sprint Q D4: load enabled/requires_approval state from automation_rules_db
+    and overlay it onto the hardcoded AUTOMATION_RULES in-memory.
+
+    Only rules that also exist in the hardcoded list are affected (DB-only rules
+    don't have Python handlers yet). Returns a diagnostic dict.
+    """
+    from sqlalchemy import text as _text  # local alias so we don't shadow file-level import
+
+    try:
+        rows = await db.execute(_text(
+            "SELECT rule_id, enabled, requires_approval, deleted "
+            "FROM automation_rules_db"
+        ))
+        db_state = {
+            r.rule_id: {
+                "enabled": bool(r.enabled),
+                "requires_approval": bool(r.requires_approval),
+                "deleted": bool(r.deleted),
+            }
+            for r in rows.fetchall()
+        }
+    except Exception as exc:
+        logger.warning("D4: could not load automation_rules_db (%s) — using hardcoded", exc)
+        return {"applied": 0, "source": "hardcoded-fallback"}
+
+    applied = 0
+    for rule in AUTOMATION_RULES:
+        s = db_state.get(rule["rule_id"])
+        if not s:
+            continue
+        # Soft-deleted rules are treated as disabled
+        rule["enabled"] = False if s["deleted"] else s["enabled"]
+        rule["requires_approval"] = s["requires_approval"]
+        applied += 1
+
+    return {"applied": applied, "source": "db-overlay", "db_rule_count": len(db_state)}
+
+
 async def evaluate_rules(db: AsyncSession) -> list:
     """
     Evaluate all enabled rules against current diagnostic findings and root cause data.
     Returns list of triggered actions (pending approval or auto-executed).
+
+    Sprint Q D4: state (enabled / requires_approval) is loaded from
+    automation_rules_db on each evaluation; the hardcoded AUTOMATION_RULES list
+    provides the Python handler mapping.
     """
+    # Refresh DB-backed state before evaluating
+    overlay = await _overlay_db_rule_state(db)
+    logger.info("evaluate_rules: %s", overlay)
+
     triggered = []
 
     try:
@@ -519,7 +566,7 @@ async def _find_filing_deadline_claims(db: AsyncSession, rule: dict) -> list:
         condition = rule["condition"]
         max_days = condition.get("max_days_from_dos", 75)
         min_remaining = condition.get("min_days_remaining", 15)
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         cutoff_start = now - timedelta(days=max_days)
         cutoff_end = now - timedelta(days=max_days - min_remaining)
 
@@ -575,7 +622,7 @@ async def _find_auth_expiry_claims(db: AsyncSession, rule: dict) -> list:
     window_days = condition.get("expiry_window_days", 14)
 
     try:
-        now_date = datetime.now(timezone.utc).date()
+        now_date = datetime.utcnow().date()
         cutoff = now_date + timedelta(days=window_days)
 
         stmt = (
@@ -838,7 +885,7 @@ async def _create_action_from_finding(db: AsyncSession, rule: dict, finding: dic
             estimated_impact=round(finding.get("impact_amount", 0), 2),
             confidence=finding.get("confidence_score", 0),
             status=status,
-            executed_at=datetime.now(timezone.utc) if status == "EXECUTED" else None,
+            executed_at=datetime.utcnow() if status == "EXECUTED" else None,
             outcome="Auto-executed" if status == "EXECUTED" else None,
         )
 
@@ -989,7 +1036,7 @@ async def _create_action_from_breach(db: AsyncSession, rule: dict, breach: dict,
             estimated_impact=round(breach.get("impact_amount", 0), 2),
             confidence=breach.get("confidence_score", 0),
             status=status,
-            executed_at=datetime.now(timezone.utc) if status == "EXECUTED" else None,
+            executed_at=datetime.utcnow() if status == "EXECUTED" else None,
             outcome="Auto-executed" if status == "EXECUTED" else None,
         )
 

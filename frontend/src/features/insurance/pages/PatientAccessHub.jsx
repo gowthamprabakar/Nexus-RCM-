@@ -7,6 +7,7 @@ export function PatientAccessHub() {
  const [arSummary, setArSummary] = useState(null);
  const [eligibilityData, setEligibilityData] = useState(null);
  const [costEstimate, setCostEstimate] = useState(null);
+ const [worklist, setWorklist] = useState([]);
  const [error, setError] = useState(null);
 
  useEffect(() => {
@@ -14,11 +15,19 @@ export function PatientAccessHub() {
      setLoading(true);
      setError(null);
      try {
+       // Pull the pending prior-auth queue — this drives the worklist AND the
+       // first-patient lookups for eligibility / cost estimate below.
+       const paList = await api.patientAccess.getPriorAuth({ size: 10, status: 'PENDING' }).catch(() => null);
+       const items = paList?.items || (Array.isArray(paList) ? paList : []);
+       setWorklist(items);
+       const firstPatientId = items[0]?.patient_id || null;
+       const firstClaimId = items[0]?.claim_id || null;
+
        const [crs, ar, eligibility, cost] = await Promise.allSettled([
          api.crs.getSummary(),
          api.ar.getSummary(),
-         api.patientAccess.getEligibility('default'),
-         api.patientAccess.getCostEstimate('default'),
+         firstPatientId ? api.patientAccess.getEligibility(firstPatientId) : Promise.resolve(null),
+         firstClaimId ? api.patientAccess.getCostEstimate(firstClaimId) : Promise.resolve(null),
        ]);
        if (crs.status === 'fulfilled') setCrsSummary(crs.value);
        if (ar.status === 'fulfilled') setArSummary(ar.value);
@@ -33,6 +42,15 @@ export function PatientAccessHub() {
    }
    load();
  }, []);
+
+ // Days until expiry helper — null-safe
+ const daysUntil = (dateStr) => {
+   if (!dateStr) return null;
+   const d = new Date(dateStr);
+   if (Number.isNaN(d.getTime())) return null;
+   const diffMs = d.getTime() - Date.now();
+   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+ };
 
  // Derive KPI values from real data (prefer patientAccess APIs, fallback to CRS/AR)
  const registrationAccuracy = eligibilityData?.accuracy != null
@@ -51,6 +69,8 @@ export function PatientAccessHub() {
    : '--');
  const estLiability = costEstimate?.estimated_liability != null
    ? `$${(costEstimate.estimated_liability / 1000).toFixed(1)}k`
+   : costEstimate?.estimated_patient_oop != null
+     ? `$${(costEstimate.estimated_patient_oop / 1000).toFixed(1)}k`
    : arSummary?.total_outstanding != null
      ? `$${(arSummary.total_outstanding / 1000).toFixed(1)}k`
      : '--';
@@ -59,6 +79,16 @@ export function PatientAccessHub() {
    : arSummary?.total_collected != null
      ? `+$${(arSummary.total_collected / 1000).toFixed(1)}k`
      : '--';
+
+ // Sprint Q Track C4 — propensity-to-pay badge
+ const payProb = costEstimate?.patient_payment_probability;
+ const payProbPct = typeof payProb === 'number' ? Math.round(payProb * 100) : null;
+ const payProbTier = costEstimate?.patient_payment_tier;
+ const payProbColor = payProbPct == null
+   ? 'text-th-muted bg-th-surface-overlay border-th-border'
+   : payProbPct >= 70 ? 'text-emerald-400 bg-emerald-900/20 border-emerald-800/40'
+   : payProbPct >= 40 ? 'text-amber-400 bg-amber-900/20 border-amber-800/40'
+   : 'text-rose-400 bg-rose-900/20 border-rose-800/40';
 
  const Skeleton = () => (
    <div className="animate-pulse bg-th-surface-overlay rounded h-8 w-24"></div>
@@ -117,6 +147,15 @@ export function PatientAccessHub() {
  <p className="text-xs font-bold uppercase text-th-secondary mb-1">Est. Patient Liability</p>
  {loading ? <Skeleton /> : <h3 className="text-3xl font-black text-th-heading tabular-nums">{estLiability}</h3>}
  <p className="text-xs text-emerald-500 font-bold mt-1 tabular-nums">{loading ? '' : `${collectedAmt} collected`}</p>
+ {/* Sprint Q Track C4 — ML-predicted propensity to pay */}
+ {!loading && payProbPct != null && (
+ <div className={`mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-bold tabular-nums ${payProbColor}`}
+      title={`Tier: ${payProbTier || 'N/A'} — ML propensity-to-pay`}>
+ <span className="material-symbols-outlined text-[11px]">smart_toy</span>
+ Likely to collect: {payProbPct}%
+ {payProbTier && <span className="opacity-70">({payProbTier})</span>}
+ </div>
+ )}
  </div>
  </div>
 
@@ -137,30 +176,51 @@ export function PatientAccessHub() {
  </div>
  </div>
  <div className="flex-1 overflow-y-auto custom-scrollbar p-0">
- {[
- { patient: "Sarah Jenkins", initials: "SJ", task: "Obtain Prior Auth", urgency: "High", time: "10:00 AM", score: 98 },
- { patient: "Michael Ross", initials: "MR", task: "Verify Sec. Insurance", urgency: "Medium", time: "10:15 AM", score: 85 },
- { patient: "David Miller", initials: "DM", task: "Review Benefits Limit", urgency: "Low", time: "11:00 AM", score: 60 },
- { patient: "Linda Chen", initials: "LC", task: "Update Demographics", urgency: "Critical", time: "09:30 AM", score: 99 },
- ].sort((a, b) => b.score - a.score).map((item, i) => (
- <div key={i} className="flex items-center justify-between p-4 border-b border-th-border hover:bg-th-surface-overlay/50 transition-colors group cursor-pointer">
+ {loading && (
+ <div className="p-6 text-sm text-th-muted">Loading prior-auth queue…</div>
+ )}
+ {!loading && worklist.length === 0 && (
+ <div className="p-10 text-center">
+ <span className="material-symbols-outlined text-[40px] text-th-muted mb-2">task_alt</span>
+ <p className="text-sm font-bold text-th-heading mb-1">No pending prior authorizations</p>
+ <p className="text-xs text-th-muted">Queue is clear — all active auths are approved or in progress.</p>
+ </div>
+ )}
+ {!loading && worklist.map((item) => {
+ const days = daysUntil(item.expiry_date);
+ const isCritical = days != null && days <= 3;
+ const initials = (item.patient_id || '?').slice(-2).toUpperCase();
+ const firstCpt = (item.approved_cpt_codes || '').split(',')[0]?.trim() || '—';
+ return (
+ <div key={item.auth_id} className="flex items-center justify-between p-4 border-b border-th-border hover:bg-th-surface-overlay/50 transition-colors group cursor-pointer">
  <div className="flex items-center gap-4">
- <div className={`size-10 rounded-full flex items-center justify-center font-bold text-th-heading ${item.urgency === 'Critical' ? 'bg-rose-500' : 'bg-th-surface-overlay'}`}>
- <span className="tabular-nums">{item.score}</span>
+ <div className={`size-10 rounded-full flex items-center justify-center font-bold text-th-heading ${isCritical ? 'bg-rose-500' : 'bg-th-surface-overlay'}`}>
+ <span className="tabular-nums text-xs">
+ {days != null ? `${days}d` : '—'}
+ </span>
  </div>
  <div className="size-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
- {item.initials}
+ {initials}
  </div>
  <div>
- <p className="font-bold text-sm text-th-heading">{item.task}</p>
- <p className="text-xs text-th-secondary">{item.patient} • Appointment at {item.time}</p>
+ <p className="font-bold text-sm text-th-heading">
+ {item.patient_id} · CPT {firstCpt}
+ </p>
+ <p className="text-xs text-th-secondary">
+ {item.payer_name || item.payer_id || 'Unknown payer'}
+ {' · '}
+ <span className="uppercase tracking-wide text-[10px] font-bold">{item.status}</span>
+ {item.auth_number ? ` · Auth ${item.auth_number}` : ' · No auth number yet'}
+ {days != null ? ` · ${days >= 0 ? `${days} days to expiry` : `expired ${Math.abs(days)}d ago`}` : ''}
+ </p>
  </div>
  </div>
  <button className="px-4 py-2 bg-primary text-th-heading text-xs font-bold rounded-lg transition-all hover:bg-primary/90">
  Process
  </button>
  </div>
- ))}
+ );
+ })}
  </div>
  </div>
 

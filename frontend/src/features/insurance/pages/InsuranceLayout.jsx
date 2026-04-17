@@ -3,11 +3,12 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { cn } from '../../../lib/utils';
 
 const tabs = [
- { to: '/insurance-verification/overview', label: 'Access Dashboard', icon: 'dashboard' },
- { to: '/insurance-verification/eligibility', label: 'Eligibility (270/271)', icon: 'verified_user' },
- { to: '/insurance-verification/auths', label: 'Prior Authorization', icon: 'assignment_turned_in' },
- { to: '/insurance-verification/benefits', label: 'Benefit Analytics', icon: 'payments' },
- { to: '/insurance-verification/history', label: 'History', icon: 'history' },
+ { to: '/specialty/patient-access/overview', label: 'Access Dashboard', icon: 'dashboard' },
+ { to: '/specialty/patient-access/eligibility', label: 'Eligibility (270/271)', icon: 'verified_user' },
+ { to: '/specialty/patient-access/auths', label: 'Prior Authorization', icon: 'assignment_turned_in' },
+ { to: '/specialty/patient-access/benefits', label: 'Benefit Analytics', icon: 'payments' },
+ { to: '/specialty/patient-access/history', label: 'History', icon: 'history' },
+ { to: '/specialty/patient-access/accounts', label: 'Patient Accounts', icon: 'account_circle' },
 ];
 
 export function InsuranceLayout() {
